@@ -162,7 +162,8 @@ internal sealed class LauncherForm : Form {
 
             SetStatus("Launching MapleStory 2...");
             InstallClientPatch();
-            SetTestKitMod(settings.TestKit);
+            SetMod("offline-testkit", settings.TestKit);
+            SetMod("offline-dungeons", settings.UnlimitedDungeonClears); // dungeon window shows the 9999 clear limits
             using Process game = LaunchGame();
             report?.Step("Game started");
             EventLog.Write("game", "started");
@@ -445,9 +446,9 @@ internal sealed class LauncherForm : Form {
         EventLog.Write("patch", "client patch installed into " + settings.ClientDir);
     }
 
-    /// <summary>The test-kit client mod is only loaded while TestKit=true (mod.json vs mod.json.disabled).</summary>
-    private void SetTestKitMod(bool enabled) {
-        string folder = Path.Combine(settings.ModsDir, "offline-testkit");
+    /// <summary>A client mod that follows a setting is only loaded while it is on (mod.json vs mod.json.disabled).</summary>
+    private void SetMod(string mod, bool enabled) {
+        string folder = Path.Combine(settings.ModsDir, mod);
         string on = Path.Combine(folder, "mod.json"), off = Path.Combine(folder, "mod.json.disabled");
         if (enabled && File.Exists(off) && !File.Exists(on)) {
             File.Move(off, on);
