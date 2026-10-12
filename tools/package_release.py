@@ -38,6 +38,9 @@ UnlimitedDungeonClears=true
 MailNeverExpires=true
 ClassDropsOnly=true
 
+# Chat commands /godmode, /killall, /unstuck (see Cheats in README.txt)
+CheatCommands=true
+
 # Updates: ask = offer a newer version when you press Play (needs internet, otherwise skipped),
 # always = install it without asking, off = only manual updates (Start menu > Install Update)
 AutoUpdate=ask
@@ -95,8 +98,16 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   UnlimitedDungeonClears dungeon clear rewards on every clear
   MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days)
   ClassDropsOnly         monsters and dungeon rewards only drop gear your class can wear
+  CheatCommands          the chat commands below (CheatCommands=false turns them off)
   AutoUpdate             ask / always / off - online update check when you press Play
   ClientDir              the game's x64 folder, if you moved the game
+
+Cheats
+------
+Some quests or places can get stuck in this offline version. Type these in the chat box:
+  /godmode   on/off: you take no damage and every hit kills a monster
+  /killall   kills every monster on the map (counts for quests, exp and drops)
+  /unstuck   takes you back to Henesys (revives you first if you are dead)
 
 Uninstall: Start menu > "Uninstall MapleStory 2 Offline" (asks before deleting your saves).
 

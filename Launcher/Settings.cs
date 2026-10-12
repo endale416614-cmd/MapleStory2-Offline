@@ -48,6 +48,8 @@ internal sealed class Settings {
     public bool ClassDropsOnly { get; private init; }
     /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
     public bool MailNeverExpires { get; private init; }
+    /// <summary>Chat commands /godmode, /killall and /unstuck for getting past stuck quests (on unless CheatCommands=false).</summary>
+    public bool CheatCommands { get; private init; } = true;
     /// <summary>
     /// Online update check when Play is pressed: "ask" (offer the newer version), "always" (install it without asking)
     /// or "off" (only manual updates). Skipped silently without internet.
@@ -87,6 +89,7 @@ internal sealed class Settings {
             UnlimitedDungeonClears = Flag(values, "UnlimitedDungeonClears", false),
             GrindRates = Flag(values, "GrindRates", false),
             MailNeverExpires = Flag(values, "MailNeverExpires", false),
+            CheatCommands = Flag(values, "CheatCommands", true),
             ClassDropsOnly = Flag(values, "ClassDropsOnly", false),
             AutoUpdate = (values.GetValueOrDefault("AutoUpdate") ?? defaults.AutoUpdate).Trim().ToLowerInvariant() switch {
                 "ask" or "true" or "yes" or "on" => "ask",

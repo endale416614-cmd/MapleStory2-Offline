@@ -10,6 +10,9 @@ UnlimitedDungeonClears=true
 MailNeverExpires=true
 ClassDropsOnly=true
 
+# Chat commands /godmode, /killall, /unstuck (for quests or places you get stuck in).
+CheatCommands=true
+
 # Online update check when you press Play: ask, always (no question) or off (manual updates only).
 AutoUpdate=ask
 
