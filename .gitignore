@@ -38,3 +38,10 @@ _dl/minhook/
 _dl/wiki/
 install-id
 install.json
+
+# Local test harnesses and internal test/audit reports (kept on the developer PC, not published)
+tools/tests/
+docs/audit/
+docs/TEST-REPORT.md
+docs/RELEASE-BLOCKERS.md
+docs/COVERAGE.md

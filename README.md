@@ -49,7 +49,7 @@ Every change to the original game is listed in [docs/ADAPTATIONS.md](docs/ADAPTA
 | `Maple2/` | the server emulator, fork of MS2Community/Maple2 (git submodule) |
 | `_dl/Agarcium/` | client patch source, fork of shuabritze/Agarcium (git submodule) |
 | `tools/` | data and maintenance scripts (Python) |
-| `docs/` | design notes, change log, test report, audits |
+| `docs/` | design notes, the list of changes to the original game, release guide |
 | `launcher.ini.example` | launcher settings with their defaults |
 | `docs/RELEASING.md` | how to build releases and updates |
 
