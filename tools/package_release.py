@@ -195,7 +195,7 @@ def assemble(stage, version):
         copy(os.path.join(project, "appsettings.json"), put(f"Maple2/Maple2.Server.{server}/appsettings.json"))
         copy_tree(os.path.join(project, "bin", "Release", "net8.0"), put(f"Maple2/Maple2.Server.{server}/bin/Release/net8.0"))
     copy_tree(os.path.join(maple, "Maple2.Server.Web", "Data"), put("Maple2/Maple2.Server.Web/Data"))
-    for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-testkit.json", "offline-doctor-shop.json"):
+    for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-testkit.json"):
         copy(os.path.join(maple, name), put(f"Maple2/{name}"))
 
     # Portable .env: no machine paths (the launcher passes the folders), no MySQL credentials.
