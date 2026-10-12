@@ -118,7 +118,7 @@ internal static class Program {
         if (!quiet) {
             if (path != null) {
                 Process.Start("explorer.exe", $"/select,\"{path}\"");
-                MessageBox.Show($"Saved:\n{path}\n\nSend this file with your bug report.", Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Community.ShowProblem($"Saved:\n{path}\n\nAttach this file to your bug report.", Title, MessageBoxIcon.Information);
             } else {
                 MessageBox.Show("The diagnostics file could not be written.", Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -244,10 +244,10 @@ internal static class Program {
             // nothing more we can do
         }
 
-        MessageBox.Show("MapleStory 2 (Offline) ran into an unexpected error and has to close." +
-                        (path == null ? "" : $"\n\nA report was saved in the \"{SessionReport.FolderName}\" folder on your desktop. " +
-                                             "Please send it to the developer."),
-            Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        Community.ShowProblem("MapleStory 2 (Offline) ran into an unexpected error and has to close." +
+                              (path == null ? "" : $"\n\nA report was saved in the \"{SessionReport.FolderName}\" folder on your desktop. " +
+                                                   "Please attach it to your report."),
+            Title, MessageBoxIcon.Error);
         Environment.Exit(1);
     }
 

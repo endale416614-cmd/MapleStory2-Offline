@@ -108,7 +108,7 @@ internal sealed class SessionReport {
         var text = new StringBuilder();
         text.AppendLine("MapleStory 2 (Offline) - play session report");
         text.AppendLine("=============================================");
-        text.AppendLine("If something went wrong, please send this whole file to the developer.");
+        text.AppendLine($"If something went wrong, please post this whole file on our Discord: {Community.Discord}");
         text.AppendLine("Your Windows user name and PC name have been removed from it.");
         text.AppendLine();
         text.AppendLine($"Session : {started:yyyy-MM-dd HH:mm} - {ended:HH:mm} ({FormatDuration(ended - started)})");

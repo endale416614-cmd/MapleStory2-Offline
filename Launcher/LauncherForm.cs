@@ -34,7 +34,7 @@ internal sealed class LauncherForm : Form {
         Text = Title;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(440, 132);
+        ClientSize = new Size(440, 152);
         BackColor = Color.FromArgb(28, 30, 36);
         ForeColor = Color.White;
         TopMost = true;
@@ -69,7 +69,16 @@ internal sealed class LauncherForm : Form {
             MarqueeAnimationSpeed = 30,
             Bounds = new Rectangle(20, 104, 400, 8),
         };
-        Controls.AddRange([picture, title, subtitle, status, progress]);
+        var discord = new LinkLabel {
+            Text = "Found a bug? Report it on Discord",
+            Font = new Font("Segoe UI", 8.5f),
+            LinkColor = Color.FromArgb(150, 170, 255),
+            ActiveLinkColor = Color.White,
+            AutoSize = true,
+            Location = new Point(18, 124),
+        };
+        discord.LinkClicked += (_, _) => Community.OpenDiscord();
+        Controls.AddRange([picture, title, subtitle, status, progress, discord]);
     }
 
     protected override async void OnShown(EventArgs e) {
@@ -195,9 +204,9 @@ internal sealed class LauncherForm : Form {
             EventLog.Write("save", outcome.ToString());
             if (outcome == SaveOutcome.Failed) {
                 Hide();
-                MessageBox.Show("Your progress from this session could not be saved. Your previous save was kept.\n\n" +
-                                "Please use \"MapleStory 2 Offline - Export Diagnostics\" in the Start menu and send the file to the developer.",
-                    Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Community.ShowProblem("Your progress from this session could not be saved. Your previous save was kept.\n\n" +
+                                      "Please use \"MapleStory 2 Offline - Export Diagnostics\" in the Start menu and post the file with your report.",
+                    Title, MessageBoxIcon.Error);
             }
             SetStatus("Closing...");
             host.StopAll();
@@ -224,9 +233,9 @@ internal sealed class LauncherForm : Form {
 
         Hide();
         if (error != null) {
-            MessageBox.Show(error + ReportHint(reportPath), Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Community.ShowProblem(error + ReportHint(reportPath), Title, MessageBoxIcon.Error);
         } else if (report is { HasProblems: true } && reportPath != null) {
-            MessageBox.Show("Something went wrong during this session." + ReportHint(reportPath), Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            Community.ShowProblem("Something went wrong during this session." + ReportHint(reportPath), Title, MessageBoxIcon.Warning);
         }
 
         finished = true;
@@ -235,7 +244,7 @@ internal sealed class LauncherForm : Form {
 
     private static string ReportHint(string? reportPath) => reportPath == null ? "" :
         $"\n\nA report was saved in the \"{SessionReport.FolderName}\" folder on your desktop:\n{Path.GetFileName(reportPath)}\n\n" +
-        "Please send that file to the developer (or use \"Export Diagnostics\" in the Start menu).";
+        "Please post that file with your report (or use \"Export Diagnostics\" in the Start menu).";
 
     private void SetStatus(string text) => status.Text = text;
 
