@@ -349,7 +349,10 @@ internal sealed class SessionReport {
                 text = Regex.Replace(text, $@"\b{Regex.Escape(secret)}\b", "<redacted>", RegexOptions.IgnoreCase);
             }
         }
-        return Regex.Replace(text, @"Machine: [0-9a-fA-F-]{8,}", "Machine: <redacted>");
+        text = Regex.Replace(text, @"Machine: [0-9a-fA-F-]{8,}", "Machine: <redacted>");
+        // Login server: Logging in to game as { ..., "machineId": "<client hardware id>", ... }
+        return Regex.Replace(text, @"(machine[ _-]?id[""']?\s*[:=]\s*[""']?)[0-9a-fA-F][0-9a-fA-F-]{7,}", "$1<redacted>",
+            RegexOptions.IgnoreCase);
     }
 
     private static string JobName(int job) => job switch {
