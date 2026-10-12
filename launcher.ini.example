@@ -7,6 +7,10 @@
 GrindRates=true
 DungeonAllDrops=true
 UnlimitedDungeonClears=true
+MailNeverExpires=true
+
+# Online update check when you press Play: ask, always (no question) or off (manual updates only).
+AutoUpdate=ask
 
 # After every session a plain-text report goes to "MapleStory 2 Offline Reports" on the desktop.
 DebugReports=true

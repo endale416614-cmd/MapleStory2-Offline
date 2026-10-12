@@ -35,6 +35,11 @@ PLAYER_DEFAULTS = """# Default settings of this release (replaced by updates).
 GrindRates=true
 DungeonAllDrops=true
 UnlimitedDungeonClears=true
+MailNeverExpires=true
+
+# Updates: ask = offer a newer version when you press Play (needs internet, otherwise skipped),
+# always = install it without asking, off = only manual updates (Start menu > Install Update)
+AutoUpdate=ask
 
 # Problem reports on the desktop after every session
 DebugReports=true
@@ -47,7 +52,8 @@ TriggerTrace=false
 PLAYER_README = r"""MapleStory 2 (Offline) {version}
 ==============================
 
-MapleStory 2 as a single-player game on your own PC. Nothing connects to the internet.
+MapleStory 2 as a single-player game on your own PC. The game never connects to the internet; only the
+launcher asks GitHub whether a newer version exists when you press Play (AutoUpdate, see Settings).
 
 You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library it is found
 automatically. Otherwise the launcher shows where to get it the first time you start.
@@ -62,7 +68,7 @@ Then start "MapleStory 2 Offline" from the desktop or the Start menu.
 (Portable alternative: extract the .zip anywhere and run "MapleStory 2 Offline.exe".)
 
 Your character is stored in %LOCALAPPDATA%\MapleStory 2 Offline\SaveData (portable copy: the
-SaveData folder). It is backed up on every start (SaveDataackups, newest 10 kept).
+SaveData folder). It is backed up on every start (SaveData\backups, newest 10 kept).
 
 Updates
 -------
@@ -85,6 +91,8 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   GrindRates             faster exp, more drops, upgrade materials from monsters
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
+  MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days)
+  AutoUpdate             ask / always / off - online update check when you press Play
   ClientDir              the game's x64 folder, if you moved the game
 
 Uninstall: Start menu > "Uninstall MapleStory 2 Offline" (asks before deleting your saves).
@@ -238,6 +246,7 @@ def main():
     parser.add_argument("--base", help="folder of the last FULL release (with its files.json) to build an update zip against")
     parser.add_argument("--notes", default="", help="one-line release notes shown to the player after updating")
     parser.add_argument("--no-build", action="store_true", help="package the existing builds")
+    parser.add_argument("--sign-key", help="update signing key (default ../Signing/update-signing-key.pem)")
     args = parser.parse_args()
 
     out = os.path.join(ROOT, "publish")
@@ -267,6 +276,8 @@ def main():
         update_zip = os.path.join(out, f"MapleStory2-Offline-Update-{args.version}.zip")
         print(f"update {base_version} -> {args.version}: {len(changed)} changed, {len(deleted)} deleted")
         zip_folder(stage, update_zip, only=changed + ["files.json"], extra={"update.json": json.dumps(update, indent=1)})
+        import sign_update
+        sign_update.sign(update_zip, args.sign_key)
 
     for name in sorted(os.listdir(out)):
         path = os.path.join(out, name)

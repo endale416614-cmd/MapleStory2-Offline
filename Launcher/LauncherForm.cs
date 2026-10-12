@@ -108,6 +108,9 @@ internal sealed class LauncherForm : Form {
                 MessageBox.Show(recovered, Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Show();
             }
+            if (settings.AutoUpdate != "off" && File.Exists(Path.Combine(settings.Root, "files.json"))) {
+                await DownloadOnlineUpdateAsync(token);
+            }
             if (await InstallUpdatesAsync(updates)) {
                 return; // the launcher itself was updated and restarted
             }
@@ -320,6 +323,62 @@ internal sealed class LauncherForm : Form {
         finished = true;
         Close();
         return true;
+    }
+
+    /// <summary>
+    /// AutoUpdate: when the PC is online and a newer release exists, fetch its signed update file into the updates
+    /// folder (asking first unless AutoUpdate=always); <see cref="InstallUpdatesAsync"/> then verifies and installs it.
+    /// Any failure here only means playing the installed version.
+    /// </summary>
+    private async Task DownloadOnlineUpdateAsync(CancellationToken token) {
+        SetStatus("Checking for updates...");
+        UpdateChecker.Available? update;
+        try {
+            update = await UpdateChecker.CheckAsync(settings, token);
+        } catch (Exception ex) when (!token.IsCancellationRequested) {
+            EventLog.Write("update", "online check skipped: " + ex.Message);
+            return;
+        }
+        if (update == null) {
+            return;
+        }
+        EventLog.Write("update", $"version {update.Version} available online");
+
+        if (update.FileUrl == null) {
+            // A release that can only be installed with its full Setup.
+            Hide();
+            bool open = MessageBox.Show($"Version {update.Version} is available (you have {settings.Version}). It has to be installed with its full Setup.\n\n" +
+                                        "Open the download page?", Title, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes;
+            Show();
+            if (open && update.PageUrl.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase)) {
+                Process.Start(new ProcessStartInfo(update.PageUrl) { UseShellExecute = true });
+            }
+            return;
+        }
+        if (settings.AutoUpdate == "ask") {
+            Hide();
+            DialogResult answer = MessageBox.Show(
+                $"Version {update.Version} is available (you have {settings.Version}).\n\n" + (update.Notes.Length > 0 ? update.Notes + "\n\n" : "") +
+                $"Update now? ({Math.Max(1, update.Size / 1048576)} MB download; your save is backed up first.)\n\n" +
+                "To update by hand instead, set AutoUpdate=off in launcher.ini.",
+                Title, MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+            Show();
+            if (answer != DialogResult.Yes) {
+                EventLog.Write("update", $"{update.Version} postponed by the player");
+                return;
+            }
+        }
+        try {
+            var progress = new Progress<int>(percent => SetStatus($"Downloading update {update.Version}... {percent}%"));
+            string file = await UpdateChecker.DownloadAsync(update, settings, settings.UpdateDir, progress, token);
+            EventLog.Write("update", $"downloaded {Path.GetFileName(file)}");
+        } catch (Exception ex) when (!token.IsCancellationRequested) {
+            EventLog.Write("update", $"download of {update.Version} failed: {ex.Message}");
+            Hide();
+            MessageBox.Show($"The update could not be downloaded ({ex.Message}). You can keep playing; it is tried again next time.",
+                Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            Show();
+        }
     }
 
     /// <summary>After an update that has not yet started successfully: offer to go back to the previous version.</summary>

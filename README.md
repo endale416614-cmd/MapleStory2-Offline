@@ -2,7 +2,8 @@
 
 A single-player, fully offline edition of MapleStory 2 for Windows. It runs a local copy of the community
 [Maple2](https://github.com/MS2Community/Maple2) server emulator next to the official game client, so the game can be
-played again after the official servers closed in 2020. Nothing connects to the internet.
+played again after the official servers closed in 2020. The game never connects to the internet; only the launcher
+checks GitHub for a newer version when you press Play (and skips that when you are offline).
 
 ## Download
 
@@ -16,7 +17,9 @@ You also need the MapleStory 2 game client (about 14 GB). If it is in your Steam
 Otherwise the launcher points you to the community downloader ([Mushroom Launcher](https://github.com/shuabritze/mushroom-launcher/releases),
 "Install client"), or you choose any folder that holds the client. This project does not include the game client.
 
-Updates: download the update file, then Start menu → **MapleStory 2 Offline - Install Update**. Problems: Start menu →
+Updates install themselves: when you press Play and a newer version exists, the launcher asks and updates (your save
+is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
+Start menu → **MapleStory 2 Offline - Install Update**. Problems: Start menu →
 **MapleStory 2 Offline - Export Diagnostics**, and attach the file it saves on your desktop to an
 [issue](https://github.com/endale416614-cmd/MapleStory2-Offline/issues). All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
 
@@ -26,6 +29,7 @@ Updates: download the update file, then Start menu → **MapleStory 2 Offline - 
 
 - One-click launcher: starts the local servers, the game, saves your progress on exit and shuts everything down.
 - Save data in a single local file (SQLite), backed up on every start.
+- Signed updates: the launcher only installs updates signed with the project's update key.
 - The client is locked to this PC: connections to anything except `127.0.0.1` are blocked.
 - Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items.
 - Solo-friendly options: adjustable exp and drop rates, upgrade-material drops, dungeon reward options.

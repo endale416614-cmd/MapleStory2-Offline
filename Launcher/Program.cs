@@ -9,7 +9,7 @@ namespace MapleStory2Offline;
 ///   --install-update        pick a downloaded update zip and install it
 ///   --uninstall             remove the program (asks about saves)
 /// Helpers: --install-patch/--remove-patch &lt;client dir&gt; (run elevated by the launcher), --report, and for automated
-/// tests --setup-silent --dir &lt;folder&gt; --data &lt;folder&gt; [--no-shortcuts] [--no-registry], --apply-updates,
+/// tests --setup-silent --dir &lt;folder&gt; --data &lt;folder&gt; [--no-shortcuts] [--no-registry], --apply-updates, --check-updates,
 /// --export-diagnostics --quiet [--include-save], --uninstall --quiet [--delete-data].
 /// Silent modes write their outcome to "last-result.txt" in the data (or target) folder and set the exit code.
 /// </summary>
@@ -52,6 +52,9 @@ internal static class Program {
             }
             if (Has(args, "--install-update")) {
                 return InstallUpdate(settings, quiet, Value(args, "--install-update"));
+            }
+            if (Has(args, "--check-updates")) {
+                return CheckUpdatesQuiet(settings);
             }
             if (Has(args, "--apply-updates")) {
                 return ApplyUpdatesQuiet(settings);
@@ -169,6 +172,30 @@ internal static class Program {
             string result = string.Join(Environment.NewLine, installer.InstallPending().Select(r => $"installed {r.Version}"));
             WriteResult(settings.DataRoot, (recovered != null ? "recovered: " + recovered + Environment.NewLine : "") +
                                            $"version {settings.Version}{Environment.NewLine}{(result.Length == 0 ? "nothing to install" : result)}");
+            return 0;
+        } catch (Exception ex) {
+            WriteResult(settings.DataRoot, $"version {settings.Version}{Environment.NewLine}FAILED: {ex.Message}");
+            return 1;
+        }
+    }
+
+    /// <summary>"--check-updates": the online update check without prompts (tests and support): download + install.</summary>
+    private static int CheckUpdatesQuiet(Settings settings) {
+        try {
+            UpdateChecker.Available? update = UpdateChecker.CheckAsync(settings, CancellationToken.None).GetAwaiter().GetResult();
+            if (update == null) {
+                WriteResult(settings.DataRoot, $"version {settings.Version}{Environment.NewLine}up to date");
+                return 0;
+            }
+            if (update.FileUrl == null) {
+                WriteResult(settings.DataRoot, $"version {settings.Version}{Environment.NewLine}{update.Version} available, full Setup only");
+                return 0;
+            }
+            UpdateChecker.DownloadAsync(update, settings, settings.UpdateDir, null, CancellationToken.None).GetAwaiter().GetResult();
+            var installer = new UpdateInstaller(settings);
+            installer.RecoverInterrupted();
+            string installed = string.Join(Environment.NewLine, installer.InstallPending().Select(r => $"installed {r.Version}"));
+            WriteResult(settings.DataRoot, $"version {settings.Version}{Environment.NewLine}{(installed.Length == 0 ? "nothing to install" : installed)}");
             return 0;
         } catch (Exception ex) {
             WriteResult(settings.DataRoot, $"version {settings.Version}{Environment.NewLine}FAILED: {ex.Message}");

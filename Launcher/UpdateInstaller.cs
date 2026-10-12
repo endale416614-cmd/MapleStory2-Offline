@@ -19,9 +19,10 @@ namespace MapleStory2Offline;
 /// 5. After a successful start of the new version the update is marked verified; if the new version cannot start the
 ///    launcher offers a rollback that restores the program files and the pre-update save.
 ///
-/// Authenticity: the hashes only prove the files are the ones the zip's own files.json names. Anyone who can make a
-/// zip can make a matching files.json, so they detect corruption, not tampering. Get updates from the official
-/// release page only. (No signing key exists yet; see docs/RELEASE-BLOCKERS.md.)
+/// Authenticity: the zip comment holds an ECDSA P-256 signature (the developer's update key, <see cref="UpdateKey"/>)
+/// over update.json and files.json, and files.json holds the sha256 of every file. (In the comment rather than in a
+/// file so that launchers from before signing, which accept only listed files, can still install signed updates.) An update without a valid signature, or
+/// with any file that does not match, is refused before anything changes and moved to updates\rejected.
 /// </summary>
 internal sealed class UpdateInstaller {
     private const string ManifestName = "update.json";
@@ -92,7 +93,12 @@ internal sealed class UpdateInstaller {
                     $"but version {settings.Version} is installed.\n\nPlease download the full version {manifest.Version} instead.");
             }
             status?.Invoke($"Installing update {manifest.Version}...");
-            results.Add(Install(zip, manifest));
+            try {
+                results.Add(Install(zip, manifest));
+            } catch (RejectedException ex) {
+                Archive(zip, "rejected"); // so a bad download does not stop every start
+                throw new InvalidOperationException(ex.Message);
+            }
             settings.Version = manifest.Version;
         }
         return results;
@@ -111,7 +117,8 @@ internal sealed class UpdateInstaller {
         List<(string Relative, long Length)> files;
         Dictionary<string, string> hashes;
         using (ZipArchive archive = ZipFile.OpenRead(zip)) {
-            hashes = ReadHashes(archive) ?? throw new InvalidOperationException(
+            manifest = VerifySignature(archive, manifest, zip);
+            hashes = ReadHashes(archive) ?? throw new RejectedException(
                 "This update has no file list (files.json), so it cannot be checked. It was not installed; download it again from the release page.");
             files = [];
             foreach (ZipArchiveEntry entry in archive.Entries.Where(entry => entry.Name.Length > 0 && entry.FullName is not ManifestName)) {
@@ -133,7 +140,7 @@ internal sealed class UpdateInstaller {
                 if (relative != HashesName && (!hashes.TryGetValue(relative, out string? expected) || !string.Equals(expected, Hash(staged), StringComparison.OrdinalIgnoreCase))) {
                     Directory.Delete(staging, true);
                     EventLog.Write("update", $"rejected {Path.GetFileName(zip)}: hash mismatch {relative}");
-                    throw new InvalidOperationException(
+                    throw new RejectedException(
                         $"The update file is damaged ({relative} does not match its checksum). Nothing was changed; download the update again.");
                 }
             }
@@ -396,6 +403,73 @@ internal sealed class UpdateInstaller {
         } catch (Exception) {
             // still in use; next start
         }
+    }
+
+    /// <summary>A refused update file: moved to updates\rejected by <see cref="InstallPending"/>.</summary>
+    private sealed class RejectedException(string message) : Exception(message);
+
+    /// <summary>Checks the signature in the zip comment against the built-in public key; returns the signed manifest (the one acted on).</summary>
+    private static Manifest VerifySignature(ZipArchive archive, Manifest manifest, string zip) {
+        byte[]? update = ReadEntry(archive, ManifestName), files = ReadEntry(archive, HashesName), signature = ReadSignature(zip);
+        bool valid = false;
+        if (update != null && files != null && signature != null) {
+            try {
+                using ECDsa key = ECDsa.Create();
+                key.ImportSubjectPublicKeyInfo(Convert.FromBase64String(UpdateKey.PublicKey), out _);
+                valid = key.VerifyData(UpdateKey.Message(update, files), Convert.FromBase64String(System.Text.Encoding.ASCII.GetString(signature).Trim()),
+                    HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
+            } catch (Exception ex) when (ex is FormatException or CryptographicException) {
+                valid = false;
+            }
+        }
+        if (!valid) {
+            EventLog.Write("update", $"rejected {Path.GetFileName(zip)}: signature {(signature == null ? "missing" : "invalid")}");
+            throw new RejectedException($"\"{Path.GetFileName(zip)}\" is not signed by the MapleStory 2 Offline developer, or it was changed " +
+                                        "after signing. It was not installed and nothing was changed.\n\nGet updates only from the official release page.");
+        }
+
+        Manifest? signed = JsonSerializer.Deserialize<Manifest>(update!, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (signed == null || signed.Version != manifest.Version || signed.MinVersion != manifest.MinVersion) {
+            throw new RejectedException($"\"{Path.GetFileName(zip)}\" changed while it was being checked. It was not installed.");
+        }
+        return signed;
+    }
+
+    private const string SignaturePrefix = "MS2OFFLINE-SIG-1:";
+
+    /// <summary>The base64 signature from the zip comment ("MS2OFFLINE-SIG-1:&lt;base64&gt;"), or null.</summary>
+    private static byte[]? ReadSignature(string zip) {
+        try {
+            using FileStream stream = File.OpenRead(zip);
+            int tail = (int) Math.Min(stream.Length, 22 + 65535);
+            var buffer = new byte[tail];
+            stream.Seek(-tail, SeekOrigin.End);
+            stream.ReadExactly(buffer);
+            for (int i = tail - 22; i >= 0; i--) { // end-of-central-directory record, searched from the end
+                if (buffer[i] == 0x50 && buffer[i + 1] == 0x4B && buffer[i + 2] == 0x05 && buffer[i + 3] == 0x06) {
+                    int length = buffer[i + 20] | buffer[i + 21] << 8;
+                    if (i + 22 + length != tail) {
+                        continue; // not the real record (the bytes appeared inside the comment or data)
+                    }
+                    string comment = System.Text.Encoding.ASCII.GetString(buffer, i + 22, length);
+                    return comment.StartsWith(SignaturePrefix) ? System.Text.Encoding.ASCII.GetBytes(comment[SignaturePrefix.Length..]) : null;
+                }
+            }
+        } catch (IOException) {
+            // unreadable: treated as unsigned
+        }
+        return null;
+    }
+
+    private static byte[]? ReadEntry(ZipArchive archive, string name) {
+        ZipArchiveEntry? entry = archive.GetEntry(name);
+        if (entry == null || entry.Length > 64L * 1024 * 1024) {
+            return null;
+        }
+        using Stream stream = entry.Open();
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return buffer.ToArray();
     }
 
     private static Manifest? ReadManifest(string zip) {

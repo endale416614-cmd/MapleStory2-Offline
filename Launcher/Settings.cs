@@ -44,6 +44,13 @@ internal sealed class Settings {
     public bool UnlimitedDungeonClears { get; private init; }
     /// <summary>Grinding rates from offline-grind.json: scaled monster exp, more loot, upgrade-material drops.</summary>
     public bool GrindRates { get; private init; }
+    /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
+    public bool MailNeverExpires { get; private init; }
+    /// <summary>
+    /// Online update check when Play is pressed: "ask" (offer the newer version), "always" (install it without asking)
+    /// or "off" (only manual updates). Skipped silently without internet.
+    /// </summary>
+    public string AutoUpdate { get; private init; } = "off";
     /// <summary>Writes a plain-text report of every session to the desktop for bug reports (on unless DebugReports=false).</summary>
     public bool DebugReports { get; private init; } = true;
 
@@ -77,6 +84,12 @@ internal sealed class Settings {
             DungeonAllDrops = Flag(values, "DungeonAllDrops", false),
             UnlimitedDungeonClears = Flag(values, "UnlimitedDungeonClears", false),
             GrindRates = Flag(values, "GrindRates", false),
+            MailNeverExpires = Flag(values, "MailNeverExpires", false),
+            AutoUpdate = (values.GetValueOrDefault("AutoUpdate") ?? defaults.AutoUpdate).Trim().ToLowerInvariant() switch {
+                "ask" or "true" or "yes" or "on" => "ask",
+                "always" or "auto" or "silent" => "always",
+                _ => "off",
+            },
             DebugReports = Flag(values, "DebugReports", true),
             BackupsToKeep = int.TryParse(values.GetValueOrDefault("BackupsToKeep"), out int keep) ? keep : defaults.BackupsToKeep,
         };
