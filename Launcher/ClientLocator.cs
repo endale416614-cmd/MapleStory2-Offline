@@ -14,6 +14,8 @@ internal static class ClientLocator {
     private const string GameExe = "MapleStory2.exe";
     private const string Proxy = "NxCharacter64.dll";
     private const string Backup = "NxCharacter64.dll.bak";
+    /// <summary>sha256 of the game's own NxCharacter64.dll (Steam release, final NA version).</summary>
+    public const string OriginalProxySha256 = "E742CA44B24AAD0787D73C5DA530EED16FA945BD539B1AB00ED0408AB69D0949";
 
     /// <summary>The client's x64 folder, or null. Order: the saved choice, then every Steam library.</summary>
     public static string? Find(string? saved) {
@@ -92,7 +94,12 @@ internal static class ClientLocator {
             string proxy = Path.Combine(clientDir, Proxy), backup = Path.Combine(clientDir, Backup);
             string patchedProxy = Path.Combine(patchDir, Proxy);
             if (!File.Exists(backup) && File.Exists(proxy) && Hash(proxy) != Hash(patchedProxy)) {
-                File.Copy(proxy, backup); // the game's original, restored by uninstalling the patch
+                // Keep whatever is there (normally the game's original) so uninstalling can put it back.
+                string current = Hash(proxy);
+                if (current != OriginalProxySha256) {
+                    EventLog.Write("patch", $"client NxCharacter64.dll is not the original (sha256 {current[..16]}); kept as .bak");
+                }
+                File.Copy(proxy, backup);
             }
             foreach (string dll in new[] { "AgarciumClient.dll", Proxy }) {
                 string source = Path.Combine(patchDir, dll), target = Path.Combine(clientDir, dll);
@@ -106,13 +113,44 @@ internal static class ClientLocator {
         }
     }
 
+    /// <summary>
+    /// Uninstall: puts the game's own DLL back (only if the current one is this patch) and removes the patch files.
+    /// Returns false when Windows refused access.
+    /// </summary>
+    public static bool RemovePatch(string clientDir, string patchDir) {
+        try {
+            string proxy = Path.Combine(clientDir, Proxy), backup = Path.Combine(clientDir, Backup);
+            if (File.Exists(backup) && (!File.Exists(proxy) || Hash(proxy) == Hash(Path.Combine(patchDir, Proxy)))) {
+                File.Copy(backup, proxy, true);
+                File.Delete(backup);
+            }
+            string agarcium = Path.Combine(clientDir, "AgarciumClient.dll");
+            if (File.Exists(agarcium) && Hash(agarcium) == Hash(Path.Combine(patchDir, "AgarciumClient.dll"))) {
+                File.Delete(agarcium);
+            }
+            return true;
+        } catch (UnauthorizedAccessException) {
+            return false;
+        }
+    }
+
+    /// <summary>"pristine", "patched", "modified" (neither original nor this patch) or "missing".</summary>
+    public static string ProxyState(string clientDir, string patchDir) {
+        string proxy = Path.Combine(clientDir, Proxy);
+        if (!File.Exists(proxy)) {
+            return "missing";
+        }
+        string hash = Hash(proxy);
+        return hash == OriginalProxySha256 ? "pristine" : hash == Hash(Path.Combine(patchDir, Proxy)) ? "patched" : "modified";
+    }
+
     /// <summary>Runs "--install-patch" as administrator (game folders under Program Files are write-protected).</summary>
-    public static bool InstallPatchElevated(string clientDir) {
+    public static bool InstallPatchElevated(string clientDir, string mode = "--install-patch") {
         try {
             using Process? process = Process.Start(new ProcessStartInfo(Environment.ProcessPath!) {
                 UseShellExecute = true,
                 Verb = "runas",
-                ArgumentList = { "--install-patch", clientDir },
+                ArgumentList = { mode, clientDir },
             });
             process?.WaitForExit();
             return process?.ExitCode == 0;

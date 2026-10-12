@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using System.Globalization;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace MapleStory2Offline;
@@ -13,6 +13,9 @@ internal sealed class LauncherForm : Form {
     private const int WEB_PORT = 4000;
     private const int WORLD_GRPC_PORT = 21001;
     private const string GAME_EXE = "MapleStory2";
+    private const string Title = "MapleStory 2 (Offline)";
+    private static readonly TimeSpan WindowTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan SaveWait = TimeSpan.FromSeconds(60);
 
     private readonly Settings settings;
     private readonly ServerHost host;
@@ -28,7 +31,7 @@ internal sealed class LauncherForm : Form {
 
         using Stream iconStream = typeof(LauncherForm).Assembly.GetManifestResourceStream("app.ico")!;
         Icon = new Icon(iconStream);
-        Text = "MapleStory 2 (Offline)";
+        Text = Title;
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(440, 132);
@@ -91,13 +94,21 @@ internal sealed class LauncherForm : Form {
 
     private async Task RunAsync() {
         CancellationToken token = cancel.Token;
+        var updates = new UpdateInstaller(settings);
         string? error = null;
         try {
+            EventLog.Init(settings);
             if (Process.GetProcessesByName(GAME_EXE).Length > 0) {
-                throw new InvalidOperationException("MapleStory 2 is already running.");
+                throw new InvalidOperationException("MapleStory 2 is already running. Close it first.");
             }
 
-            if (await InstallUpdatesAsync()) {
+            if (updates.RecoverInterrupted() is { } recovered) {
+                report?.Problem(recovered);
+                Hide();
+                MessageBox.Show(recovered, Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Show();
+            }
+            if (await InstallUpdatesAsync(updates)) {
                 return; // the launcher itself was updated and restarted
             }
             if (!LocateClient()) {
@@ -107,12 +118,13 @@ internal sealed class LauncherForm : Form {
                 return;
             }
 
-            // Servers someone started by hand (Start-Server.bat) are reused and left running.
-            bool ownServers = !ServerHost.IsListening(LOGIN_PORT);
-            if (ownServers) {
-                SetStatus("Backing up your save...");
-                await Task.Run(BackupSave, token);
-                host.PrepareLogs();
+            ClaimPorts();
+
+            SetStatus("Backing up your save...");
+            await Task.Run(BackupSave, token);
+            host.PrepareLogs();
+            File.Delete(host.SaveStatusFile);
+            try {
                 SetStatus("Starting the world...");
                 host.Start("World");
                 await host.WaitAsync(() => ServerHost.IsListening(WORLD_GRPC_PORT), "the world server", TimeSpan.FromMinutes(2), token);
@@ -126,51 +138,76 @@ internal sealed class LauncherForm : Form {
                 SetStatus("Loading Maple World...");
                 host.Start("Game");
                 await host.WaitAsync(() => host.LogContains("World", "has become active"), "the game server", TimeSpan.FromMinutes(4), token);
-                report?.Step("Servers started");
-            } else {
-                report?.Step("Servers were already running (started by hand); their logs are not from this session");
+            } catch (Exception ex) when (ex is not OperationCanceledException) {
+                host.StopAll();
+                EventLog.Write("error", "servers failed to start: " + ex.Message);
+                OfferRollback(updates, ex.Message);
+                throw;
             }
+            report?.Step("Servers started");
+            EventLog.Write("servers", "started");
 
             SetStatus("Launching MapleStory 2...");
             InstallClientPatch();
             SetTestKitMod(settings.TestKit);
             using Process game = LaunchGame();
             report?.Step("Game started");
+            EventLog.Write("game", "started");
             await WaitForWindowAsync(game, token);
-            report?.Step(game.HasExited ? "Game closed before its window opened" : "Game window opened");
             Hide();
 
             // The game may hand off to helper processes, so wait for every MapleStory2.exe to close.
-            DateTime lastSeenRunning = DateTime.Now;
             var reportedStops = new HashSet<string>();
             while (Process.GetProcessesByName(GAME_EXE).Length > 0) {
-                lastSeenRunning = DateTime.Now;
                 foreach (string server in host.StoppedServers().Where(reportedStops.Add)) {
                     report?.Problem($"The {server} server stopped while the game was running");
+                    EventLog.Write("error", $"{server} server stopped during play");
                 }
                 await Task.Delay(1000);
             }
-            report?.GameExited(game.HasExited ? game.ExitCode : null);
+            int? exitCode = game.HasExited ? game.ExitCode : null;
+            report?.GameExited(exitCode);
+            EventLog.Write("game", $"closed exit={exitCode?.ToString() ?? "?"}");
 
-            if (ownServers) {
-                Show();
-                SetStatus("Saving your progress...");
-                bool? saved = await WaitForSaveAsync(lastSeenRunning);
-                if (saved == true) {
+            Show();
+            SetStatus("Saving your progress...");
+            SaveOutcome outcome = await WaitForSaveAsync();
+            switch (outcome) {
+                case SaveOutcome.Committed:
                     report?.Step("Progress saved");
-                } else if (saved == false) {
-                    report?.Problem("Could not confirm that the character was saved after the game closed");
-                } else {
+                    updates.MarkVerified();
+                    break;
+                case SaveOutcome.NothingToSave:
                     report?.Step("Closed before entering the world (nothing to save)");
-                }
-                SetStatus("Closing...");
-                host.StopAll();
+                    updates.MarkVerified();
+                    break;
+                case SaveOutcome.Failed:
+                    report?.Problem("The game server reported that saving your progress FAILED; the previous save is kept");
+                    break;
+                case SaveOutcome.Unconfirmed:
+                    report?.Problem("The save was not confirmed; the servers were closed at your request");
+                    break;
+            }
+            EventLog.Write("save", outcome.ToString());
+            if (outcome == SaveOutcome.Failed) {
+                Hide();
+                MessageBox.Show("Your progress from this session could not be saved. Your previous save was kept.\n\n" +
+                                "Please use \"MapleStory 2 Offline - Export Diagnostics\" in the Start menu and send the file to the developer.",
+                    Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            SetStatus("Closing...");
+            host.StopAll();
+            EventLog.Write("servers", "stopped");
+            if (SaveBackup.Checkpoint(settings.SaveFile) is { } checkpointProblem) {
+                EventLog.Write("save", "could not fold the write-ahead log into the save (kept beside it): " + checkpointProblem);
             }
         } catch (OperationCanceledException) {
             report?.Step("Start-up cancelled");
+            EventLog.Write("cancel", "start-up cancelled");
             host.StopAll();
         } catch (Exception ex) {
             report?.Problem(ex.Message);
+            EventLog.Write("error", ex.Message);
             host.StopAll();
             error = ex.Message;
         }
@@ -183,10 +220,9 @@ internal sealed class LauncherForm : Form {
 
         Hide();
         if (error != null) {
-            MessageBox.Show(error + ReportHint(reportPath), "MapleStory 2 (Offline)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(error + ReportHint(reportPath), Title, MessageBoxButtons.OK, MessageBoxIcon.Error);
         } else if (report is { HasProblems: true } && reportPath != null) {
-            MessageBox.Show("Something went wrong during this session." + ReportHint(reportPath),
-                "MapleStory 2 (Offline)", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Something went wrong during this session." + ReportHint(reportPath), Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         finished = true;
@@ -195,12 +231,36 @@ internal sealed class LauncherForm : Form {
 
     private static string ReportHint(string? reportPath) => reportPath == null ? "" :
         $"\n\nA report was saved in the \"{SessionReport.FolderName}\" folder on your desktop:\n{Path.GetFileName(reportPath)}\n\n" +
-        "Please send that file to the developer so the problem can be fixed.";
+        "Please send that file to the developer (or use \"Export Diagnostics\" in the Start menu).";
 
     private void SetStatus(string text) => status.Text = text;
 
     /// <summary>
-    /// Consistent copy of the save (SQLite online backup) before the servers open it; keeps the newest few.
+    /// Stops servers this installation left running and refuses to start when another program holds a port.
+    /// Nothing outside this installation is ever terminated.
+    /// </summary>
+    private void ClaimPorts() {
+        List<PortGuard.Listener> listeners = PortGuard.Listeners();
+        List<PortGuard.Listener> foreign = listeners.Where(listener => !PortGuard.IsOwnServer(listener, settings)).ToList();
+        if (foreign.Count > 0) {
+            string list = string.Join("\n", foreign.Select(listener => $"  port {listener.Port}: {listener.Name} (process {listener.ProcessId})"));
+            EventLog.Write("error", "ports in use: " + list.Replace("\n", ";"));
+            throw new InvalidOperationException(
+                $"Another program is using a network port MapleStory 2 Offline needs:\n{list}\n\n" +
+                "Close that program (or another copy of MapleStory 2 Offline) and start again.");
+        }
+        List<PortGuard.Listener> leftovers = listeners.Where(listener => PortGuard.IsOwnServer(listener, settings)).ToList();
+        if (leftovers.Count > 0) {
+            SetStatus("Closing servers left over from last time...");
+            EventLog.Write("startup", "stopping leftover servers of this installation: " + string.Join(", ", leftovers.Select(l => l.Name).Distinct()));
+            report?.Step("Stopped servers left over from a previous run");
+            PortGuard.StopOwnServers(leftovers);
+        }
+    }
+
+    /// <summary>
+    /// Consistent copy of the save (SQLite online backup) before the servers open it, checked with
+    /// PRAGMA integrity_check; keeps the newest few. A damaged copy is deleted and reported.
     /// </summary>
     private void BackupSave() {
         if (!File.Exists(settings.SaveFile) || settings.BackupsToKeep <= 0) {
@@ -209,13 +269,13 @@ internal sealed class LauncherForm : Form {
 
         Directory.CreateDirectory(settings.BackupDir);
         string target = Path.Combine(settings.BackupDir, $"game-server-{DateTime.Now:yyyyMMdd-HHmmss}.db");
-        using (var source = new SqliteConnection($"Data Source={settings.SaveFile}"))
-        using (var destination = new SqliteConnection($"Data Source={target};Pooling=False")) {
-            source.Open();
-            destination.Open();
-            source.BackupDatabase(destination);
+        string? problem = SaveBackup.Create(settings.SaveFile, target);
+        if (problem != null) {
+            report?.Problem("The save backup failed its check and was discarded: " + problem);
+            EventLog.Write("backup", "FAILED " + problem);
+        } else {
+            EventLog.Write("backup", $"ok {Path.GetFileName(target)}");
         }
-        SqliteConnection.ClearAllPools();
 
         foreach (FileInfo old in new DirectoryInfo(settings.BackupDir).GetFiles("game-server-*.db")
                      .OrderByDescending(file => file.Name).Skip(settings.BackupsToKeep)) {
@@ -224,13 +284,21 @@ internal sealed class LauncherForm : Form {
     }
 
     /// <summary>Installs pending update zips. Returns true when the launcher restarted itself.</summary>
-    private async Task<bool> InstallUpdatesAsync() {
-        var installer = new UpdateInstaller(settings);
+    private async Task<bool> InstallUpdatesAsync(UpdateInstaller installer) {
         if (!installer.Pending().Any()) {
             return false;
         }
-        SetStatus("Checking updates...");
-        List<UpdateInstaller.Result> installed = await Task.Run(() => installer.InstallPending(text => Invoke(() => SetStatus(text))));
+        SetStatus("Installing update...");
+        List<UpdateInstaller.Result> installed;
+        try {
+            installed = await Task.Run(() => installer.InstallPending(text => Invoke(() => SetStatus(text))));
+        } catch (Exception ex) {
+            report?.Problem(ex.Message);
+            Hide();
+            MessageBox.Show(ex.Message, Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            Show();
+            return false; // keep playing the installed version
+        }
         foreach (UpdateInstaller.Result result in installed) {
             report?.Step($"Updated to version {result.Version}");
         }
@@ -241,7 +309,7 @@ internal sealed class LauncherForm : Form {
         string notes = string.Join("\n", installed.Where(r => !string.IsNullOrWhiteSpace(r.Notes)).Select(r => $"{r.Version}: {r.Notes}"));
         Hide();
         MessageBox.Show($"Updated to version {installed[^1].Version}." + (notes.Length > 0 ? $"\n\n{notes}" : ""),
-            "MapleStory 2 (Offline)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
         if (!installed.Any(r => r.LauncherReplaced)) {
             Show();
             return false;
@@ -252,6 +320,23 @@ internal sealed class LauncherForm : Form {
         finished = true;
         Close();
         return true;
+    }
+
+    /// <summary>After an update that has not yet started successfully: offer to go back to the previous version.</summary>
+    private void OfferRollback(UpdateInstaller updates, string reason) {
+        if (updates.UnverifiedUpdate() is not { } last) {
+            return;
+        }
+        Hide();
+        DialogResult answer = MessageBox.Show(
+            $"The game did not start after updating to version {last.Version}:\n{reason}\n\n" +
+            $"Go back to version {last.PreviousVersion}? Your save from before the update is restored too.",
+            Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+        if (answer == DialogResult.Yes) {
+            string result = updates.RollBackLastUpdate();
+            report?.Step(result);
+            MessageBox.Show(result, Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
     }
 
     /// <summary>Finds the game (saved choice, Steam libraries) or asks the player once; remembers the answer.</summary>
@@ -288,6 +373,7 @@ internal sealed class LauncherForm : Form {
                 "Without it the game tries to reach Nexon's closed servers. Start the launcher again and allow the Windows prompt.");
         }
         report?.Step("Client patch installed");
+        EventLog.Write("patch", "client patch installed into " + settings.ClientDir);
     }
 
     /// <summary>The test-kit client mod is only loaded while TestKit=true (mod.json vs mod.json.disabled).</summary>
@@ -317,55 +403,160 @@ internal sealed class LauncherForm : Form {
         return Process.Start(info) ?? throw new InvalidOperationException("MapleStory 2 could not be started.");
     }
 
-    private static async Task WaitForWindowAsync(Process game, CancellationToken token) {
+    /// <summary>
+    /// Waits for the game window. A game that closes during start-up, or shows no window in time, is reported
+    /// visibly (the player may keep waiting or stop the game this launcher started).
+    /// </summary>
+    private async Task WaitForWindowAsync(Process game, CancellationToken token) {
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(90)) {
+        while (true) {
             game.Refresh();
-            if (game.HasExited || game.MainWindowHandle != IntPtr.Zero) {
+            if (game.HasExited) {
+                EventLog.Write("error", $"game closed during start-up exit={game.ExitCode}");
+                throw new InvalidOperationException(
+                    $"MapleStory 2 closed while starting (exit code {game.ExitCode}). The offline patch or the game files may be damaged.");
+            }
+            if (game.MainWindowHandle != IntPtr.Zero) {
+                report?.Step("Game window opened");
+                EventLog.Write("game", "window opened");
                 return;
+            }
+            if (stopwatch.Elapsed > WindowTimeout) {
+                EventLog.Write("error", "game window did not appear in time");
+                Hide();
+                DialogResult answer = MessageBox.Show(
+                    "MapleStory 2 has not opened a window yet.\n\nKeep waiting? (No closes the game this launcher started.)",
+                    Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                Show();
+                if (answer == DialogResult.No) {
+                    try {
+                        game.Kill(entireProcessTree: true);
+                    } catch (InvalidOperationException) {
+                        // already closed
+                    }
+                    throw new TimeoutException("MapleStory 2 did not open a window and was closed.");
+                }
+                stopwatch.Restart();
             }
             await Task.Delay(500, token);
         }
     }
 
-    /// <summary>
-    /// The game server saves your character when the client disconnects. Wait until that save
-    /// (character LastModified after the game closed) is in the save file before stopping it.
-    /// </summary>
-    /// <returns>true when saved, false when the save could not be confirmed, null when there was nothing to save.</returns>
-    private async Task<bool?> WaitForSaveAsync(DateTime threshold) {
-        // The game server logs this when the client drops, right before it saves the character.
-        var stopwatch = Stopwatch.StartNew();
-        while (!host.LogContains("Game", "Disconnected GameSession")) {
-            if (stopwatch.Elapsed > TimeSpan.FromSeconds(10)) {
-                return null; // never entered the world (closed at character select): nothing to save
-            }
-            await Task.Delay(500);
-        }
+    private enum SaveOutcome { Committed, Failed, NothingToSave, Unconfirmed }
 
-        stopwatch.Restart();
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(30)) {
-            if (LastCharacterSave() is { } saved && saved >= threshold) {
-                await Task.Delay(1500); // let the rest of the logout work finish
-                return true;
+    private sealed record SaveStatus(long CharacterId, long AccountId, string Result, string? Error, string? Utc);
+
+    /// <summary>
+    /// The game server writes save-status.json: "active" once a character is in the world, then "committed" or
+    /// "failed" for the save made when the client leaves. The servers keep running until the save is confirmed or
+    /// the player decides to close them.
+    /// </summary>
+    private async Task<SaveOutcome> WaitForSaveAsync() {
+        var stopwatch = Stopwatch.StartNew();
+        while (true) {
+            SaveStatus? state = ReadSaveStatus();
+            if (state == null && stopwatch.Elapsed > TimeSpan.FromSeconds(5)) {
+                return SaveOutcome.NothingToSave; // no character ever entered the world
+            }
+            if (state?.Result == "committed") {
+                return SaveOutcome.Committed;
+            }
+            if (state?.Result == "failed") {
+                EventLog.Write("save", $"failed character={state.CharacterId} error={state.Error}");
+                return SaveOutcome.Failed;
+            }
+            if (host.StoppedServers().Contains("Game")) {
+                EventLog.Write("save", "game server stopped before confirming the save");
+                return SaveOutcome.Failed;
+            }
+            if (stopwatch.Elapsed > SaveWait) {
+                Hide();
+                DialogResult answer = MessageBox.Show(
+                    "Your progress is still being saved.\n\nKeep waiting? (No closes the servers now; progress since your last save may be lost.)",
+                    Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                Show();
+                if (answer == DialogResult.No) {
+                    return SaveOutcome.Unconfirmed;
+                }
+                stopwatch.Restart();
             }
             await Task.Delay(500);
         }
-        return false;
     }
 
-    private DateTime? LastCharacterSave() {
+    private SaveStatus? ReadSaveStatus() {
         try {
-            using var connection = new SqliteConnection($"Data Source={settings.SaveFile};Mode=ReadOnly");
+            if (!File.Exists(host.SaveStatusFile)) {
+                return null;
+            }
+            using var stream = new FileStream(host.SaveStatusFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            return JsonSerializer.Deserialize<SaveStatus>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        } catch (Exception) {
+            return null; // being replaced right now: read again
+        }
+    }
+}
+
+/// <summary>Validated SQLite backups of the save.</summary>
+internal static class SaveBackup {
+    /// <summary>Online backup + PRAGMA integrity_check of the copy. Returns null when good, else the problem (copy removed).</summary>
+    public static string? Create(string source, string target) {
+        try {
+            using (var from = new SqliteConnection($"Data Source={source};Mode=ReadOnly;Pooling=False"))
+            using (var to = new SqliteConnection($"Data Source={target};Pooling=False")) {
+                from.Open();
+                to.Open();
+                from.BackupDatabase(to);
+                using SqliteCommand single = to.CreateCommand();
+                single.CommandText = "PRAGMA journal_mode=DELETE"; // the copy is one self-contained file
+                single.ExecuteNonQuery();
+            }
+            string? problem = Check(target);
+            if (problem != null) {
+                File.Delete(target);
+            }
+            return problem;
+        } catch (Exception ex) {
+            try {
+                File.Delete(target);
+            } catch (Exception) {
+                // nothing to clean
+            }
+            return ex.Message;
+        } finally {
+            SqliteConnection.ClearAllPools();
+        }
+    }
+
+    /// <summary>
+    /// After the servers are stopped (killed, so SQLite could not tidy up), folds the write-ahead log back into the save
+    /// so game-server.db alone holds all progress. Returns null when done or not needed, else the problem.
+    /// </summary>
+    public static string? Checkpoint(string path) {
+        if (!File.Exists(path) || !File.Exists(path + "-wal")) {
+            return null;
+        }
+        try {
+            using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
             connection.Open();
             using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "SELECT MAX(LastModified) FROM \"character\"";
-            return command.ExecuteScalar() is string text &&
-                   DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime value)
-                ? value
-                : null;
-        } catch (SqliteException) {
-            return null; // busy or locked: try again
+            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+            using SqliteDataReader reader = command.ExecuteReader();
+            return reader.Read() && reader.GetInt32(0) != 0 ? "the save is busy" : null;
+        } catch (Exception ex) {
+            return ex.Message;
+        } finally {
+            SqliteConnection.ClearAllPools();
         }
+    }
+
+    /// <summary>null when the database passes integrity_check, else the first problem.</summary>
+    public static string? Check(string path) {
+        using var connection = new SqliteConnection($"Data Source={path};Mode=ReadOnly;Pooling=False");
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "PRAGMA integrity_check";
+        string result = command.ExecuteScalar() as string ?? "no result";
+        return result == "ok" ? null : result;
     }
 }

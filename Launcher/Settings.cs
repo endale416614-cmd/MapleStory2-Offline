@@ -8,20 +8,29 @@ internal sealed class Settings {
     public const string DefaultsFile = "defaults.ini";
     public const string UserFile = "launcher.ini";
 
+    /// <summary>Program folder (the exe, servers, game data). Replaced by updates.</summary>
     public string Root { get; private init; } = "";
+    /// <summary>
+    /// Player data folder (save, logs, reports, launcher.ini, update backups). Installed copies use
+    /// %LOCALAPPDATA%\MapleStory 2 Offline (named in install.json); portable/dev copies use the program folder.
+    /// </summary>
+    public string DataRoot { get; private init; } = "";
+    public bool Installed { get; private init; }
+    public string InstallId { get; private init; } = "";
     public string Version { get; set; } = "dev";
     public string ServerDir => Path.Combine(Root, "Maple2");
     public string DotnetDir => Path.Combine(Root, "dotnet");
-    public string LogDir => Path.Combine(Root, "logs");
+    public string LogDir => Path.Combine(DataRoot, "logs");
+    public string ReportDir => Path.Combine(DataRoot, "reports");
     public string PatchDir => Path.Combine(Root, "client-patch");
     /// <summary>Client data mods (XML replacements) loaded by the client patch, one folder per mod.</summary>
     public string ModsDir => Path.Combine(Root, "client-mods");
-    public string SaveDir => Path.Combine(Root, "SaveData");
+    public string SaveDir => Path.Combine(DataRoot, "SaveData");
     public string SaveFile => Path.Combine(SaveDir, "game-server.db");
     public string BackupDir => Path.Combine(SaveDir, "backups");
     /// <summary>Game data built from the client; in releases it lives apart from the save so updates can replace it.</summary>
     public string GameDataDir => Path.Combine(Root, "GameData");
-    public string UpdateDir => Path.Combine(Root, "updates");
+    public string UpdateDir => Path.Combine(DataRoot, "updates");
     public int BackupsToKeep { get; private init; } = 10;
     /// <summary>Server build to run: Release (normal rules) or Debug (developer cheats).</summary>
     public string ServerConfiguration { get; private init; } = "Release";
@@ -45,15 +54,19 @@ internal sealed class Settings {
 
     public static Settings Load() {
         string root = Path.GetFullPath(AppContext.BaseDirectory);
+        (string dataRoot, bool installed, string installId) = InstallInfo.Read(root);
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         ReadInto(values, Path.Combine(root, DefaultsFile));
-        ReadInto(values, Path.Combine(root, UserFile));
+        ReadInto(values, Path.Combine(dataRoot, UserFile));
         root = values.GetValueOrDefault("Root", root);
 
         string versionFile = Path.Combine(root, "VERSION");
         var defaults = new Settings();
         return new Settings {
             Root = root,
+            DataRoot = dataRoot,
+            Installed = installed,
+            InstallId = installId,
             Version = File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : defaults.Version,
             ClientDir = values.GetValueOrDefault("ClientDir", defaults.ClientDir),
             Username = values.GetValueOrDefault("Username", defaults.Username),
@@ -71,7 +84,8 @@ internal sealed class Settings {
 
     /// <summary>Stores one choice in the player's launcher.ini (adds or replaces the line, keeps the rest).</summary>
     public void SaveUserValue(string key, string value) {
-        string path = Path.Combine(Root, UserFile);
+        Directory.CreateDirectory(DataRoot);
+        string path = Path.Combine(DataRoot, UserFile);
         List<string> lines = File.Exists(path) ? File.ReadAllLines(path).ToList() : ["# Your own settings. They override defaults.ini and are kept by updates."];
         int index = lines.FindIndex(line => line.TrimStart().StartsWith(key + "=", StringComparison.OrdinalIgnoreCase));
         if (index >= 0) {

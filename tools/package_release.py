@@ -4,7 +4,8 @@
 
 Creates in publish/:
   MapleStory2-Offline-<ver>/            the release folder (what players get)
-  MapleStory2-Offline-<ver>.zip         full download
+  MapleStory2-Offline-Setup-<ver>.exe   installer for players (launcher + program zip appended)
+  MapleStory2-Offline-<ver>.zip         full download (portable: extract and run)
   MapleStory2-Offline-Update-<ver>.zip  only with --base: every file changed since that release + update.json
                                         (cumulative: works on the base version and every patch after it)
   MapleStory2-Offline-<ver>/files.json  sha256 of every release file; keep it, the next --base needs it
@@ -43,7 +44,7 @@ TestKit=false
 TriggerTrace=false
 """
 
-PLAYER_README = """MapleStory 2 (Offline) {version}
+PLAYER_README = r"""MapleStory 2 (Offline) {version}
 ==============================
 
 MapleStory 2 as a single-player game on your own PC. Nothing connects to the internet.
@@ -51,37 +52,42 @@ MapleStory 2 as a single-player game on your own PC. Nothing connects to the int
 You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library it is found
 automatically. Otherwise the launcher shows where to get it the first time you start.
 
-Play
-----
-1. Extract this whole folder anywhere you like (not inside the game's own folder).
-2. Double-click "MapleStory 2 Offline.exe".
-   - First start: it finds the game (or asks you once) and installs the offline patch into it.
-     Windows may ask for permission if the game is under "Program Files".
-3. Play. When you close the game, the launcher saves and closes everything by itself.
+Install and play
+----------------
+Run "MapleStory2-Offline-Setup-{version}.exe" and click Install (no administrator rights needed).
+Then start "MapleStory 2 Offline" from the desktop or the Start menu.
+  - First start: it finds the game (or asks you once) and installs the offline patch into it.
+    Windows may ask for permission if the game is under "Program Files".
+  - When you close the game, the launcher saves and closes everything by itself.
+(Portable alternative: extract the .zip anywhere and run "MapleStory 2 Offline.exe".)
 
-Your character is stored in the SaveData folder. The launcher backs it up on every start
-(SaveData\\backups, newest 10 kept).
+Your character is stored in %LOCALAPPDATA%\MapleStory 2 Offline\SaveData (portable copy: the
+SaveData folder). It is backed up on every start (SaveDataackups, newest 10 kept).
 
 Updates
 -------
-Download the update zip and copy it, as it is (do not open it), into this folder.
-Start the game as usual - the launcher installs it, keeps a backup and tells you the new version.
-Your save and your settings are never changed by an update.
+Start menu > "MapleStory 2 Offline - Install Update" and pick the downloaded update zip.
+(Or copy the zip, unopened, into the program folder and start the game.) The launcher checks the
+file, backs up your save, and undoes everything if something goes wrong. Your save and settings
+are never replaced.
 
 Problems?
 ---------
-After every session a report is written to the folder "MapleStory 2 Offline Reports" on your
-desktop (file names ending in "- PROBLEM" when something went wrong). Send that file with your
-bug report. Your Windows user name and PC name are removed from it.
+Start menu > "MapleStory 2 Offline - Export Diagnostics" saves one zip file on your desktop - send
+that file with your bug report. It works even when the game does not start. Your Windows user
+name and PC name are removed; your save is only included if you say yes.
+After every session a short report is also written to "MapleStory 2 Offline Reports" on the desktop.
 
 Settings
 --------
-defaults.ini lists the options. To change one, create launcher.ini next to the launcher and put
-the line there, for example:  GrindRates=false
+defaults.ini lists the options. To change one, put the line in launcher.ini in your data folder
+(%LOCALAPPDATA%\MapleStory 2 Offline), for example:  GrindRates=false
   GrindRates             faster exp, more drops, upgrade materials from monsters
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
   ClientDir              the game's x64 folder, if you moved the game
+
+Uninstall: Start menu > "Uninstall MapleStory 2 Offline" (asks before deleting your saves).
 
 This is a non-commercial fan project, not affiliated with NEXON. MapleStory 2 is a trademark of
 NEXON Korea Corporation. See LICENSES for the licenses of the included software.
@@ -187,6 +193,19 @@ def assemble(stage, version):
     source.close()
 
 
+SETUP_MAGIC = b"MS2OFFLINE-PAYLOAD-1"
+
+
+def make_setup(launcher, payload_zip, target):
+    """Setup.exe = the launcher with the program zip appended, then <payload length:int64 LE><magic>."""
+    with open(target, "wb") as out_file:
+        with open(launcher, "rb") as f:
+            shutil.copyfileobj(f, out_file)
+        with open(payload_zip, "rb") as f:
+            shutil.copyfileobj(f, out_file, 1 << 20)
+        out_file.write(os.path.getsize(payload_zip).to_bytes(8, "little") + SETUP_MAGIC)
+
+
 def manifest(stage):
     files = {}
     for folder, _, names in os.walk(stage):
@@ -232,6 +251,10 @@ def main():
     full_zip = os.path.join(out, f"MapleStory2-Offline-{args.version}.zip")
     print("zipping", full_zip)
     zip_folder(stage, full_zip)
+
+    setup = os.path.join(out, f"MapleStory2-Offline-Setup-{args.version}.exe")
+    print("building", setup)
+    make_setup(os.path.join(ROOT, "publish", "launcher", "MapleStory 2 Offline.exe"), full_zip, setup)
 
     if args.base:
         with open(os.path.join(args.base, "files.json"), encoding="utf-8") as f:

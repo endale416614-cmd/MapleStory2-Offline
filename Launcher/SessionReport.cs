@@ -67,10 +67,10 @@ internal sealed class SessionReport {
     /// <summary>Writes the report; never throws. Returns the file path, or null if writing failed.</summary>
     public string? Write() {
         try {
-            string text = Redact(Build());
-            string name = $"Report {started:yyyy-MM-dd HH-mm}{(HasProblems ? " - PROBLEM" : "")}.txt";
+            string text = BuildText();
+            string name = $"Report {started:yyyy-MM-dd HH-mm-ss}{(HasProblems ? " - PROBLEM" : "")}.txt";
             string? saved = null;
-            foreach (string folder in new[] { Folder, Path.Combine(settings.Root, "reports") }) {
+            foreach (string folder in new[] { Folder, settings.ReportDir }) {
                 try {
                     Directory.CreateDirectory(folder);
                     string path = Path.Combine(folder, name);
@@ -88,13 +88,17 @@ internal sealed class SessionReport {
         } catch (Exception ex) {
             // Last resort: leave the reason next to the launcher so the failure itself can be reported.
             try {
-                File.WriteAllText(Path.Combine(settings.Root, "report-error.txt"), ex.ToString());
+                Directory.CreateDirectory(settings.DataRoot);
+                File.WriteAllText(Path.Combine(settings.DataRoot, "report-error.txt"), ex.ToString());
             } catch (Exception) {
                 // nothing more we can do
             }
             return null;
         }
     }
+
+    /// <summary>The report text, redacted (also used by the diagnostics export).</summary>
+    public string BuildText() => Redact(Build());
 
     private string Build() {
         DateTime ended = DateTime.Now;
@@ -248,6 +252,7 @@ internal sealed class SessionReport {
 
     private void AppendInstall(StringBuilder text) {
         text.AppendLine($"Offline folder: {settings.Root}");
+        text.AppendLine($"Data folder   : {settings.DataRoot} ({(settings.Installed ? "installed" : "portable")}, install id {settings.InstallId})");
         string? detected = ClientLocator.Find(settings.ClientDir);
         text.AppendLine($"Game folder   : {(detected ?? "NOT FOUND")} ({(string.IsNullOrEmpty(settings.ClientDir) ? "found automatically" : "set in launcher.ini")})");
         string clientDir = detected ?? settings.ClientDir;
@@ -261,7 +266,7 @@ internal sealed class SessionReport {
         text.AppendLine($"Original DLL backup : {(File.Exists(Path.Combine(clientDir, "NxCharacter64.dll.bak")) ? "present" : "not yet (made on first start)")}");
         text.AppendLine($"Save file           : {(File.Exists(settings.SaveFile) ? $"{new FileInfo(settings.SaveFile).Length / 1024} KB" : "MISSING")}");
 
-        string ini = Path.Combine(settings.Root, "launcher.ini");
+        string ini = Path.Combine(settings.DataRoot, "launcher.ini");
         text.AppendLine("launcher.ini:");
         foreach (string line in ReadLines(ini)) {
             string trimmed = line.Trim();
@@ -334,7 +339,7 @@ internal sealed class SessionReport {
     }
 
     /// <summary>Removes the Windows user name, PC name and machine id.</summary>
-    private static string Redact(string text) {
+    public static string Redact(string text) {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (profile.Length > 3) {
             text = text.Replace(profile, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);

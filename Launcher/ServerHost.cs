@@ -25,15 +25,32 @@ internal sealed class ServerHost : IDisposable {
 
     public string LogPath(string name) => Path.Combine(settings.LogDir, $"{name.ToLowerInvariant()}.log");
 
+    private const long MaxLogBytes = 50L * 1024 * 1024;
+    private const int SessionsKept = 5;
+
+    /// <summary>Moves the last session's server logs to logs\history\&lt;time&gt; (newest 5 kept).</summary>
     public void PrepareLogs() {
         Directory.CreateDirectory(settings.LogDir);
-        string previous = Path.Combine(settings.LogDir, "previous");
-        Directory.CreateDirectory(previous);
-        foreach (string log in Directory.GetFiles(settings.LogDir, "*.log")) {
-            File.Copy(log, Path.Combine(previous, Path.GetFileName(log)), true);
-            File.Delete(log);
+        string history = Path.Combine(settings.LogDir, "history");
+        string[] last = ServerNames.Select(LogPath).Where(File.Exists).ToArray();
+        if (last.Length > 0) {
+            string target = Path.Combine(history, File.GetLastWriteTime(last[0]).ToString("yyyy-MM-dd_HH-mm-ss"));
+            Directory.CreateDirectory(target);
+            foreach (string log in last) {
+                File.Move(log, Path.Combine(target, Path.GetFileName(log)), true);
+            }
+        }
+        if (Directory.Exists(history)) {
+            foreach (DirectoryInfo old in new DirectoryInfo(history).GetDirectories().OrderByDescending(dir => dir.Name).Skip(SessionsKept)) {
+                old.Delete(true);
+            }
         }
     }
+
+    public static readonly string[] ServerNames = ["World", "Login", "Web", "Game"];
+
+    /// <summary>The save-status file the game server writes when a character enters the world or is saved on leaving.</summary>
+    public string SaveStatusFile => Path.Combine(settings.SaveDir, "save-status.json");
 
     public void Start(string name) {
         string projectDir = Path.Combine(settings.ServerDir, $"Maple2.Server.{name}");
@@ -51,6 +68,17 @@ internal sealed class ServerHost : IDisposable {
         };
         info.Environment["DOTNET_ROOT"] = settings.DotnetDir; // ASP.NET runtime lives in the local dotnet
         info.Environment["DOTNET_ENVIRONMENT"] = "Production";
+        // Offline edition: every address on this PC, whatever the player's environment inherited.
+        foreach (string variable in new[] { "BIND_IP", "LOGIN_IP", "GAME_IP", "GRPC_GAME_IP", "GRPC_WORLD_IP", "GRPC_LOGIN_IP", "WEB_IP" }) {
+            info.Environment[variable] = "127.0.0.1";
+        }
+        foreach (string variable in new[] { "ASPNETCORE_URLS", "DOTNET_URLS", "ASPNETCORE_HTTP_PORTS", "ASPNETCORE_HTTPS_PORTS" }) {
+            info.Environment.Remove(variable);
+        }
+        info.Environment["OFFLINE_MODE"] = "true";
+        info.Environment["DB_PROVIDER"] = "sqlite";
+        info.Environment["OFFLINE_SAVE_STATUS_FILE"] = SaveStatusFile;
+        info.Environment["OFFLINE_LAUNCH_ID"] = EventLog.SessionId;
         // Saves next to the launcher; release builds keep the game data in GameData so updates can replace it.
         info.Environment["SQLITE_DIR"] = settings.SaveDir;
         if (File.Exists(Path.Combine(settings.GameDataDir, "maple-data.db"))) {
@@ -66,8 +94,21 @@ internal sealed class ServerHost : IDisposable {
             AutoFlush = true,
         };
         var process = new Process { StartInfo = info, EnableRaisingEvents = true };
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) lock (log) log.WriteLine(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (log) log.WriteLine(e.Data); };
+        long written = 0;
+        void Append(string? line) {
+            if (line == null) {
+                return;
+            }
+            lock (log) {
+                if (written > MaxLogBytes) {
+                    return;
+                }
+                written += line.Length + 2;
+                log.WriteLine(written > MaxLogBytes ? "... log size limit reached, further lines not written ..." : line);
+            }
+        }
+        process.OutputDataReceived += (_, e) => Append(e.Data);
+        process.ErrorDataReceived += (_, e) => Append(e.Data);
         process.Exited += (_, _) => { lock (log) log.Dispose(); };
 
         process.Start();
