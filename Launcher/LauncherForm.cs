@@ -126,6 +126,7 @@ internal sealed class LauncherForm : Form {
             SetStatus("Backing up your save...");
             await Task.Run(BackupSave, token);
             host.PrepareLogs();
+            Directory.CreateDirectory(settings.SaveDir); // first run: no save yet, and File.Delete throws on a missing folder
             File.Delete(host.SaveStatusFile);
             try {
                 SetStatus("Starting the world...");
