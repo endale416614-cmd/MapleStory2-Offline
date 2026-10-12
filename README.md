@@ -19,9 +19,13 @@ Otherwise the launcher points you to the community downloader ([Mushroom Launche
 
 Updates install themselves: when you press Play and a newer version exists, the launcher asks and updates (your save
 is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
-Start menu → **MapleStory 2 Offline - Install Update**. Problems: Start menu →
-**MapleStory 2 Offline - Export Diagnostics**, and attach the file it saves on your desktop to an
-[issue](https://github.com/endale416614-cmd/MapleStory2-Offline/issues). All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
+Start menu → **MapleStory 2 Offline - Install Update**. All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
+
+### Found a bug?
+
+Report it on **[Discord](https://discord.gg/bEEc9QsRx)** (or open an [issue](https://github.com/endale416614-cmd/MapleStory2-Offline/issues)).
+Run Start menu → **MapleStory 2 Offline - Export Diagnostics** first and attach the file it saves on your desktop;
+it works even when the game does not start.
 
 > The green **Code → Download ZIP** button gives you the source code only, which cannot be played. Use the download link above.
 

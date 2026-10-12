@@ -79,6 +79,7 @@ are never replaced.
 
 Problems?
 ---------
+Report bugs on Discord: https://discord.gg/bEEc9QsRx
 Start menu > "MapleStory 2 Offline - Export Diagnostics" saves one zip file on your desktop - send
 that file with your bug report. It works even when the game does not start. Your Windows user
 name and PC name are removed; your save is only included if you say yes.
