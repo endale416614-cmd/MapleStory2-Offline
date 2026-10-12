@@ -34,8 +34,7 @@ glides) were checked on the next server tick after casting and cancelled before 
 a glide also counts as still running while the client reports Jump/Fall.
 2026-10-12: the generated Meret catalog sold every item at rarity 1; items now sell at their own default rarity
 (option ConstantId, as the server's item boxes and all original Meret entries with a rarity do). Air mounts bought
-at rarity 1 (Surfboard, Neon Hoverboard, Starsailor) were refused by the client. `tools\fix_catalog_rarity.py`
-repaired already-bought items (backup `SaveData\game-server-before-rarity-fix-*.db`).
+at rarity 1 (Surfboard, Neon Hoverboard, Starsailor) were refused by the client.
 2026-10-12 performance audit fixes: trigger and area-skill timers replayed every missed tick in a burst when a
 player re-entered a map that had been empty (field clock stops while empty) - now resume from the current time;
 trace log arguments (162 call sites) were built even with tracing off, and its dedupe only remembered one message per

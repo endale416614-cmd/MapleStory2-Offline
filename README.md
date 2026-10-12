@@ -60,7 +60,7 @@ and the MapleStory 2 client from Steam.
 
 1. `git clone --recurse-submodules <this repository>`
 2. Servers: `dotnet build Maple2/Maple2.sln -c Release`
-3. Game data: run the ingest tool against your own client (see [docs/OFFLINE-EDITION.md](docs/OFFLINE-EDITION.md)).
+3. Game data: run the ingest tool (`Maple2/Maple2.File.Ingest`) against your own client.
 4. Client patch: build `_dl/Agarcium/Agarcium.sln` (Release, x64) and copy the two DLLs to `client-patch/`.
 5. Launcher: `dotnet publish Launcher/MapleStory2Offline.csproj -c Release -o .`
 6. Copy `launcher.ini.example` to `launcher.ini` and set `ClientDir` if your Steam library is not the default one.
