@@ -1,21 +1,17 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Only the latest release receives fixes. Fixes are shipped as a new release or an update file on the
+[Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases) page.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+## How the game is meant to be isolated
 
-## Reporting a Vulnerability
+All servers listen on `127.0.0.1` only, and the client patch blocks every connection that does not go to this PC.
+A way to reach the game servers from another computer, to make the client connect elsewhere, or to make an update
+file install something outside the program folder counts as a security problem.
 
-Use this section to tell people how to report a vulnerability.
+## Reporting a vulnerability
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Please report it privately through this repository's **Security** tab → **Report a vulnerability**, not as a public
+issue. Include the build id (first lines of `summary.txt` in an Export Diagnostics file) and the steps to reproduce.

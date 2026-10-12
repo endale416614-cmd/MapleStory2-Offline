@@ -4,12 +4,23 @@ A single-player, fully offline edition of MapleStory 2 for Windows. It runs a lo
 [Maple2](https://github.com/MS2Community/Maple2) server emulator next to the official game client, so the game can be
 played again after the official servers closed in 2020. Nothing connects to the internet.
 
-You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library, the launcher finds it. Otherwise
-the launcher points you to the community downloader ([Mushroom Launcher](https://github.com/shuabritze/mushroom-launcher/releases),
+## Download
+
+### [⬇ Download MapleStory 2 Offline (Setup, about 530 MB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
+
+1. Run the downloaded file and click **Install**. No administrator rights are needed.
+2. Start the game from the **MapleStory 2 Offline** icon on your desktop.
+3. Windows may say "Windows protected your PC" because the file is not signed: click **More info**, then **Run anyway**.
+
+You also need the MapleStory 2 game client (about 14 GB). If it is in your Steam library, the launcher finds it.
+Otherwise the launcher points you to the community downloader ([Mushroom Launcher](https://github.com/shuabritze/mushroom-launcher/releases),
 "Install client"), or you choose any folder that holds the client. This project does not include the game client.
 
-**Players:** download the latest release zip, extract it anywhere and run `MapleStory 2 Offline.exe`. Updates are
-zip files you copy, unopened, into that folder. See `README.txt` in the release.
+Updates: download the update file, then Start menu → **MapleStory 2 Offline - Install Update**. Problems: Start menu →
+**MapleStory 2 Offline - Export Diagnostics**, and attach the file it saves on your desktop to an
+[issue](https://github.com/endale416614-cmd/MapleStory2-Offline/issues). All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
+
+> The green **Code → Download ZIP** button gives you the source code only, which cannot be played. Use the download link above.
 
 ## Features
 
