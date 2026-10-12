@@ -36,6 +36,7 @@ GrindRates=true
 DungeonAllDrops=true
 UnlimitedDungeonClears=true
 MailNeverExpires=true
+ClassDropsOnly=true
 
 # Updates: ask = offer a newer version when you press Play (needs internet, otherwise skipped),
 # always = install it without asking, off = only manual updates (Start menu > Install Update)
@@ -93,6 +94,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
   MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days)
+  ClassDropsOnly         monsters and dungeon rewards only drop gear your class can wear
   AutoUpdate             ask / always / off - online update check when you press Play
   ClientDir              the game's x64 folder, if you moved the game
 

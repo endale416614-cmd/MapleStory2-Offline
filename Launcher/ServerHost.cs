@@ -90,6 +90,7 @@ internal sealed class ServerHost : IDisposable {
         info.Environment["OFFLINE_UNLIMITED_DUNGEON_CLEARS"] = settings.UnlimitedDungeonClears ? "true" : "false";
         info.Environment["OFFLINE_GRIND"] = settings.GrindRates ? "true" : "false";
         info.Environment["OFFLINE_MAIL_NEVER_EXPIRES"] = settings.MailNeverExpires ? "true" : "false";
+        info.Environment["OFFLINE_CLASS_DROPS"] = settings.ClassDropsOnly ? "true" : "false";
 
         var log = new StreamWriter(new FileStream(LogPath(name), FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {
             AutoFlush = true,

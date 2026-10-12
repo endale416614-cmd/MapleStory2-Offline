@@ -44,6 +44,8 @@ internal sealed class Settings {
     public bool UnlimitedDungeonClears { get; private init; }
     /// <summary>Grinding rates from offline-grind.json: scaled monster exp, more loot, upgrade-material drops.</summary>
     public bool GrindRates { get; private init; }
+    /// <summary>Monsters and dungeon rewards only drop gear the player's class can wear.</summary>
+    public bool ClassDropsOnly { get; private init; }
     /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
     public bool MailNeverExpires { get; private init; }
     /// <summary>
@@ -85,6 +87,7 @@ internal sealed class Settings {
             UnlimitedDungeonClears = Flag(values, "UnlimitedDungeonClears", false),
             GrindRates = Flag(values, "GrindRates", false),
             MailNeverExpires = Flag(values, "MailNeverExpires", false),
+            ClassDropsOnly = Flag(values, "ClassDropsOnly", false),
             AutoUpdate = (values.GetValueOrDefault("AutoUpdate") ?? defaults.AutoUpdate).Trim().ToLowerInvariant() switch {
                 "ask" or "true" or "yes" or "on" => "ask",
                 "always" or "auto" or "silent" => "always",

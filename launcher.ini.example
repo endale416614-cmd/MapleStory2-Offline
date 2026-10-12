@@ -8,6 +8,7 @@ GrindRates=true
 DungeonAllDrops=true
 UnlimitedDungeonClears=true
 MailNeverExpires=true
+ClassDropsOnly=true
 
 # Online update check when you press Play: ask, always (no question) or off (manual updates only).
 AutoUpdate=ask
