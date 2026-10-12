@@ -36,3 +36,5 @@ __pycache__/
 # Third-party clones used during setup (not modified)
 _dl/minhook/
 _dl/wiki/
+install-id
+install.json
