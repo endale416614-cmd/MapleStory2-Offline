@@ -1,0 +1,16 @@
+# MapleStory 2 (Offline) launcher settings. Copy to launcher.ini to change them; remove a line to use the default.
+
+# Folder of MapleStory2.exe (the x64 folder of your Steam install).
+#ClientDir=C:\Program Files (x86)\Steam\steamapps\common\MapleStory 2\x64
+
+# Gameplay options (offline edition additions; see docs/ADAPTATIONS.md)
+GrindRates=true
+DungeonAllDrops=true
+UnlimitedDungeonClears=true
+
+# After every session a plain-text report goes to "MapleStory 2 Offline Reports" on the desktop.
+DebugReports=true
+
+# Developer options - leave off for normal play.
+TestKit=false
+TriggerTrace=false

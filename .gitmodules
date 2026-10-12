@@ -1,0 +1,8 @@
+[submodule "Maple2"]
+	path = Maple2
+	url = https://github.com/endale416614-cmd/Maple2.git
+	branch = offline
+[submodule "_dl/Agarcium"]
+	path = _dl/Agarcium
+	url = https://github.com/endale416614-cmd/Agarcium.git
+	branch = offline
