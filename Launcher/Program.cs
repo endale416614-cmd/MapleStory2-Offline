@@ -7,6 +7,24 @@ internal static class Program {
             MakeReportNow();
             return;
         }
+        if (args.Length == 2 && args[0] == "--install-patch") {
+            // Started elevated by the launcher when the game folder is write-protected.
+            Environment.Exit(ClientLocator.InstallPatch(args[1], Settings.Load().PatchDir) ? 0 : 1);
+        }
+        if (args.Contains("--apply-updates", StringComparer.OrdinalIgnoreCase)) {
+            // Maintenance/testing: install pending update zips without starting the game; result in updates\last-result.txt.
+            Settings current = Settings.Load();
+            string result;
+            try {
+                result = string.Join(Environment.NewLine, new UpdateInstaller(current).InstallPending().Select(r => $"installed {r.Version}"));
+                result = result.Length == 0 ? "nothing to install" : result;
+            } catch (Exception ex) {
+                result = "FAILED: " + ex.Message;
+            }
+            Directory.CreateDirectory(current.UpdateDir);
+            File.WriteAllText(Path.Combine(current.UpdateDir, "last-result.txt"), $"version {current.Version}{Environment.NewLine}{result}");
+            return;
+        }
 
         using var mutex = new Mutex(true, "MapleStory2Offline.Launcher", out bool first);
         if (!first) {

@@ -51,6 +51,11 @@ internal sealed class ServerHost : IDisposable {
         };
         info.Environment["DOTNET_ROOT"] = settings.DotnetDir; // ASP.NET runtime lives in the local dotnet
         info.Environment["DOTNET_ENVIRONMENT"] = "Production";
+        // Saves next to the launcher; release builds keep the game data in GameData so updates can replace it.
+        info.Environment["SQLITE_DIR"] = settings.SaveDir;
+        if (File.Exists(Path.Combine(settings.GameDataDir, "maple-data.db"))) {
+            info.Environment["SQLITE_DATA_DIR"] = settings.GameDataDir;
+        }
         info.Environment["OFFLINE_TESTKIT"] = settings.TestKit ? "true" : "false";
         info.Environment["OFFLINE_TRIGGER_TRACE"] = settings.TriggerTrace ? "true" : "false";
         info.Environment["OFFLINE_DUNGEON_ALL_DROPS"] = settings.DungeonAllDrops ? "true" : "false";

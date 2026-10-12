@@ -31,7 +31,7 @@ internal sealed class SessionReport {
 
     public SessionReport(Settings settings) {
         this.settings = settings;
-        Step($"Launcher started (version {Version})");
+        Step($"Launcher started (version {settings.Version})");
     }
 
     public static string Version => typeof(SessionReport).Assembly.GetName().Version?.ToString() ?? "?";
@@ -85,7 +85,13 @@ internal sealed class SessionReport {
                 }
             }
             return saved;
-        } catch (Exception) {
+        } catch (Exception ex) {
+            // Last resort: leave the reason next to the launcher so the failure itself can be reported.
+            try {
+                File.WriteAllText(Path.Combine(settings.Root, "report-error.txt"), ex.ToString());
+            } catch (Exception) {
+                // nothing more we can do
+            }
             return null;
         }
     }
@@ -103,7 +109,7 @@ internal sealed class SessionReport {
         text.AppendLine();
         text.AppendLine($"Session : {started:yyyy-MM-dd HH:mm} - {ended:HH:mm} ({FormatDuration(ended - started)})");
         text.AppendLine($"Result  : {(problemCount == 0 ? "no problems detected" : $"{problemCount} problem(s) detected - see below")}");
-        text.AppendLine($"Launcher: {Version}   Servers: {settings.ServerConfiguration}");
+        text.AppendLine($"Version : {settings.Version} (launcher build {Version}, servers {settings.ServerConfiguration})");
         text.AppendLine();
 
         Section(text, "What happened");
@@ -142,11 +148,12 @@ internal sealed class SessionReport {
         }
 
         Section(text, "Game client log (last 80 lines)");
-        string? clientLog = NewestFile(Path.Combine(Path.GetDirectoryName(settings.ClientDir) ?? settings.ClientDir, "ms2log"), "MS2Log*.txt");
+        string clientRoot = ClientLocator.Find(settings.ClientDir) ?? settings.ClientDir;
+        string? clientLog = NewestFile(Path.Combine(Path.GetDirectoryName(clientRoot) ?? clientRoot, "ms2log"), "MS2Log*.txt");
         text.AppendLine(clientLog == null ? "(none)" : $"{Path.GetFileName(clientLog)}:\n{Tail(clientLog, 80)}");
 
         Section(text, "Offline guard log (last 20 lines)");
-        text.AppendLine(Tail(Path.Combine(settings.ClientDir, "offline_guard.log"), 20));
+        text.AppendLine(Tail(Path.Combine(clientRoot, "offline_guard.log"), 20));
 
         text.AppendLine();
         text.AppendLine("-- end of report --");
@@ -220,7 +227,12 @@ internal sealed class SessionReport {
         foreach (string gpu in GraphicsCards()) {
             text.AppendLine($"Graphics: {gpu}");
         }
-        foreach (string drivePath in new[] { settings.Root, settings.ClientDir }.Select(folder => Path.GetPathRoot(folder)!.ToUpperInvariant()).Distinct()) {
+        foreach (string drivePath in new[] { settings.Root, ClientLocator.Find(settings.ClientDir) ?? settings.ClientDir }
+                     .Where(folder => !string.IsNullOrEmpty(folder))
+                     .Select(folder => Path.GetPathRoot(folder))
+                     .Where(rootPath => !string.IsNullOrEmpty(rootPath))
+                     .Select(rootPath => rootPath!.ToUpperInvariant())
+                     .Distinct()) {
             try {
                 var drive = new DriveInfo(drivePath);
                 text.AppendLine($"Disk {drive.Name,-4}: {drive.AvailableFreeSpace / 1024.0 / 1024 / 1024:0} GB free");
@@ -236,15 +248,17 @@ internal sealed class SessionReport {
 
     private void AppendInstall(StringBuilder text) {
         text.AppendLine($"Offline folder: {settings.Root}");
-        text.AppendLine($"Game folder   : {settings.ClientDir} (MapleStory2.exe {(File.Exists(Path.Combine(settings.ClientDir, "MapleStory2.exe")) ? "found" : "MISSING")})");
+        string? detected = ClientLocator.Find(settings.ClientDir);
+        text.AppendLine($"Game folder   : {(detected ?? "NOT FOUND")} ({(string.IsNullOrEmpty(settings.ClientDir) ? "found automatically" : "set in launcher.ini")})");
+        string clientDir = detected ?? settings.ClientDir;
         foreach (string dll in new[] { "NxCharacter64.dll", "AgarciumClient.dll" }) {
-            string installed = Path.Combine(settings.ClientDir, dll), shipped = Path.Combine(settings.PatchDir, dll);
+            string installed = Path.Combine(clientDir, dll), shipped = Path.Combine(settings.PatchDir, dll);
             string state = !File.Exists(installed) ? "MISSING"
                 : !File.Exists(shipped) ? "installed"
                 : Hash(installed) == Hash(shipped) ? "up to date" : "DIFFERENT from the shipped patch";
             text.AppendLine($"Patch {dll,-20}: {state}");
         }
-        text.AppendLine($"Original DLL backup : {(File.Exists(Path.Combine(settings.ClientDir, "NxCharacter64.dll.bak")) ? "present" : "MISSING")}");
+        text.AppendLine($"Original DLL backup : {(File.Exists(Path.Combine(clientDir, "NxCharacter64.dll.bak")) ? "present" : "not yet (made on first start)")}");
         text.AppendLine($"Save file           : {(File.Exists(settings.SaveFile) ? $"{new FileInfo(settings.SaveFile).Length / 1024} KB" : "MISSING")}");
 
         string ini = Path.Combine(settings.Root, "launcher.ini");

@@ -48,7 +48,7 @@ internal sealed class LauncherForm : Form {
             Location = new Point(100, 18),
         };
         var subtitle = new Label {
-            Text = "Offline",
+            Text = $"Offline  v{settings.Version}",
             Font = new Font("Segoe UI", 9.5f),
             ForeColor = Color.FromArgb(255, 196, 92),
             AutoSize = true,
@@ -97,6 +97,16 @@ internal sealed class LauncherForm : Form {
                 throw new InvalidOperationException("MapleStory 2 is already running.");
             }
 
+            if (await InstallUpdatesAsync()) {
+                return; // the launcher itself was updated and restarted
+            }
+            if (!LocateClient()) {
+                report?.Step("No game folder chosen");
+                finished = true;
+                Close();
+                return;
+            }
+
             // Servers someone started by hand (Start-Server.bat) are reused and left running.
             bool ownServers = !ServerHost.IsListening(LOGIN_PORT);
             if (ownServers) {
@@ -122,7 +132,7 @@ internal sealed class LauncherForm : Form {
             }
 
             SetStatus("Launching MapleStory 2...");
-            RefreshClientPatch();
+            InstallClientPatch();
             SetTestKitMod(settings.TestKit);
             using Process game = LaunchGame();
             report?.Step("Game started");
@@ -213,20 +223,71 @@ internal sealed class LauncherForm : Form {
         }
     }
 
-    /// <summary>Copies the rebuilt client patch into the game folder when it changed.</summary>
-    private void RefreshClientPatch() {
-        if (!File.Exists(Path.Combine(settings.ClientDir, "NxCharacter64.dll.bak"))) {
-            throw new InvalidOperationException(
-                $"The client patch is not installed in:\n{settings.ClientDir}\n\nWithout it the game tries to reach Nexon's closed servers.");
+    /// <summary>Installs pending update zips. Returns true when the launcher restarted itself.</summary>
+    private async Task<bool> InstallUpdatesAsync() {
+        var installer = new UpdateInstaller(settings);
+        if (!installer.Pending().Any()) {
+            return false;
+        }
+        SetStatus("Checking updates...");
+        List<UpdateInstaller.Result> installed = await Task.Run(() => installer.InstallPending(text => Invoke(() => SetStatus(text))));
+        foreach (UpdateInstaller.Result result in installed) {
+            report?.Step($"Updated to version {result.Version}");
+        }
+        if (installed.Count == 0) {
+            return false;
         }
 
-        foreach (string dll in new[] { "AgarciumClient.dll", "NxCharacter64.dll" }) {
-            string source = Path.Combine(settings.PatchDir, dll);
-            string target = Path.Combine(settings.ClientDir, dll);
-            if (File.Exists(source) && (!File.Exists(target) || !File.ReadAllBytes(source).AsSpan().SequenceEqual(File.ReadAllBytes(target)))) {
-                File.Copy(source, target, true);
-            }
+        string notes = string.Join("\n", installed.Where(r => !string.IsNullOrWhiteSpace(r.Notes)).Select(r => $"{r.Version}: {r.Notes}"));
+        Hide();
+        MessageBox.Show($"Updated to version {installed[^1].Version}." + (notes.Length > 0 ? $"\n\n{notes}" : ""),
+            "MapleStory 2 (Offline)", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        if (!installed.Any(r => r.LauncherReplaced)) {
+            Show();
+            return false;
         }
+
+        // The launcher exe itself changed: start the new one.
+        Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, WorkingDirectory = settings.Root });
+        finished = true;
+        Close();
+        return true;
+    }
+
+    /// <summary>Finds the game (saved choice, Steam libraries) or asks the player once; remembers the answer.</summary>
+    private bool LocateClient() {
+        string? found = ClientLocator.Find(settings.ClientDir);
+        if (found == null) {
+            Hide();
+            found = ClientLocator.Ask(null);
+            if (found == null) {
+                return false;
+            }
+            Show();
+        }
+        if (!string.Equals(found, settings.ClientDir, StringComparison.OrdinalIgnoreCase)) {
+            settings.ClientDir = found;
+            settings.SaveUserValue("ClientDir", found);
+        }
+        report?.Step($"Game folder: {found}");
+        return true;
+    }
+
+    /// <summary>Installs the client patch (first run) or refreshes it after an update; asks for admin rights if needed.</summary>
+    private void InstallClientPatch() {
+        if (ClientLocator.PatchInstalled(settings.ClientDir, settings.PatchDir)) {
+            return;
+        }
+        if (!ClientLocator.InstallPatch(settings.ClientDir, settings.PatchDir)) {
+            SetStatus("Installing the client patch (Windows will ask for permission)...");
+            ClientLocator.InstallPatchElevated(settings.ClientDir);
+        }
+        if (!ClientLocator.PatchInstalled(settings.ClientDir, settings.PatchDir)) {
+            throw new InvalidOperationException(
+                $"The offline patch could not be installed into the game folder:\n{settings.ClientDir}\n\n" +
+                "Without it the game tries to reach Nexon's closed servers. Start the launcher again and allow the Windows prompt.");
+        }
+        report?.Step("Client patch installed");
     }
 
     /// <summary>The test-kit client mod is only loaded while TestKit=true (mod.json vs mod.json.disabled).</summary>

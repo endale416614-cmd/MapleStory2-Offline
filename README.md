@@ -4,8 +4,12 @@ A single-player, fully offline edition of MapleStory 2 for Windows. It runs a lo
 [Maple2](https://github.com/MS2Community/Maple2) server emulator next to the official game client, so the game can be
 played again after the official servers closed in 2020. Nothing connects to the internet.
 
-You need your own copy of the MapleStory 2 client (it is still downloadable on Steam). This project does not include
-any game client files or game data.
+You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library, the launcher finds it. Otherwise
+the launcher points you to the community downloader ([Mushroom Launcher](https://github.com/shuabritze/mushroom-launcher/releases),
+"Install client"), or you choose any folder that holds the client. This project does not include the game client.
+
+**Players:** download the latest release zip, extract it anywhere and run `MapleStory 2 Offline.exe`. Updates are
+zip files you copy, unopened, into that folder. See `README.txt` in the release.
 
 ## Features
 
@@ -28,6 +32,7 @@ Every change to the original game is listed in [docs/ADAPTATIONS.md](docs/ADAPTA
 | `tools/` | data and maintenance scripts (Python) |
 | `docs/` | design notes, change log, test report, audits |
 | `launcher.ini.example` | launcher settings with their defaults |
+| `docs/RELEASING.md` | how to build releases and updates |
 
 ## Building from source
 

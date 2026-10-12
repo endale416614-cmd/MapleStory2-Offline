@@ -1,19 +1,27 @@
-﻿namespace MapleStory2Offline;
+namespace MapleStory2Offline;
 
 /// <summary>
-/// Paths and login for the offline setup. Defaults assume the launcher sits in the offline folder; any value can be
-/// overridden with "Key=Value" lines in launcher.ini next to the exe.
+/// Paths and options for the offline setup. Values come from defaults.ini (shipped, replaced by updates) and then
+/// launcher.ini (the player's own choices, never touched by updates), both "Key=Value" files next to the exe.
 /// </summary>
 internal sealed class Settings {
+    public const string DefaultsFile = "defaults.ini";
+    public const string UserFile = "launcher.ini";
+
     public string Root { get; private init; } = "";
+    public string Version { get; set; } = "dev";
     public string ServerDir => Path.Combine(Root, "Maple2");
     public string DotnetDir => Path.Combine(Root, "dotnet");
     public string LogDir => Path.Combine(Root, "logs");
     public string PatchDir => Path.Combine(Root, "client-patch");
     /// <summary>Client data mods (XML replacements) loaded by the client patch, one folder per mod.</summary>
     public string ModsDir => Path.Combine(Root, "client-mods");
-    public string SaveFile => Path.Combine(Root, "SaveData", "game-server.db");
-    public string BackupDir => Path.Combine(Root, "SaveData", "backups");
+    public string SaveDir => Path.Combine(Root, "SaveData");
+    public string SaveFile => Path.Combine(SaveDir, "game-server.db");
+    public string BackupDir => Path.Combine(SaveDir, "backups");
+    /// <summary>Game data built from the client; in releases it lives apart from the save so updates can replace it.</summary>
+    public string GameDataDir => Path.Combine(Root, "GameData");
+    public string UpdateDir => Path.Combine(Root, "updates");
     public int BackupsToKeep { get; private init; } = 10;
     /// <summary>Server build to run: Release (normal rules) or Debug (developer cheats).</summary>
     public string ServerConfiguration { get; private init; } = "Release";
@@ -30,37 +38,62 @@ internal sealed class Settings {
     /// <summary>Writes a plain-text report of every session to the desktop for bug reports (on unless DebugReports=false).</summary>
     public bool DebugReports { get; private init; } = true;
 
-    public string ClientDir { get; private init; } = @"C:\Program Files (x86)\Steam\steamapps\common\MapleStory 2\x64";
+    /// <summary>Folder of MapleStory2.exe (the client's x64 folder); found automatically when not set.</summary>
+    public string ClientDir { get; set; } = "";
     public string Username { get; private init; } = "offline";
     public string Password { get; private init; } = "offline";
 
     public static Settings Load() {
         string root = Path.GetFullPath(AppContext.BaseDirectory);
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        string ini = Path.Combine(root, "launcher.ini");
-        if (File.Exists(ini)) {
-            foreach (string line in File.ReadAllLines(ini)) {
-                int index = line.IndexOf('=');
-                if (index > 0 && !line.TrimStart().StartsWith('#')) {
-                    values[line[..index].Trim()] = line[(index + 1)..].Trim();
-                }
-            }
-        }
+        ReadInto(values, Path.Combine(root, DefaultsFile));
+        ReadInto(values, Path.Combine(root, UserFile));
+        root = values.GetValueOrDefault("Root", root);
 
+        string versionFile = Path.Combine(root, "VERSION");
         var defaults = new Settings();
         return new Settings {
-            Root = values.GetValueOrDefault("Root", root),
+            Root = root,
+            Version = File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : defaults.Version,
             ClientDir = values.GetValueOrDefault("ClientDir", defaults.ClientDir),
             Username = values.GetValueOrDefault("Username", defaults.Username),
             Password = values.GetValueOrDefault("Password", defaults.Password),
             ServerConfiguration = values.GetValueOrDefault("ServerConfiguration", defaults.ServerConfiguration),
-            TestKit = bool.TryParse(values.GetValueOrDefault("TestKit"), out bool testKit) && testKit,
-            TriggerTrace = bool.TryParse(values.GetValueOrDefault("TriggerTrace"), out bool trace) && trace,
-            DungeonAllDrops = bool.TryParse(values.GetValueOrDefault("DungeonAllDrops"), out bool allDrops) && allDrops,
-            UnlimitedDungeonClears = bool.TryParse(values.GetValueOrDefault("UnlimitedDungeonClears"), out bool clears) && clears,
-            GrindRates = bool.TryParse(values.GetValueOrDefault("GrindRates"), out bool grind) && grind,
-            DebugReports = !bool.TryParse(values.GetValueOrDefault("DebugReports"), out bool reports) || reports,
+            TestKit = Flag(values, "TestKit", false),
+            TriggerTrace = Flag(values, "TriggerTrace", false),
+            DungeonAllDrops = Flag(values, "DungeonAllDrops", false),
+            UnlimitedDungeonClears = Flag(values, "UnlimitedDungeonClears", false),
+            GrindRates = Flag(values, "GrindRates", false),
+            DebugReports = Flag(values, "DebugReports", true),
             BackupsToKeep = int.TryParse(values.GetValueOrDefault("BackupsToKeep"), out int keep) ? keep : defaults.BackupsToKeep,
         };
     }
+
+    /// <summary>Stores one choice in the player's launcher.ini (adds or replaces the line, keeps the rest).</summary>
+    public void SaveUserValue(string key, string value) {
+        string path = Path.Combine(Root, UserFile);
+        List<string> lines = File.Exists(path) ? File.ReadAllLines(path).ToList() : ["# Your own settings. They override defaults.ini and are kept by updates."];
+        int index = lines.FindIndex(line => line.TrimStart().StartsWith(key + "=", StringComparison.OrdinalIgnoreCase));
+        if (index >= 0) {
+            lines[index] = $"{key}={value}";
+        } else {
+            lines.Add($"{key}={value}");
+        }
+        File.WriteAllLines(path, lines);
+    }
+
+    private static void ReadInto(Dictionary<string, string> values, string path) {
+        if (!File.Exists(path)) {
+            return;
+        }
+        foreach (string line in File.ReadAllLines(path)) {
+            int index = line.IndexOf('=');
+            if (index > 0 && !line.TrimStart().StartsWith('#')) {
+                values[line[..index].Trim()] = line[(index + 1)..].Trim();
+            }
+        }
+    }
+
+    private static bool Flag(Dictionary<string, string> values, string key, bool fallback) =>
+        bool.TryParse(values.GetValueOrDefault(key), out bool value) ? value : fallback;
 }
