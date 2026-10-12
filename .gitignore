@@ -45,3 +45,7 @@ docs/audit/
 docs/TEST-REPORT.md
 docs/RELEASE-BLOCKERS.md
 docs/COVERAGE.md
+.github/
+docs/OFFLINE-EDITION.md
+tools/quarantine.py
+tools/fix_catalog_rarity.py
