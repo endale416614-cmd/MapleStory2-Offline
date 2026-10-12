@@ -38,7 +38,7 @@ UnlimitedDungeonClears=true
 MailNeverExpires=true
 ClassDropsOnly=true
 
-# Chat commands /godmode, /killall, /unstuck (see Cheats in README.txt)
+# Chat commands /godmode, /killall, /unstuck, /freebies (see Cheats in README.txt)
 CheatCommands=true
 
 # Updates: ask = offer a newer version when you press Play (needs internet, otherwise skipped),
@@ -108,6 +108,7 @@ Some quests or places can get stuck in this offline version. Type these in the c
   /godmode   on/off: you take no damage and every hit kills a monster
   /killall   kills every monster on the map (counts for quests, exp and drops)
   /unstuck   takes you back to Henesys (revives you first if you are dead)
+  /freebies  on/off: everything you buy is free, whatever the currency
 
 Uninstall: Start menu > "Uninstall MapleStory 2 Offline" (asks before deleting your saves).
 

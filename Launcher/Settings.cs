@@ -48,7 +48,7 @@ internal sealed class Settings {
     public bool ClassDropsOnly { get; private init; }
     /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
     public bool MailNeverExpires { get; private init; }
-    /// <summary>Chat commands /godmode, /killall and /unstuck for getting past stuck quests (on unless CheatCommands=false).</summary>
+    /// <summary>Chat commands /godmode, /killall, /unstuck and /freebies for getting past stuck quests (on unless CheatCommands=false).</summary>
     public bool CheatCommands { get; private init; } = true;
     /// <summary>
     /// Online update check when Play is pressed: "ask" (offer the newer version), "always" (install it without asking)
