@@ -1,51 +1,24 @@
-# --- Never in the repository ---------------------------------------------------
-# Game data built from the MapleStory 2 client (Nexon) and the client itself
+# Game client data (Nexon) is never in the repository
 ms2data/
 client-mods/
-docs/audit/raw_*
-docs/audit/client_item_meta.json
-docs/audit/client_missing_art.json
-docs/audit/cash_catalog.csv
-docs/audit/meret_catalog_offline.csv
 
-# Player data and machine-specific files
+# Player data and per-install files
 SaveData/
 logs/
 reports/
 launcher.ini
-client-backup/
+install-id
+install.json
 
-# Bundled runtime, build outputs and binaries (shipped in releases, not in source)
+# Runtime, build outputs and binaries (shipped in releases)
 dotnet/
 bin/
 obj/
 publish/
+client-patch/
 *.exe
 *.dll
 *.pdb
-client-patch/
-
-# Exported patch files (the same changes live in the fork repositories)
-docs/patches/
-
-# Tool caches
 __pycache__/
 *.pyc
 .vs/
-
-# Third-party clones used during setup (not modified)
-_dl/minhook/
-_dl/wiki/
-install-id
-install.json
-
-# Local test harnesses and internal test/audit reports (kept on the developer PC, not published)
-tools/tests/
-docs/audit/
-docs/TEST-REPORT.md
-docs/RELEASE-BLOCKERS.md
-docs/COVERAGE.md
-.github/
-docs/OFFLINE-EDITION.md
-tools/quarantine.py
-tools/fix_catalog_rarity.py

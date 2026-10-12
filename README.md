@@ -48,10 +48,9 @@ Every change to the original game is listed in [docs/ADAPTATIONS.md](docs/ADAPTA
 | `Launcher/` | the one-click launcher (C#, WinForms) |
 | `Maple2/` | the server emulator, fork of MS2Community/Maple2 (git submodule) |
 | `_dl/Agarcium/` | client patch source, fork of shuabritze/Agarcium (git submodule) |
-| `tools/` | data and maintenance scripts (Python) |
-| `docs/` | design notes, the list of changes to the original game, release guide |
+| `tools/` | release packaging and update signing (Python) |
+| `docs/ADAPTATIONS.md` | every change to the original game |
 | `launcher.ini.example` | launcher settings with their defaults |
-| `docs/RELEASING.md` | how to build releases and updates |
 
 ## Building from source
 
