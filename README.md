@@ -29,6 +29,8 @@ it works even when the game does not start.
 
 > The green **Code → Download ZIP** button gives you the source code only, which cannot be played. Use the download link above.
 
+**Linux:** the same servers run natively and the game runs under Proton. See [linux/README.md](linux/README.md).
+
 ## Features
 
 - One-click launcher: starts the local servers, the game, saves your progress on exit and shuts everything down.
@@ -49,6 +51,7 @@ Every change to the original game is listed in [docs/ADAPTATIONS.md](docs/ADAPTA
 | `Maple2/` | the server emulator, fork of MS2Community/Maple2 (git submodule) |
 | `_dl/Agarcium/` | client patch source, fork of shuabritze/Agarcium (git submodule) |
 | `tools/` | release packaging and update signing (Python) |
+| `linux/` | the Linux launcher: servers native on .NET 8, game under Proton (Python 3, PyQt6 window) |
 | `docs/ADAPTATIONS.md` | every change to the original game |
 | `launcher.ini.example` | launcher settings with their defaults |
 

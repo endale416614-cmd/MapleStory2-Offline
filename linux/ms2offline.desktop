@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=MapleStory 2 Offline
+Comment=MapleStory 2 as a single-player game on this PC (local servers, Proton client)
+Exec=python3 @DIR@/ms2offline-gui.py
+Icon=@HOME@/icon.png
+Terminal=false
+Categories=Game;RolePlaying;
+Keywords=MapleStory;MS2;Maple;
+StartupNotify=false
+Actions=stop;
+
+[Desktop Action stop]
+Name=Stop the servers
+Exec=@BIN@ stop

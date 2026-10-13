@@ -1,0 +1,40 @@
+# MapleStory 2 (Offline) launcher settings, Linux edition. This file is yours: updates never touch it.
+# Remove a line to use the default from defaults.ini (shipped with each release).
+
+# Folder of MapleStory2.exe (the x64 folder of your Steam install). Found automatically when not set:
+# the program folder's own "client" folder, then every Steam library (steamapps/common/MapleStory 2).
+#ClientDir=/home/you/.local/share/Steam/steamapps/common/MapleStory 2/x64
+
+# Gameplay options (offline edition additions; see docs/ADAPTATIONS.md of the project)
+GrindRates=true
+DungeonAllDrops=true
+UnlimitedDungeonClears=true
+MailNeverExpires=true
+ClassDropsOnly=true
+
+# Chat commands /godmode, /killall, /unstuck, /freebies (for quests or places you get stuck in).
+CheatCommands=true
+
+# Online update check when you press Play: ask, always (no question) or off (manual: ms2offline update).
+AutoUpdate=ask
+
+# After every session a plain-text report goes to the "reports" folder in the program folder.
+DebugReports=true
+
+# ---- Linux ----
+# Proton build for the game: a name in ~/.local/share/Steam/compatibilitytools.d, a folder, or "GE-Proton"
+# for the newest GE-Proton (umu downloads it). Default: GE-Proton10-28 when installed, else GE-Proton.
+#Proton=GE-Proton10-28
+
+# The game's Wine prefix (default: the "prefix" folder in the program folder).
+#Prefix=~/Games/MapleStory2-Offline/prefix
+
+# Extra environment for the game, KEY=VALUE pairs separated by ";" (for example a MangoHud or DXVK setting).
+#LaunchEnv=MANGOHUD=1;DXVK_HUD=fps
+
+# Shows the client patch's own console log window (debugging).
+ClientConsole=false
+
+# Developer options - leave off for normal play.
+TestKit=false
+TriggerTrace=false
