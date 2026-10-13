@@ -26,6 +26,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOTNET = os.path.join(ROOT, "dotnet", "dotnet.exe")
 SERVERS = ["World", "Login", "Web", "Game"]
 PROTECTED = ("SaveData/", "logs/", "reports/", "updates/", "launcher.ini")
+# Files a release after the --base shipped and a later one dropped: the base's files.json does not list them, so they
+# are named here to be deleted by every cumulative update (the launcher skips names that are not installed).
+RETIRED = (
+    "Maple2/offline-doctor-shop.json",  # 1.1.2 Doctor Pask shop, removed in 1.1.3
+    # Character portraits of the build PC that 1.1.0-1.1.2 shipped by mistake (exact names only; a player's own
+    # portraits get new random names, so they are never touched). The 1.1.0 ones are already in its files.json.
+    "Maple2/Maple2.Server.Web/Data/profiles/20000000004/360534ce-ba45-4e6a-a74e-fca994304ea6.png",
+)
 ENV_DROP = {"MS2_DATA_FOLDER", "SQLITE_DIR", "SQLITE_DATA_DIR", "DB_IP", "DB_PORT", "DB_USER", "DB_PASSWORD"}
 
 PLAYER_DEFAULTS = """# Default settings of this release (replaced by updates).
@@ -195,7 +203,9 @@ def assemble(stage, version):
         project = os.path.join(maple, f"Maple2.Server.{server}")
         copy(os.path.join(project, "appsettings.json"), put(f"Maple2/Maple2.Server.{server}/appsettings.json"))
         copy_tree(os.path.join(project, "bin", "Release", "net8.0"), put(f"Maple2/Maple2.Server.{server}/bin/Release/net8.0"))
-    copy_tree(os.path.join(maple, "Maple2.Server.Web", "Data"), put("Maple2/Maple2.Server.Web/Data"))
+    # Only the tracked web data (shop banner). profiles/, guildmark/, blueprint/... are written at runtime by the
+    # build PC's own game (character portraits) and must never ship.
+    copy_tree(os.path.join(maple, "Maple2.Server.Web", "Data", "system"), put("Maple2/Maple2.Server.Web/Data/system"))
     for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-testkit.json"):
         copy(os.path.join(maple, name), put(f"Maple2/{name}"))
 
@@ -287,6 +297,7 @@ def main():
             base_version = f.read().strip()
         changed = [rel for rel, digest in files.items() if base_files.get(rel) != digest]
         deleted = [rel for rel in base_files if rel not in files and not rel.startswith(PROTECTED)]
+        deleted += [rel for rel in RETIRED if rel not in files and rel not in deleted]
         update = {"version": args.version, "minVersion": base_version, "delete": deleted, "notes": args.notes}
         update_zip = os.path.join(out, f"MapleStory2-Offline-Update-{args.version}.zip")
         print(f"update {base_version} -> {args.version}: {len(changed)} changed, {len(deleted)} deleted")
