@@ -39,7 +39,8 @@ priority:
 1. 100% playable: all Epic Quests, dungeons and bosses.
 2. Korean edition: translate the Korean content and merge it with the Global edition.
 3. Quality of life: smoother systems, shaped by community feedback.
-4. Co-op: your character lives on your PC and can join a friend's or a community server, then come home with what it earned.
+4. Co-op wLAN RPG, not an MMORPG: like Stardew Valley's co-op, your character is a save on your own PC. Join a
+   friend's game over wLAN or a community server, then take your character and everything it earned back home.
 5. Modding tools for customizing and expanding your own game.
 
 Own your game. Own your character. Keep your progress. The full plan is in [VISION.md](VISION.md).

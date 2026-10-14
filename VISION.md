@@ -17,11 +17,15 @@ My goal is to make the game 100% playable and give players full control over the
 - Refine existing systems for a smoother experience.
 - Community feedback and suggestions are welcome.
 
-## 4. LAN Co-op Multiplayer
+## 4. Co-op wLAN RPG (not an MMORPG)
 
-The game already supports multiplayer through the existing emulator. My long-term goal is to improve it into something
-closer to Stardew Valley's co-op, rather than a traditional MMORPG where your character disappears when the server shuts
-down.
+This is not about turning the game back into an MMORPG. The goal is a co-op RPG you play with friends over wLAN (your
+home network) or a server you choose, the way Stardew Valley's co-op works.
+
+In an MMORPG your character lives on someone else's server and disappears when that server shuts down. Here your
+character is a save file on your own PC, and other people's games are just places you visit.
+
+The game already supports multiplayer through the existing emulator; the work is to rebuild it around these rules:
 
 - Local saves: your character and progress stay on your PC.
 - Bring your character: join a server with your offline character and return home with everything you've earned.
