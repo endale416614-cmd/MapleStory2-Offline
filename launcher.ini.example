@@ -10,7 +10,6 @@ UnlimitedDungeonClears=true
 MailNeverExpires=true
 ClassDropsOnly=true
 PetTaming=true
-EpicGear=true
 
 # Chat commands /godmode, /killall, /unstuck, /freebies (for quests or places you get stuck in).
 CheatCommands=true
