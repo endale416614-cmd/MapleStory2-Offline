@@ -92,6 +92,7 @@ internal sealed class ServerHost : IDisposable {
         info.Environment["OFFLINE_MAIL_NEVER_EXPIRES"] = settings.MailNeverExpires ? "true" : "false";
         info.Environment["OFFLINE_CLASS_DROPS"] = settings.ClassDropsOnly ? "true" : "false";
         info.Environment["OFFLINE_PET_TAMING"] = settings.PetTaming ? "true" : "false";
+        info.Environment["OFFLINE_DUNGEON_EPIC_GEAR"] = settings.DungeonEpicGear ? "true" : "false";
         info.Environment["OFFLINE_CHEATS"] = settings.CheatCommands ? "true" : "false";
 
         var log = new StreamWriter(new FileStream(LogPath(name), FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {

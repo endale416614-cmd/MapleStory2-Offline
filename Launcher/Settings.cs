@@ -48,6 +48,8 @@ internal sealed class Settings {
     public bool ClassDropsOnly { get; private init; }
     /// <summary>Wild pets 3x as often, pet candy captures on a full gauge, taming items usable from level 10.</summary>
     public bool PetTaming { get; private init; }
+    /// <summary>Weapons, armor and accessories dropped in dungeons are at least Epic where the item has Epic stats.</summary>
+    public bool DungeonEpicGear { get; private init; }
     /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
     public bool MailNeverExpires { get; private init; }
     /// <summary>Chat commands /godmode, /killall, /unstuck and /freebies for getting past stuck quests (on unless CheatCommands=false).</summary>
@@ -94,6 +96,7 @@ internal sealed class Settings {
             CheatCommands = Flag(values, "CheatCommands", true),
             ClassDropsOnly = Flag(values, "ClassDropsOnly", false),
             PetTaming = Flag(values, "PetTaming", false),
+            DungeonEpicGear = Flag(values, "DungeonEpicGear", false),
             AutoUpdate = (values.GetValueOrDefault("AutoUpdate") ?? defaults.AutoUpdate).Trim().ToLowerInvariant() switch {
                 "ask" or "true" or "yes" or "on" => "ask",
                 "always" or "auto" or "silent" => "always",

@@ -46,6 +46,7 @@ UnlimitedDungeonClears=true
 MailNeverExpires=true
 ClassDropsOnly=true
 PetTaming=true
+DungeonEpicGear=true
 
 # Chat commands /godmode, /killall, /unstuck, /freebies (see Cheats in README.txt)
 CheatCommands=true
@@ -108,6 +109,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days)
   ClassDropsOnly         monsters and dungeon rewards only drop gear your class can wear
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
+  DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
   CheatCommands          the chat commands below (CheatCommands=false turns them off)
   AutoUpdate             ask / always / off - online update check when you press Play
   ClientDir              the game's x64 folder, if you moved the game
