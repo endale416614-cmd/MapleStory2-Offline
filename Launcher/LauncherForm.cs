@@ -164,6 +164,7 @@ internal sealed class LauncherForm : Form {
             InstallClientPatch();
             SetMod("offline-testkit", settings.TestKit);
             SetMod("offline-dungeons", settings.UnlimitedDungeonClears); // dungeon window shows the 9999 clear limits
+            SetMod("offline-pets", settings.PetTaming); // taming items usable from level 10
             using Process game = LaunchGame();
             report?.Step("Game started");
             EventLog.Write("game", "started");

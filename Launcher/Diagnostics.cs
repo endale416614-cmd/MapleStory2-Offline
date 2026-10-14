@@ -95,7 +95,7 @@ internal static class Diagnostics {
                 string path = Path.Combine(settings.Root, relative.Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(path)) {
                     lines.Add($"MISSING   {relative}");
-                } else if (relative is "VERSION" or "defaults.ini" or "MapleStory 2 Offline.exe" || relative.StartsWith("client-mods/offline-testkit/") || relative.StartsWith("client-mods/offline-dungeons/mod.json")) {
+                } else if (relative is "VERSION" or "defaults.ini" or "MapleStory 2 Offline.exe" || relative.StartsWith("client-mods/offline-testkit/") || relative.StartsWith("client-mods/offline-dungeons/mod.json") || relative.StartsWith("client-mods/offline-pets/mod.json")) {
                     ok++; // changed by updates or by the launcher itself
                 } else if (!string.Equals(Hash(path), hash, StringComparison.OrdinalIgnoreCase)) {
                     lines.Add($"MODIFIED  {relative}");
