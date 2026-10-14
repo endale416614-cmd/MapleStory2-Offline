@@ -31,6 +31,19 @@ it works even when the game does not start.
 
 **Linux:** the same servers run natively and the game runs under Proton. See [linux/README.md](linux/README.md).
 
+## Vision
+
+Make the game 100% playable and give players full control over their game, characters and progress. In order of
+priority:
+
+1. 100% playable: all Epic Quests, dungeons and bosses.
+2. Korean edition: translate the Korean content and merge it with the Global edition.
+3. Quality of life: smoother systems, shaped by community feedback.
+4. Co-op: your character lives on your PC and can join a friend's or a community server, then come home with what it earned.
+5. Modding tools for customizing and expanding your own game.
+
+Own your game. Own your character. Keep your progress. The full plan is in [VISION.md](VISION.md).
+
 ## Features
 
 - One-click launcher: starts the local servers, the game, saves your progress on exit and shuts everything down.
