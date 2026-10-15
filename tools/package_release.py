@@ -299,7 +299,15 @@ def main():
             base_files = json.load(f)
         with open(os.path.join(args.base, "VERSION"), encoding="utf-8") as f:
             base_version = f.read().strip()
-        changed = [rel for rel, digest in files.items() if base_files.get(rel) != digest]
+        # A file that went back to its base content after a later patch changed it must still ship,
+        # or players on that patch keep the patched copy: compare against every release kept in publish\ too.
+        others = [base_files]
+        for name in os.listdir(out):
+            other = os.path.join(out, name, "files.json")
+            if name.startswith("MapleStory2-Offline-") and os.path.join(out, name) != stage and os.path.isfile(other):
+                with open(other, encoding="utf-8") as f:
+                    others.append(json.load(f))
+        changed = [rel for rel, digest in files.items() if any(o.get(rel) != digest for o in others)]
         deleted = [rel for rel in base_files if rel not in files and not rel.startswith(PROTECTED)]
         deleted += [rel for rel in RETIRED if rel not in files and rel not in deleted]
         update = {"version": args.version, "minVersion": base_version, "delete": deleted, "notes": args.notes}
