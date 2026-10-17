@@ -36,18 +36,20 @@ static int Paths(string m2d, string[] prefixes) {
 // ---------- convert ----------
 static int RunConvert(string[] a) {
     string kmsPath = a[0], outDir = a[1];
-    HashSet<long>? only = null; string? naPath = null; Dictionary<string, Type>? model = null;
+    HashSet<long>? only = null; string? naPath = null, modelLists = null; Dictionary<string, Type>? model = null;
     var lossy = new SortedDictionary<string, int>();
     for (int i = 2; i < a.Length; i += 2) {
-        if (i + 1 >= a.Length || a[i] is not ("--only-ids" or "--na" or "--model")) { Console.Error.WriteLine("unknown option or missing value: " + a[i]); return 2; }
+        if (i + 1 >= a.Length || a[i] is not ("--only-ids" or "--na" or "--model" or "--item-models")) { Console.Error.WriteLine("unknown option or missing value: " + a[i]); return 2; }
         if (a[i] == "--only-ids") only = File.ReadLines(a[i + 1]).Select(l => l.Trim()).Where(l => l.Length > 0).Select(long.Parse).ToHashSet();
         else if (a[i] == "--na") naPath = a[i + 1];
+        else if (a[i] == "--item-models") modelLists = a[i + 1]; // comma list of path<TAB>.. listings of Model/Item archives (rule 5)
         else if (a[i] == "--model") model = EnumCheck.LoadEnums(a[i + 1]); // Maple2.Model.dll: values the ingest cannot parse become NA defaults
     }
     var k = new Kms(kmsPath);
     using var na = naPath == null ? null : new Na(naPath);
     var skel = na == null ? null : Skeleton.Learn(na, null);
     var rules = na == null ? null : NaRules.Learn(na.All()); // learned from ALL NA files of each kind
+    if (rules != null && modelLists != null) rules.Models = NaRules.LoadModels(modelLists.Split((char)44));
     var sb = new StringBuilder("kind\tkms_ids\tselected\twritten\tfrom_questdata\tfrom_kms_quest_file\tskipped\n");
     foreach (var kind in Layout.Kinds) {
         int total = 0, sel = 0, wrote = 0, fromQd = 0, fromFile = 0, skipped = 0, empty = 0;
@@ -77,6 +79,7 @@ static int RunConvert(string[] a) {
                 foreach (var (d, src) in docs) if (Pick(d) is { } sl) return (sl, src, 0L);
                 return (null, "", docs.Count > 0 ? Next(docs[0].D) : 0L);
             });
+            if (kind == "item") rules?.ModelFill(id, doc);
             if (kind == "item" && model != null)
                 foreach (var (el, attr, val) in EnumCheck.ItemEnumErrors(doc, model)) {
                     string key = $"{el.Name}@{attr}=\"{val}\" -> " + (el.Name == "slot" ? "slot removed" : "\"\"");
@@ -91,6 +94,7 @@ static int RunConvert(string[] a) {
     }
     foreach (var (kk, n) in lossy) sb.AppendLine($"lossy	{n}	{kk}");
     if (rules != null) foreach (var (kk, n) in rules.Counts) sb.AppendLine($"rule	{n}	{kk}");
+    if (rules != null) foreach (var e in rules.Examples) sb.AppendLine("example	" + e);
     Console.Write(sb);
     File.WriteAllText(outDir.TrimEnd(Path.DirectorySeparatorChar, (char)47) + ".summary.tsv", sb.ToString()); // outside outDir: it is packed as an overlay
     return 0;
@@ -374,6 +378,61 @@ sealed class NaRules {
     public readonly SortedDictionary<string, int> Counts = new();
     void Count(string key, int n) { if (n > 0) Counts[key] = Counts.GetValueOrDefault(key) + n; }
 
+    // rule 5 templates: per slot name the most common asset (minus name) and the most common non-asset slot children
+    readonly Dictionary<string, Dictionary<string, int>> assetTpl = new(), extraTpl = new();
+    static void Bump(Dictionary<string, Dictionary<string, int>> d, string slot, string key) {
+        if (!d.TryGetValue(slot, out var t)) d[slot] = t = new();
+        t[key] = t.GetValueOrDefault(key) + 1;
+    }
+    public Dictionary<long, List<string>> Models = new(); // item id -> model paths relative to Data/Resource/Model/Item/
+    readonly Dictionary<long, List<long>> chains = new();  // item id -> preset chain walked by Reissue
+    public readonly List<string> Examples = new();
+    public static Dictionary<long, List<string>> LoadModels(IEnumerable<string> tsvs) {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var d = new Dictionary<long, List<string>>();
+        foreach (var t in tsvs)
+            foreach (var line in File.ReadLines(t)) {
+                string p = line.Split((char)9)[0].Trim().Replace((char)92, (char)47);
+                string f = p[(p.LastIndexOf((char)47) + 1)..];
+                if (!p.EndsWith(".nif", StringComparison.OrdinalIgnoreCase) || f.IndexOf((char)95) < 1 || !long.TryParse(f[..f.IndexOf((char)95)], out long id) || !seen.Add(p)) continue;
+                if (!d.TryGetValue(id, out var l)) d[id] = l = new();
+                l.Add(p);
+            }
+        foreach (var l in d.Values) l.Sort(StringComparer.Ordinal);
+        return d;
+    }
+    static string Top(Dictionary<string, int> t) => t.OrderByDescending(v => v.Value).First().Key;
+    // gender marker of a model file name after the id: _m_ / _f_ / trailing _m / _f (any case); null = none
+    static char? Marker(string path) {
+        var m = System.Text.RegularExpressions.Regex.Match(path[(path.LastIndexOf((char)47) + 1)..], "^[0-9]+_([mfMF])(?=_|[.])");
+        return m.Success ? char.ToLowerInvariant(m.Groups[1].Value[0]) : null;
+    }
+    // 5 model files: slots still without asset -> assets from <id>_*.nif, else <preset>_*.nif along the preset chain.
+    // Slot name = property@category, templates (asset attributes, userrotation/physx children, decal) = dominant NA ones.
+    // Gender: genderLimit 0 keeps unmarked + _m_, 1 keeps unmarked + _f_, otherwise all; if that leaves nothing, all files.
+    public void ModelFill(long id, XDocument doc) {
+        foreach (var env in doc.Root!.Elements("environment")) {
+            if (env.Element("slots") is not { } sl || sl.Descendants("asset").Any()) continue;
+            string cat = (string?)env.Element("property")?.Attribute("category") ?? "";
+            if (cat.Length == 0 || !assetTpl.ContainsKey(cat)) continue;
+            string? from = null; List<string>? files = null;
+            var cands = new List<long> { id }; if (chains.TryGetValue(id, out var ch)) cands.AddRange(ch);
+            for (int i = 0; i < cands.Count && files == null; i++) if (Models.TryGetValue(cands[i], out var l)) { files = l; from = i == 0 ? "own-id" : "base"; }
+            if (files == null) { Count($"item model fill: none found (kept empty): {id}", 1); continue; }
+            string? gl = (string?)env.Element("limit")?.Attribute("genderLimit");
+            char? want = gl == "0" ? (char)109 : gl == "1" ? (char)102 : null;
+            var pick = files.Where(f => want == null || Marker(f) == null || Marker(f) == want).ToList();
+            if (pick.Count == 0) pick = files;
+            var slot = new XElement("slot", new XAttribute("name", cat));
+            foreach (var f in pick) {
+                var asset = XElement.Parse(Top(assetTpl[cat])); asset.SetAttributeValue("name", "Data/Resource/Model/Item/" + f);
+                slot.Add(asset);
+            }
+            foreach (var e in XElement.Parse("<x>" + Top(extraTpl[cat]) + "</x>").Elements()) slot.Add(e);
+            sl.RemoveNodes(); sl.Add(slot);
+            Count($"item model fill from {from} file", 1);
+            if (Examples.Count < 10) Examples.Add($"{id} ({from}) -> " + string.Join(", ", pick));
+        }
+    }
     static string Kfm(XDocument d) => d.Descendants("model").Select(m => (string?)m.Attribute("kfm")).FirstOrDefault(v => v != null) ?? "";
     static double Height(XDocument d) => double.TryParse(d.Descendants("capsule").Select(c => (string?)c.Attribute("height")).FirstOrDefault(v => v != null),
         System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var h) ? h : 0;
@@ -401,6 +460,9 @@ sealed class NaRules {
                         if (!slotTally.TryGetValue(slot, out var t)) slotTally[slot] = t = new();
                         var k = (((string?)a.Attribute("replace")) ?? "0", ((string?)a.Attribute("ani")) ?? "0");
                         t[k] = t.GetValueOrDefault(k) + 1;
+                        var at = new XElement(a); at.SetAttributeValue("name", null);
+                        Bump(r.assetTpl, slot, at.ToString(SaveOptions.DisableFormatting));
+                        Bump(r.extraTpl, slot, string.Concat(s.Elements().Where(e => e.Name != "asset").Select(e => e.ToString(SaveOptions.DisableFormatting))));
                     }
             if (kind == "npc" && doc.Descendants("effectdummy").FirstOrDefault(e => !e.IsEmpty) is { } ed) {
                 var block = new XElement(ed);
@@ -427,6 +489,7 @@ sealed class NaRules {
             if (env.Element("slots") is not { } sl || sl.Descendants("asset").Any()) continue;
             long first = b; XElement? src = null; string from = ""; var seen = new HashSet<long> { id };
             for (int hop = 0; hop < 5 && b != 0 && seen.Add(b); hop++) { (src, from, b) = slotsOf(b); if (src != null) break; }
+            chains[id] = seen.Where(x => x != id).ToList(); // HashSet keeps insertion order here (no removals)
             if (src == null) { Count($"item re-issue slots: none available (kept empty): {id} -> {first}", 1); continue; }
             sl.ReplaceWith(new XElement(src)); Count($"item re-issue slots copied from {from}", 1);
         }
@@ -792,6 +855,13 @@ static class Cmp {
         (XElement?, string, long) Chain(long x) => x switch { 7 => (null, "NA", 9), 9 => (D(ItemXml("CP", "1", "1")).Descendants("slots").First(), "KMS", 0), 8 => (null, "NA", 5), _ => (null, "", 0) };
         var hop2 = D(Tool("<slots/>")); rr.Reissue(5, hop2, Chain);
         var cyc = D("<ms2><environment><tool itemPreset=\"8\"/><slots/></environment></ms2>"); rr.Reissue(5, cyc, Chain);
+        // 11 rule 5: model files by own id, else preset chain; gender pick; asset attributes from the dominant NA ones
+        var m5 = NaRules.Learn(new[] { ("item", D("<ms2><environment><slots><slot name=\"CP\"><asset name=\"x.nif\" selfnode=\"CP\" targetnode=\"Bip01 Head\" gender=\"2\" replace=\"0\" ani=\"0\"/><decal/></slot></slots></environment></ms2>")) });
+        m5.Models = new() { [5] = new() { "0/00/00000005_f_a.nif", "0/00/00000005_m_a.nif", "0/00/00000005_b.nif" }, [7] = new() { "0/00/00000007_m_z.nif", "0/00/00000007_F_z.nif" } };
+        string G(long id, string gl, string preset) { var d = D($"<ms2><environment><property category=\"CP\"/><limit genderLimit=\"{gl}\"/><tool itemPreset=\"{preset}\"/><slots/></environment></ms2>"); m5.Reissue(id, d, _ => (null, "", 0L)); m5.ModelFill(id, d); m5.Apply("item", d);
+            return string.Join(",", d.Descendants("asset").Select(a => ((string)a.Attribute("name")!).Split((char)47)[^1])) + "|" + d.Descendants("asset").FirstOrDefault()?.Attribute("selfnode")?.Value + "|" + d.Descendants("decal").Count(); }
+        Check("model fill: gender pick, unmarked kept, base fallback, NA template", G(5, "1", "5") == "00000005_f_a.nif,00000005_b.nif|CP|1" && G(5, "0", "5") == "00000005_m_a.nif,00000005_b.nif|CP|1"
+            && G(5, "2", "5").Split((char)44).Length == 3 && G(6, "1", "7") == "00000007_F_z.nif|CP|1" && G(9, "0", "9") == "||0");
         Check("re-issue chain: 2 hops resolved, cycle ends empty", hop2.Descendants("asset").Count() == 1 && !cyc.Descendants("asset").Any());
         Check("re-issue slots: copied+rule2, none stays empty, self/non-empty untouched", reis.Descendants("asset").Count() == 1 && (string)reis.Descendants("asset").First().Attribute("replace")! == "0"
             && !none.Descendants("asset").Any() && !own.Descendants("asset").Any() && has.Descendants("slot").Single().Attribute("name")!.Value == "CL");
