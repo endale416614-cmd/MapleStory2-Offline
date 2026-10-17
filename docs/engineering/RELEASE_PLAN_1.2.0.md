@@ -104,6 +104,7 @@ fresh game, and the project gains the clock, data-sweep and release-manifest fou
 | P1 | New Game: save profiles in the launcher (switch `SaveDir`), backup first; tutorial skip handler (`RequestSkipTutorial` → `SkipField`/`SkipItem`); orphan cleanup on delete | D | Lv1 start already works; this makes it reproducible and reachable |
 | P1 | Debugging framework stage 2: tolerant ingest with skip log, unknown-opcode counter, triage categories in `SessionReport`, defect-pinning test template | C | Extends existing tools, no new framework |
 | P1 | Linux launcher parity for options and the manifest check (sha256 at least) | B, F | Prevents the two launchers drifting further; Linux currently installs unverified updates |
+| P1 | `/give <item name> [count]` cheat with candidate list; `/find` and `/item` under cheats; `/item` default-rarity fix (R12-25, accepted 2026-10-17) | QoL (13.2) | Small, reuses `ItemCommand` and `ItemMetadataStorage.Search`; Adapted/cheats only; starts after R12-07 |
 | P2 | Adapted solo-raid pilot: under Adapted, bypass `MinUserCount`, apply `PlayerCountFactorId` scaling if the table exists, on 2 named dungeons | B | Needs data extraction and play sessions; pilot only |
 | P2 | Seasonal pilot: persisted world-state table, recurring yearly event overlay, one event type that already has server logic (`AttendGift` login calendar) with restart recovery | A | Proves persistence and recovery before any holiday content |
 | P2 | Voice: manual experiment (JMS banks + `voiceIndex`), then `VoiceLanguage=en|jp|kr` import from a player-supplied client folder with fallback to `_en` | E | Cannot proceed past the experiment without the result; cannot ship audio |
@@ -128,7 +129,9 @@ Shared foundations (build first):
    on real time by design (expiries, timestamps) and are listed, not migrated.
 3. **OfflineProfile** (R12-07): one server-side table of option defaults per mode; launcher passes `OFFLINE_PROFILE`; existing env
    vars override. Replaces the four hand-kept key lists (`Settings.cs`, `ServerHost.cs`, `package_release.py`, `ms2offline.py`).
-4. **Save stamp** (R12-08): `server-info` row `Mode` + `ModeHistory`; `SaveSchemaVersion` stays 1 (additive).
+4. **Save stamp** (R12-08): new additive table `offline-state` (`Key`, `Value` strings) created by `UpgradeSqliteSchema`
+   (`DbProvider.cs:158`); `server-info` cannot hold it (it has only `Key` and `LastModified`, `Maple2.Database/Model/ServerInfo.cs:6-8`).
+   `SaveSchemaVersion` stays 1.
 5. **Sweep fixture** (R12-04): `[Category("Data")]` tests over the real DB, skipping when absent (pattern: `GearRepairTest.FindDataDb`).
 6. **Release manifest** (R12-06): signed by the same key as updates; verified by both launchers.
 
@@ -189,7 +192,7 @@ Format: id, objective; files; depends on; acceptance; tests; complexity/risk; ti
   `FindDataDb` helper extracted from `GearRepairTest.cs:34-47`. Depends: R12-02. Accept: runs on the shipped DB; emits
   `sweep-report.md` grouped by severity (error = reference missing; warning = unused/unimplemented); zero crashes. Tests: it is the test. Medium / low. T2. Deliverable: fixture + first report attached to `KNOWN_ISSUES` section of `PROJECT_STATUS.md`.
 - **R12-05** GameClock. New `Maple2.Tools/GameClock.cs` (`UtcNow`, `Now`, `Override(Func<DateTimeOffset>)` for tests).
-  Use at `GameEvent.cs:19-42` (also fix: compare dates in one zone), `WorldServer.cs:154-237`, `GameStorage.ServerInfo.cs`,
+  Use at `GameEvent.cs:19-42` (also fix: compare dates and time of day in the zone chosen in Open Decision 11), `WorldServer.cs:154-237`, `GameStorage.ServerInfo.cs`,
   `GameSession.cs:302-303`, `GameEventManager.cs:46-49`. Depends: none. Accept: no behaviour change at real time; a test sets the
   clock to a date-bounded event's window and `IsActive` is true at 00:30 local on the start day (today false, see tz bug). Tests:
   new `GameEventActiveTest` (3 cases: before/inside/after, plus day-of-week). Low / medium (touches resets). T2 + T4. Deliverable: class + 5 call-site edits + tests.
@@ -207,8 +210,9 @@ Format: id, objective; files; depends on; acceptance; tests; complexity/risk; ti
   `PLAYER_DEFAULTS` drops per-flag lines in favour of `GameMode=Adapted` (per-flag lines still honoured); `linux/ms2offline.py` same.
   Legacy = all A5, A13-A18 off, cheats off, Meret catalog off (`OfflineEconomy` files ignored). Depends: none. Accept: `GameMode=Legacy`
   with no other keys yields original rates, 30-day mail, original dungeon limits, no `/godmode`; `GameMode=Adapted` equals 1.1.8 defaults;
-  a per-flag line overrides either. Tests: extend `OfflineEditionTest` with profile cases via env. Medium / medium. T2 + T4. Deliverable: code, `launcher.ini.example`, ADAPTATIONS row.
-- **R12-08** Save stamp. `server-info` keys `Mode`, `ModeChangedAt`, `ModeHistory` (additive). On login under Legacy with
+  a per-flag line overrides either. Tests: `OfflineProfile.Resolve(mode, env)` is a pure function tested directly (the `Offline*`
+  statics read env once at type load, so env-driven tests are order-dependent); the statics call `Resolve` once. Medium / medium. T2 + T4. Deliverable: code, `launcher.ini.example`, ADAPTATIONS row.
+- **R12-08** Save stamp. New additive table `offline-state` (`Key`, `Value`), rows `Mode`, `ModeChangedAt`, `ModeHistory`. On login under Legacy with
   `ModeHistory` containing Adapted, log once and show a client notice (reuse `NpcNoticePacket`). Depends: R12-07. Accept: stamp
   written on first start, history appended on change, notice shown once per session. Tests: `SaveSafetyTest` addition. Low / low. T2.
 - **R12-09** Mode UX and docs. First-run prompt in `LauncherForm.cs` (two buttons, explanation text), `README.md` and player
@@ -235,9 +239,21 @@ Format: id, objective; files; depends on; acceptance; tests; complexity/risk; ti
   events included in reports even when trace is off. Depends: R12-04. Accept: a report with a known failure shows its category;
   unknown opcodes appear with counts. Tests: unit on the classifier. Medium / low. T2.
 
+- **R12-25** `/give <item name> [count]`. New `GiveCommand` in `Maple2.Server.Game/Commands/CheatCommands.cs` (`AdminPermissions.None`,
+  `OfflineCheats.Enabled` gate): `Argument<string[]>` words, trailing integer = count, options `--rarity` (default -1 so `DefaultRarity`
+  applies) and `--roll-max`; resolve exact case-insensitive name → same-name gear matching the player's job (`Limit.JobRecommends`) →
+  single substring match; else send up to 10 `id: name` candidates (format of `FindCommand`). Extract `ItemCommand`'s creation block
+  into a shared static helper used by both; change `ItemCommand`'s rarity default to -1; register `FindCommand` and `ItemCommand`
+  for players when cheats are on (lower their permission to `None` with the same gate, or add cheat-gated aliases). Depends: R12-07
+  (so Legacy keeps the commands off). Accept: `/give Dragon Scale Helmet 2` with the KMS data absent prints "No results"; `/give Absolute
+  Earrings` lists 8 candidates by id; `/give Red Potion 5` grants a stack of 5; `/item 11300390` works with cheats on and prints
+  "Cheats are off" under Legacy; a raid weapon given without `--rarity` comes out at its data rarity, not 1. Tests: resolver unit
+  tests over an in-memory `ItemMetadataStorage` fixture (exact, job preference, ambiguity, trailing count); one test that the shared
+  helper is used by both commands. Low / low. T2. Deliverable: command, helper, `README.txt` Cheats section line, ADAPTATIONS note.
+
 **Phase 2 (pilots, each droppable)**
 
-- **R12-14** World-state table: `server-info` keys `WorldLastRun`, `WorldTotalRunSeconds`; written every minute by World.
+- **R12-14** World-state rows in `offline-state` (from R12-08): `WorldLastRun`, `WorldTotalRunSeconds`; written every minute by World.
   Depends: R12-05. Accept: survives restart; readable in diagnostics. Low / low. T2.
 - **R12-15** Recurring event overlay: `Maple2/offline-events.json` (id, type, month-day start/end, yearly) loaded by
   `ServerTableMetadataStorage` after the ingested events, rebased to the current year at load, re-evaluated on World start
@@ -320,7 +336,7 @@ behaviour was not exercised (e.g. a raid pilot with no recorded solo clear) is r
 | Phase | Tasks | Deliverables | Exit criteria | Major risks |
 |---|---|---|---|---|
 | 0 Baseline | R12-01..06 | tools committed; data build recorded; CI; sweep baseline; GameClock; manifest | CI green; sweep report filed; manifest verified | 1, 2, 9 |
-| 1 Modes and new game | R12-07..13, R12-21 | GameMode presets; stamp; UX/docs; tolerant ingest; profiles; tutorial skip; Linux parity; debug stage 2 | Lv1 matrix done; mode checklist done; 1.1.8 save migrates | 3, 4, 5 |
+| 1 Modes and new game | R12-07..13, R12-21, R12-25 (after R12-07) | GameMode presets; stamp; UX/docs; tolerant ingest; profiles; tutorial skip; Linux parity; debug stage 2; `/give` by name | Lv1 matrix done; mode checklist done; 1.1.8 save migrates; `/give` acceptance list passes | 3, 4, 5 |
 | 2 Pilots | R12-14..20 | world-state; overlay + AttendGift; raid extract + pilot; voice experiment (+ import) | each pilot has a recorded pass or is cut | 6, 7, 8 |
 | 3 Hardening and release | validation plan, notes, tag | release notes; `DATA-BUILD.txt`; `release.json`; update zip from `--base 1.1.8` | all gates in Deliverable 7 | 9, 11 |
 
@@ -399,6 +415,136 @@ Known issues carried over: client patch cannot be rebuilt from source on current
    treats `1.2.0-rc1` as `1.2.0`, so never name a prerelease asset `MapleStory2-Offline-Update-1.2.0.zip`.
 10. **Feature freeze.** Freeze when phase 1 exit criteria hold; phase 2 pilots are included only with a recorded pass.
     Default: freeze date set after R12-12 completes, not before.
+11. **Event time zone.** Event times are parsed without a zone (`ServerTableMapper.cs:913-914`) and compared with UTC
+    (`GameEvent.cs:20-39`); the original data was Korean time. Default: the player's local PC time for both ingested and overlay
+    events (single-player; "midnight" means the player's midnight). Alternative: KST for ingested events, local for overlay;
+    cost is two code paths and events that start at odd hours.
 
 Rollback: the existing update journal and `RollBackLastUpdate` cover a failed 1.2.0 update; the 1.1.8 Setup stays on the
-Releases page; `SaveSchemaVersion` stays 1, so a 1.2.0 save opens in 1.1.8 (new `server-info` keys are ignored).
+Releases page; `SaveSchemaVersion` stays 1, so a 1.2.0 save opens in 1.1.8 (the extra `offline-state` table is ignored).
+
+---
+
+## Deliverable 13: Candidate additions assessed 2026-10-17
+
+Four player-facing ideas were checked against the code. All four change the original game, so they belong to the
+Offline-Adapted preset and depend on R12-07 for gating; none needs a client change except where stated. Code facts are
+observed unless marked (inferred).
+
+### 13.1 Dynamic black market (server-seeded listings)
+
+Current state. The Black Market is a real auction house: listings in table `black-market-listing`
+(`Maple2.Database/Model/Market/BlackMarketListing.cs:9-18`, no foreign key to character or account), item rows owned by the
+listing id (`GameStorage.Market.cs:242`), an in-memory World lookup loaded at start (`Maple2.Server.World/Containers/BlackMarketLookup.cs:20-25`),
+search by category, level, job, rarity, enchant, sockets, stats and name (`BlackMarketHandler.cs:75-146`), 7 results per page and
+at most 10 pages (`BlackMarketLookup.cs:93-98`). Purchase pays buyer and seller by mail (`BlackMarketManager.cs:173-348`). With one
+player it is always empty. Items with rolled stats are created only through a Field (`ItemDropManager.CreateItem`,
+`ItemDropManager.cs:355-374`; `ItemStatsCalculator.cs:97-122`); World creates bare items without stats (`WorldServer.cs:518-532`).
+World has a one-minute scheduler loop (`WorldServer.cs:132-144`). Defects found on the way: name search is case-sensitive
+(`BlackMarketLookup.cs:42`), expired listings are never deleted (no cleanup job), `BlackMarketSellMinPrice`/`MaxPrice` are parsed but unenforced.
+
+Feasibility: medium, server-only. A fake seller works because nothing references the seller id: `PlayerInfo.GetOrFetch` on an
+unknown id returns false and is handled (`PlayerInfoStorage.cs:69`); World `Purchase` skips the seller push for an unknown player
+(`WorldService.BlackMarket.cs:84`). Two things must be faked explicitly: `CreateSellerMail` (`BlackMarketManager.cs:291-348`) must
+skip a synthetic seller or garbage mail rows accumulate; listing ids must stay below 100,000 or item owner ids collide with the
+mail id space that `DeleteOrphanedMailItems` cleans (`GameStorage.Mail.cs:104-106,194-197`) (inferred).
+
+Proposed design (inferred): `OfflineMarket` next to `OfflineEconomy`, driven by `Maple2/offline-market.json` (file absent = off;
+always off under Legacy). On World start and every N hours: delete the previous synthetic set (sentinel `CharacterId`, e.g. -1)
+and its item rows in one transaction; pick up to about 150 items from a curated pool (gear by level band and job, pets, upgrade
+materials); create listings with `Deposit = 0` and `ExpiryTime = now + interval`; add them to `BlackMarketLookup`. Price =
+`Shop.SellPrice` × a configurable buy multiplier (the Preview path already uses `SellPrice`, `BlackMarketManager.cs:376-385`);
+Meret-catalog items converted at `MesosPerMeret`. Stats: either build an `ItemStatsCalculator` in World (not verified possible
+outside a Field) or seed bare items and roll stats in the Game server at purchase, before the item is attached to the buyer mail
+(`BlackMarketManager.cs:213-222`); the second keeps World simple but makes stat-filtered search useless for synthetic listings.
+
+Risks: save growth (one `item` row plus a stats JSON per listing; cap the pool and always delete the previous set);
+`BlackMarketLookup.Dispose` re-saves every listing at shutdown (`:177-182`); the 70-result search cap hides a broad pool; pricing
+has no original reference (the real market was player-driven); end-game gear in the pool trivialises progression, so the pool
+must be banded to the player's character levels.
+
+Tasks: R12-22 OfflineMarket seed and cleanup with sentinel seller, seller-mail skip, tests on an in-memory save (medium/medium, T2+T4).
+R12-23 pool and pricing JSON, level-band rule, ADAPTATIONS row (low/medium, T1 data + T2). R12-24 black market fixes:
+case-insensitive name search, expired-listing cleanup at World start, min/max price enforcement (low/low, T2).
+Priority: P2 pilot, Adapted only; depends on R12-07 and on Open Decision 12.
+
+### 13.2 `/give <item name> [count]`
+
+Current state. `/item <id>` exists but needs `AdminPermissions.SpawnItem` (`Commands/ItemCommand.cs:21`), which the offline
+account does not have (Permissions None). Name search exists: `ItemMetadataStorage.Search` is `LIKE '%name%'` on the English
+`item.Name` (`ItemMetadataStorage.cs:64-70`), used by `/find item` (`Commands/FindCommand.cs`, also admin-only). The chat command
+parser splits on spaces and honours quotes (`CommandRouter.cs:55`). The cheat pattern is `AdminPermissions.None` plus an
+`OfflineCheats.Enabled` check (`Commands/CheatCommands.cs`); a new `GameCommand` class registers itself (`Program.cs:152-158`).
+Collisions are common in the shipped DB: 22,331 distinct names for 35,323 items, 5,784 names shared (for example
+"Absolute Earrings" has 8 ids, one per job), 2,667 items have no name.
+
+Feasibility: low effort, no client change. Design: `GiveCommand` in `CheatCommands.cs` with `Argument<string[]>` words, a trailing
+integer as count, options `--rarity` and `--roll-max`. Resolution: exact name (case-insensitive) → among same-name gear prefer the
+player's job (`Limit.JobRecommends`) → single substring match; otherwise list up to 10 `id: name` candidates and ask for `/item <id>`.
+Extract `ItemCommand`'s creation block (about 80 lines) into a shared helper. Pass rarity -1 so `DefaultRarity` picks the real
+rarity (`ItemDropManager.cs:360,379`); `/item` currently defaults to 1, which is wrong for raid gear that exists only at Epic or
+above. Also expose `/item` and `/find` under `OfflineCheats` so the id path and the lookup work for players.
+
+Tasks: R12-25 `GiveCommand`, shared creation helper, `/item` default-rarity fix, `/find` and `/item` under cheats, resolver tests
+(low/low, T2). Priority: P1 (small, cheats only).
+
+### 13.3 Item code wiki or repository
+
+Current state. Item ids and English names are already in the shipped `GameData/maple-data.db`; `/find item <text>` is the
+in-game lookup but admin-only (`FindCommand.cs:24`). No document lists items. The project never ships client data (README), yet the
+names in the DB are Nexon-derived text already distributed with every release.
+
+Options: (a) in-game: `/find` under `OfflineCheats` (one line, part of R12-25) plus the candidate list of `/give`; this is the
+repository players can use without leaving the game. (b) local export: a launcher action "Export item list" writing `items.html`
+(id, name, type, slot, level, rarities) from the player's own `maple-data.db` to the desktop; the launcher already opens SQLite
+(`LauncherForm.cs:572-632`); nothing new is published. (c) a public web wiki generated from the DB: publishes Nexon-derived names
+and ids outside the game package; Open Decision 13.
+
+Tasks: R12-26 local item-list export in the launcher (low/low, T2), P2. Public wiki: P3 pending Open Decision 13.
+
+### 13.4 Weapon and armour passive editor with enchant-scaled values
+
+Current state. Random options ("passives") are rolled once at creation: `ItemStatsCalculator.RandomItemOption`
+(`ItemStatsCalculator.cs:551-635`) picks N attributes from the `itemoptionrandom` row for the item's `RandomId` and rarity;
+`RandomizeValues` (`:233-400`) sets each value from `ItemEquipVariationTable` tiers (18 tiers; the level band selects tiers 0-2,
+2-9 or 10-17; `rollMax` takes the band's top tier). Values live in the item's stats JSON (`Maple2.Database/Model/Item/Item.cs:150`)
+and are never recomputed. Enchant does not touch them: it adds its own `Enchant.BasicOptions` (`ItemEnchantManager.cs:232-243,346-362`)
+and `StatsManager` sums both (`StatsManager.cs:173-180`). Existing change paths: `ChangeAttributesHandler` (reroll with one optional
+locked line; lock scroll ids hard-coded from `:231`; rarity 4-6 and level 50+ only) and `ChangeAttributesScrollHandler` (reroll
+lines, or values only). Both send one server-made preview item that the client accepts or rejects. No client UI receives a list of
+candidate attributes (`ItemOptionPick` is a weight table, not a picker). The client patch cannot be rebuilt (`C1047`), so no new UI.
+
+Feasibility. The drop-down as described is not possible without client work. Two server-only substitutes: (a) `/passive <item>
+<attribute>` chat command (Adapted only) that sets the Random line(s) to the named attributes from the item's `itemoptionrandom`
+candidates, enforcing `IsValidStat` (`:637`: one damage type, offense-line cap), then resends the item (`ItemInventoryPacket.UpdateItem`);
+(b) reinterpret the lock-and-reroll window: under Adapted, "lock X" keeps X and cycles the other lines through the candidate list
+in a fixed order, so repeated rerolls walk the list with the compare window as preview, and the scroll consume
+(`ChangeAttributesHandler.cs:130`) is skipped.
+
+Enchant-scaled values (inferred formula): value(n) = tierMin + (tierMax − tierMin) × n/15 per attribute, tiers from the item's
+level band times `MultiplyFactor`, `Rate` lines divided by 1000 as today (`:244-262`). Recompute in `ApplyEnchantStats` when
+`Enchants` changes and once per login through an `OfflineGearOptions.RecomputeOwners` modelled on `OfflineGearRepair.RepairOwners`
+(`GameSession.cs:148-156`; idempotent, JSON only, no schema change). Resend the item after every recompute or the client keeps the
+stale tooltip. Exclude pets (different tier window). Limit Break resets `Enchants` to 0 (`ItemEnchantManager.cs:478,504`): Open Decision 15.
+
+Risks: balance (the +15 value equals today's best roll, so every maxed item is perfect: Open Decision 14); save compatibility
+(existing items get recomputed values on first login; turning the option off later leaves the last values); free picks bypassing
+`IsValidStat` unless enforced; client display of values outside the table range (not verified).
+
+Tasks: R12-27 `OfflineGearOptions` deterministic values on enchant and login, gated by `OFFLINE_GEAR_PASSIVE`, tests like
+`GearRepairTest` (medium/medium, T2+T4). R12-28 `/passive` command with candidate listing and `IsValidStat` enforcement
+(medium/low, T2). R12-29 lock-window cycling variant, only if R12-28 is judged too technical for players (medium/medium, T3; it
+changes packet semantics). Priority: P2 pilot, Adapted only, after R12-07 and the economy fixes in `e66cf648`.
+
+### 13.5 Effect on the 1.2.0 scope; new open decisions
+
+Decision 2026-10-17: R12-25 is in the P1 scope (Deliverable 4, Phase 1 backlog and roadmap updated); it starts once R12-07 is
+done. R12-22..24 and R12-27..28 are P2 pilots behind the Adapted preset, each droppable. R12-26 stays P2; the public wiki is P3. None touches the critical path; all need R12-07 so Legacy stays untouched.
+
+12. **Where synthetic market items get their stats.** Roll in World (needs `ItemStatsCalculator` outside a Field, unverified)
+    versus roll in Game at purchase (simple; stat filters ignore synthetic listings). Default: roll at purchase.
+13. **Public item wiki.** Publish Nexon-derived item names and ids on a web page (visibility risk for a project that promises to
+    ship no client data) versus in-game `/find` plus a local export. Default: in-game and local only.
+14. **Passive value cap.** Band maximum at +15 (every maxed item is perfect) versus band midpoint. Default: midpoint; the
+    maximum stays reachable through the original reroll scrolls.
+15. **Passive after Limit Break.** Follow `LimitBreak.Level` or reset with `Enchants`. Default: keep the +15 value once reached.
