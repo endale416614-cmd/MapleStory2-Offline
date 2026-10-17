@@ -101,3 +101,13 @@ Checks on it:
    - Earlier the same day: a 1.1.9 launcher took that update from a local feed with `release.json`; tampered copies were refused.
    - Not done: the 1.1.8 launcher's "install with the full Setup" prompt against a real published 1.1.9 release.
 5. Package inputs recorded (R12-02) and `maple-data.db` table checksums compared with 1.1.8; every difference explained. Pass 2026-10-17: all 23 table checksums of the packaged `maple-data.db` equal those of the 1.1.8 package (same `data-build` function over both); no difference.
+
+---
+## Published (2026-10-17)
+
+Release `v1.1.9` on `82c52a8`, marked Latest: `MapleStory2-Offline-Setup.exe` (557,790,206 bytes, sha256
+`61f7e170888ae5b93da3f55668853f79f422b590ec5132e76cf40bde05652c9f`), `release.json`, `release.json.sig`. No update zip, no
+full zip. Before upload: Setup sha256 and size matched `release.json`; `release.json.sig` verified with `openssl dgst
+-sha256 -verify` against the `UpdateKey.cs` public key. After upload: the `releases/latest/download/release.json` link
+serves the uploaded file (sha256 equal). Release notes state the Setup-only install and the key change, and list the
+Setup sha256. Still open: a 1.1.8 launcher against the live release must show the Setup-only prompt.
