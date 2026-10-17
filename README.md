@@ -7,7 +7,7 @@ checks GitHub for a newer version when you press Play (and skips that when you a
 
 ## Download
 
-### [⬇ Download MapleStory 2 Offline (Setup, about 530 MB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
+### [⬇ Download MapleStory 2 Offline 1.1.9 (Setup, about 560 MB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
 
 1. Run the downloaded file and click **Install**. No administrator rights are needed.
 2. Start the game from the **MapleStory 2 Offline** icon on your desktop.
@@ -20,6 +20,9 @@ Otherwise the launcher points you to the community downloader ([Mushroom Launche
 Updates install themselves: when you press Play and a newer version exists, the launcher asks and updates (your save
 is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
 Start menu → **MapleStory 2 Offline - Install Update**. All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
+
+**Still on 1.1.8 or older?** Install 1.1.9 once with the Setup above; it keeps your save. Older launchers cannot take
+1.1.9 as an automatic update (the update signing key was replaced); from 1.1.9 on, updates install themselves again.
 
 ### Found a bug?
 
