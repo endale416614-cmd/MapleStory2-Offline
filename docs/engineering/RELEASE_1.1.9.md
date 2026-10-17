@@ -59,8 +59,25 @@ location `..\Signing\update-signing-key.pem`; `Launcher/UpdateKey.cs` holds its 
 1. Resolved 2026-10-17: `cryptography` 50.0.2 installed (`py -I` loads it); new signing key in place (see above).
 2. Resolved: 1.1.8 data inputs identified (R12-02).
 3. Client patch link error `C1047` (prebuilt MinHook); only matters if 1.1.9 needs a client-patch change.
-4. Packaging inputs missing since the factory reset: `package_release.py` needs `dotnet/` (runtime), `client-patch/*.dll`, `client-mods/`, `SaveData/maple-data.db` and `Maple2/.env` in the repository folder (all gitignored). All five can be taken from the 1.1.8 Setup payload (`dotnet/`, `client-patch/`, `client-mods/`, `GameData/maple-data.db`, `Maple2/.env`); the client patch is unchanged in 1.1.9 and cannot be rebuilt (blocker 3). `maple-data.db` must match the 1.1.8 checksums (R12-02).
-5. Pushing `main` is refused by GitHub: the gh token lacks the `workflow` scope needed for `.github/workflows/ci.yml`. The maintainer runs `gh auth refresh -h github.com -s workflow`. `Maple2` and `_dl/Agarcium` `offline` were pushed 2026-10-17.
+4. Resolved 2026-10-17: the packaging inputs lost in the factory reset are restored (all gitignored). From the 1.1.8 Setup payload: `client-patch/*.dll` (unchanged; cannot be rebuilt, blocker 3), `client-mods/`, `Maple2/.env` (portable, no credentials) and `SaveData/maple-data.db` (= the 1.1.8 `GameData/maple-data.db`). `dotnet/` must hold an SDK (the packager builds with it), so it is a copy of the installed .NET SDK 8.0.426 with runtime 8.0.32 only (one `hostfxr`). The 1.1.9 package therefore ships .NET 8.0.32 where 1.1.8 shipped 8.0.31 (patch update).
+5. Resolved 2026-10-17: the gh token got the `workflow` scope; `main`, `Maple2` and `_dl/Agarcium` are pushed.
+
+## Local 1.1.9 package (built 2026-10-17, not published)
+
+`py -I tools/package_release.py 1.1.9 --manifest` (fixed the same day: under `py -I` the packager could not import
+`sign_update`). Output in `publish/`: Setup 531.9 MB, full zip 462.2 MB, `release.json` + `release.json.sig`.
+Checks on it:
+- `release.json` signature verifies with the launcher's key; both listed files match size and sha256.
+- `VERSION` 1.1.9; `GameData/data-build.json` records Maple2 `de966192` (no input hashes: `MS2_DATA_FOLDER` was not set).
+- No save, log, `launcher.ini`, install file, key or portrait in the folder; no machine path, e-mail or token in any file;
+  test-kit mod disabled.
+- Against the 1.1.8 `files.json`: no file removed; added `GameData/data-build.json`; changed are the servers, launcher,
+  `README.txt`, `defaults.ini`, `VERSION`, `offline-testkit.json`, the .NET 8.0.31 to 8.0.32 runtime files and
+  `maple-data.db` (rewritten by `VACUUM INTO`, same content, check 5).
+- The real Setup over a fresh 1.1.8 scratch install: save and `launcher.ini` byte-identical (15 files), install id kept,
+  VERSION 1.1.9. The World server then started from that install on the packaged runtime against the 1.1.8 test save
+  (no errors in 25 s; resets and 19 world bosses scheduled).
+- Upload when releasing: Setup, full zip, `release.json`, `release.json.sig`. No update zip (see Signing key change).
 
 ## Readiness checks (run before packaging 1.1.9)
 
@@ -73,4 +90,4 @@ location `..\Signing\update-signing-key.pem`; `Launcher/UpdateKey.cs` holds its 
    - On that install, `--install-update` of a test update signed with the new key: installed (99.0.0), save backed up first. A change to the save after the update, then `--rollback-update`: back to 1.1.9, the update's file removed, `game-server.db` content identical to the pre-update save (SQL dump hash, 43 tables). The backup is a consolidated SQLite copy, so the files are not byte-identical; `save-status.json` (last-session status, rewritten each run) is not part of the backup.
    - Earlier the same day: a 1.1.9 launcher took that update from a local feed with `release.json`; tampered copies were refused.
    - Not done: the 1.1.8 launcher's "install with the full Setup" prompt against a real published 1.1.9 release.
-5. Package inputs recorded (R12-02) and `maple-data.db` table checksums compared with 1.1.8; every difference explained.
+5. Package inputs recorded (R12-02) and `maple-data.db` table checksums compared with 1.1.8; every difference explained. Pass 2026-10-17: all 23 table checksums of the packaged `maple-data.db` equal those of the 1.1.8 package (same `data-build` function over both); no difference.
