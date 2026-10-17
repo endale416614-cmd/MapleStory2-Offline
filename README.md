@@ -51,7 +51,8 @@ Own your game. Own your character. Keep your progress. The full plan is in [VISI
 - Save data in a single local file (SQLite), backed up on every start.
 - Signed updates: the launcher only installs updates signed with the project's update key.
 - The client is locked to this PC: connections to anything except `127.0.0.1` are blocked.
-- Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items.
+- Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items, sorted for browsing: every
+  capsule under Featured, separate Design Templates and Furniture tabs.
 - Solo-friendly options: adjustable exp and drop rates, upgrade-material drops, dungeon reward options.
 - Two ways to play, picked in a "Choose how to play" window every time you start the game (your last choice is selected):
   - **Legacy Mode**: the original online-era rules and balance: original exp and drop rates, dungeon clear limits and party

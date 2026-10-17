@@ -21,6 +21,7 @@ Nothing may be labelled 1.2.0 until that release is packaged.
 | Launcher: log writer lifetime, backup check prompt, setup swap rollback; Linux staged install with hash check | `db8712f` | launcher build passed; no launcher tests exist |
 | Developer tools `ClientDiff`, `KmsSplit`, `M2dPack` and engineering docs (not shipped to players) | `3a8dec6` | selftests pass; see BACKLOG.md |
 | `GameMode=Legacy\|Adapted` preset (R12-07, shipped early; redesigned 2026-10-17 at the maintainer's request for players with no technical knowledge). Behaviour change: a "Choose how to play" window at every start (Legacy Mode / Offline Adapted Mode, last choice selected, Quit / Play; the choice is written to `launcher.ini`, no editing needed). Existing installs and an unset or unknown value stay `Adapted` (the 1.1.8 rules plus A20). `Legacy` turns off the solo-friendly adaptations (grinding rates, all dungeon drops, unlimited clears, Epic dungeon gear, pet taming, class-only drops, party-size dungeons) and keeps Meret pouches, the full Meret Market, mail that never expires and the chat commands. New option `PartyDungeons` (A20). A single option line in `launcher.ini` still wins. Linux launcher: same rules and options, no window (`GameMode` in its ini). See ADAPTATIONS.md A19, A20 | `Maple2` `f6d3588b`, `aaaab0b0`; `1ca4440` and the redesign commit on `main` | server suite 303 passed, 16 skipped (2026-10-17; `OfflineProfileTest` incl. both-mode options and the party-size door rule); window rendered and checked in both states; World + Game servers started from the packaged install under `Legacy` and under `Adapted` (Meret catalog 7,657 entries loaded in both, no errors). Maintainer play test 2026-10-17 with the package from `aaaab0b0`: the window showed, Play started the game and the chosen mode behaved as described |
+| Meret Market reorganized (maintainer request 2026-10-17). Behaviour change: capsules (128) under Featured, new Design Templates (103) and Furniture (164: maids + 128 Meret furniture pieces no shop sold) tabs, Crate Spotlight removed (coins to Functional). See ADAPTATIONS.md A21 | `tools/organize_meret_market.py`; Maple2 catalog + `OfflineEconomy`; client mod `offline-shop` (generated) | tool idempotent (second run: nothing to change); catalog diff = 299 tab moves + 128 added entries, nothing else; server suite 304 passed (`MeretCatalog_EveryEntrySitsInAKnownTab`, Featured under 255 slots). Not yet seen in the client |
 | `/give <item name> [count]` cheat (R12-25, shipped early). Behaviour changes when `CheatCommands` is on (default in Adapted): `/item` and `/find` no longer need admin rights; `/item` without `--rarity` uses the item's data rarity instead of rarity 1 (gear from `/item` now has base stats). See README and ADAPTATIONS.md | `Maple2` `05ca9d2c`; `56b5e1e` | `ItemNameResolverTest` in the same run; in-game spot checks not recorded here |
 
 The superproject's `Maple2` and `_dl/Agarcium` submodule pointers are not yet committed at these commits.
@@ -45,9 +46,9 @@ never in git). A new ECDSA P-256 key was generated on 2026-10-17 and stored outs
 location `..\Signing\update-signing-key.pem`; `Launcher/UpdateKey.cs` holds its public half. Consequences:
 
 - Launchers 1.1.1-1.1.8 trust only the old key, so they cannot install a 1.1.9 update file. 1.1.9 is installed with the
-  full Setup (or the full zip). Setup replaces the program folder only; the save stays.
-- Publish 1.1.9 without an update zip: `py -I tools/package_release.py 1.1.9 --manifest` (no `--base`). Upload: Setup,
-  full zip, `release.json`, `release.json.sig`. A 1.1.8 launcher with AutoUpdate then finds no update file and offers
+  full Setup. Setup replaces the program folder only; the save stays.
+- Publish 1.1.9 without an update zip: `py -I tools/package_release.py 1.1.9 --manifest` (no `--base`). Upload: the Setup
+  (as `MapleStory2-Offline-Setup.exe`), `release.json`, `release.json.sig`. A 1.1.8 launcher with AutoUpdate then finds no update file and offers
   "It has to be installed with its full Setup. Open the download page?" (existing behaviour). An update zip signed with
   the new key would instead be downloaded and rejected as "not signed by the MapleStory 2 Offline developer".
 - The 1.1.9 release notes must say: install 1.1.9 with the Setup; updates work again from 1.1.9 on.
@@ -79,7 +80,9 @@ Checks on it:
   VERSION 1.1.9. The World server then started from that install on the packaged runtime against the 1.1.8 test save
   (no errors in 25 s; resets and 19 world bosses scheduled). After the redesign: Setup over 1.1.8 again keeps the save
   (14 files identical); World + Game reach "Channel 1 has become active" under both modes with 0 errors.
-- Upload when releasing: Setup, full zip, `release.json`, `release.json.sig`. No update zip (see Signing key change).
+- Upload when releasing, as for 1.1.1-1.1.8: the Setup renamed to `MapleStory2-Offline-Setup.exe` (the release notes link
+  `releases/latest/download/` to that name), with `release.json` + `release.json.sig` regenerated for that file name
+  (`publish/upload-1.1.9/`, signature verified). No update zip (see Signing key change) and, as before, no full zip.
 
 ## Readiness checks (run before packaging 1.1.9)
 
