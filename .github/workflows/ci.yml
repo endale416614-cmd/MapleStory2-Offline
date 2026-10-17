@@ -27,5 +27,7 @@ jobs:
       - name: Test servers
         # The data sweep (Category=Data) skips itself: CI has no game data.
         run: dotnet test Maple2/Maple2.Server.Tests -c Release --no-build
+      - name: Test launcher
+        run: dotnet test Launcher.Tests -c Release
       - name: Converter self-test
         run: dotnet run --project tools/KmsSplit -c Release -- --selftest

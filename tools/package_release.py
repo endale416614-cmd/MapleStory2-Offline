@@ -9,6 +9,8 @@ Creates in publish/:
   MapleStory2-Offline-Update-<ver>.zip  only with --base: every file changed since that release + update.json
                                         (cumulative: works on the base version and every patch after it)
   MapleStory2-Offline-<ver>/files.json  sha256 of every release file; keep it, the next --base needs it
+  release.json + release.json.sig       only with --base: size and sha256 of Setup, full zip and update zip, signed;
+                                        upload both with the release (launchers from 1.1.9 check the update against it)
 
 The release never contains saves, logs, reports, launcher.ini, developer settings or the .NET SDK.
 """
@@ -277,6 +279,14 @@ def manifest(stage):
     return files
 
 
+def write_release(path, version, notes, assets):
+    """release.json: name, size and sha256 of each release file (read by Launcher/ReleaseManifest.cs). File names only."""
+    files = [{"name": os.path.basename(a), "size": os.path.getsize(a), "sha256": sha256(a)} for a in assets]
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"version": version, "files": files, "notes": notes}, f, indent=1)
+        f.write("\n")
+
+
 def zip_folder(stage, zip_path, only=None, extra=None):
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for rel in sorted(only if only is not None else manifest_paths(stage)):
@@ -301,6 +311,10 @@ def main():
 
     out = os.path.join(ROOT, "publish")
     stage = os.path.join(out, f"MapleStory2-Offline-{args.version}")
+    # A release.json left from an earlier run names another version; uploaded by mistake, launchers would refuse the update.
+    for name in ("release.json", "release.json.sig"):
+        if os.path.exists(os.path.join(out, name)):
+            os.remove(os.path.join(out, name))
     if not args.no_build:
         build(args.version)
     print("assembling", stage)
@@ -337,6 +351,10 @@ def main():
         zip_folder(stage, update_zip, only=changed + ["files.json"], extra={"update.json": json.dumps(update, indent=1)})
         import sign_update
         sign_update.sign(update_zip, args.sign_key)
+        # After the zip is signed: signing rewrites its comment, so its sha256 changes.
+        release = os.path.join(out, "release.json")
+        write_release(release, args.version, args.notes, [setup, full_zip, update_zip])
+        sign_update.sign_manifest(release, args.sign_key)
 
     for name in sorted(os.listdir(out)):
         path = os.path.join(out, name)
