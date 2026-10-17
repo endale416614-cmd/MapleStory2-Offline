@@ -156,10 +156,18 @@ internal static class Setup {
         if (Directory.Exists(old)) {
             Directory.Delete(old, true);
         }
-        if (Directory.Exists(programDir)) {
+        bool hadProgram = Directory.Exists(programDir);
+        if (hadProgram) {
             Directory.Move(programDir, old);
         }
-        Directory.Move(staging, programDir);
+        try {
+            Directory.Move(staging, programDir);
+        } catch (Exception) {
+            if (hadProgram) {
+                Directory.Move(old, programDir); // put the previous installation back
+            }
+            throw;
+        }
         if (Directory.Exists(old)) {
             try {
                 Directory.Delete(old, true);

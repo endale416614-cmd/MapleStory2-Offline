@@ -36,9 +36,16 @@ internal static class UpdateChecker {
         foreach (JsonElement asset in root.GetProperty("assets").EnumerateArray()) {
             string name = asset.GetProperty("name").GetString() ?? "";
             if (name.StartsWith(AssetPrefix, StringComparison.OrdinalIgnoreCase) && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
-                fileUrl = asset.GetProperty("browser_download_url").GetString();
-                fileName = Path.GetFileName(name);
-                size = asset.GetProperty("size").GetInt64();
+                // Prefer the file named for this release; otherwise the first one listed.
+                bool forThisRelease = name.Contains(version, StringComparison.OrdinalIgnoreCase);
+                if (fileUrl == null || forThisRelease) {
+                    fileUrl = asset.GetProperty("browser_download_url").GetString();
+                    fileName = Path.GetFileName(name);
+                    size = asset.GetProperty("size").GetInt64();
+                }
+                if (forThisRelease) {
+                    break;
+                }
             }
         }
         if (fileUrl != null && !Trusted(fileUrl)) {

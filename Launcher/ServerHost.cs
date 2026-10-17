@@ -109,7 +109,11 @@ internal sealed class ServerHost : IDisposable {
                     return;
                 }
                 written += line.Length + 2;
-                log.WriteLine(written > MaxLogBytes ? "... log size limit reached, further lines not written ..." : line);
+                try {
+                    log.WriteLine(written > MaxLogBytes ? "... log size limit reached, further lines not written ..." : line);
+                } catch (ObjectDisposedException) {
+                    // buffered output arriving after the process exited and the log was closed
+                }
             }
         }
         process.OutputDataReceived += (_, e) => Append(e.Data);

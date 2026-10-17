@@ -133,7 +133,16 @@ internal sealed class LauncherForm : Form {
             ClaimPorts();
 
             SetStatus("Backing up your save...");
-            await Task.Run(BackupSave, token);
+            if (await Task.Run(BackupSave, token) is { } backupProblem) {
+                Hide();
+                DialogResult answer = MessageBox.Show(
+                    $"Your save failed its integrity check ({backupProblem}).\nStarting now may make a damaged save worse.\n\nContinue anyway?",
+                    Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                Show();
+                if (answer != DialogResult.Yes) {
+                    throw new OperationCanceledException();
+                }
+            }
             host.PrepareLogs();
             Directory.CreateDirectory(settings.SaveDir); // first run: no save yet, and File.Delete throws on a missing folder
             File.Delete(host.SaveStatusFile);
@@ -277,9 +286,9 @@ internal sealed class LauncherForm : Form {
     /// Consistent copy of the save (SQLite online backup) before the servers open it, checked with
     /// PRAGMA integrity_check; keeps the newest few. A damaged copy is deleted and reported.
     /// </summary>
-    private void BackupSave() {
+    private string? BackupSave() {
         if (!File.Exists(settings.SaveFile) || settings.BackupsToKeep <= 0) {
-            return;
+            return null;
         }
 
         Directory.CreateDirectory(settings.BackupDir);
@@ -296,6 +305,7 @@ internal sealed class LauncherForm : Form {
                      .OrderByDescending(file => file.Name).Skip(settings.BackupsToKeep)) {
             old.Delete();
         }
+        return problem;
     }
 
     /// <summary>Installs pending update zips. Returns true when the launcher restarted itself.</summary>

@@ -11,7 +11,8 @@ starts the game, saves your progress when you close it and shuts everything down
   work as on Windows.
 
 The game never connects to the internet (all servers listen on 127.0.0.1 and the client patch blocks every other
-address). Only the update check and `ms2offline update` talk to GitHub.
+address). Only the update check and `ms2offline update` talk to GitHub. The one other download is the .NET runtime,
+which is fetched from dot.net (Microsoft's install script) on first install.
 
 ## Install
 

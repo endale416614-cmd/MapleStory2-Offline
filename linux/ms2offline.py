@@ -77,6 +77,40 @@ def sha256(path):
     return digest.hexdigest()
 
 
+class FileSlice(io.RawIOBase):
+    """Read-only view of bytes [start, start + length) of an open file (like SubStream in Launcher/Setup.cs)."""
+
+    def __init__(self, f, start, length):
+        super().__init__()
+        self.f, self.start, self.length, self.pos = f, start, length, 0
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def seek(self, offset, whence=os.SEEK_SET):
+        base = (0, self.pos, self.length)[whence]
+        self.pos = max(0, min(self.length, base + offset))
+        return self.pos
+
+    def readinto(self, buffer):
+        self.f.seek(self.start + self.pos)
+        data = self.f.read(min(len(buffer), self.length - self.pos))
+        buffer[:len(data)] = data
+        self.pos += len(data)
+        return len(data)
+
+    def close(self):
+        if not self.closed:
+            self.f.close()
+        super().close()
+
+
 def windows_path(path):
     """A Linux path as the game (under Proton) sees it: Z: is the root of the file system."""
     return "Z:" + os.path.abspath(path).replace("/", "\\")
@@ -748,15 +782,17 @@ class Releases:
         """The program package zip inside a Setup.exe, or the zip itself."""
         if path.lower().endswith(".exe"):
             size = os.path.getsize(path)
-            with open(path, "rb") as f:
+            f = open(path, "rb")  # closed by the slice when the ZipFile is released
+            try:
                 f.seek(size - 28)
                 tail = f.read(28)
                 length = struct.unpack("<q", tail[:8])[0]
-                if tail[8:] != SETUP_MAGIC or length <= 0 or length > size:
+                if tail[8:] != SETUP_MAGIC or length <= 0 or length > size - 28:
                     raise ValueError("This file is not a MapleStory 2 Offline Setup.")
-                f.seek(size - 28 - length)
-                data = f.read(length)
-            return zipfile.ZipFile(io.BytesIO(data))
+                return zipfile.ZipFile(FileSlice(f, size - 28 - length, length))
+            except BaseException:
+                f.close()
+                raise
         return zipfile.ZipFile(path)
 
     @staticmethod
@@ -772,12 +808,29 @@ class Releases:
 
     @classmethod
     def install_package(cls, package, home, ui, full):
-        """Extracts a package into the program folder. A full package replaces the release folders; an update
+        """Extracts a package into the program folder. A full package is extracted and checked in updates/staging-<version>
+        first (every file must be listed in files.json and match), then replaces the release folders; an update
         package only adds its files and deletes the ones update.json lists."""
         names = [n for n in package.namelist() if cls.keep(n)]
+        expected = {}
+        try:
+            expected = json.loads(package.read("files.json"))
+        except KeyError:
+            pass
+        root = home
         if full:
-            for folder in ("Maple2", "GameData", "client-patch", "client-mods", "LICENSES"):
-                shutil.rmtree(os.path.join(home, folder), ignore_errors=True)
+            if not expected:
+                raise ValueError("The package has no file list (files.json), so it cannot be checked.")
+            present = set(names)
+            for rel in expected:
+                if cls.keep(rel) and rel not in present:
+                    raise ValueError(f"The package is damaged: {rel} is missing.")
+            try:
+                version = package.read("VERSION").decode("utf-8", "replace").strip()
+            except KeyError:
+                version = ""
+            root = os.path.join(home, "updates", "staging-" + (re.sub(r"[^\w.-]", "_", version) or "new"))
+            shutil.rmtree(root, ignore_errors=True)
         else:
             try:
                 update = json.loads(package.read("update.json"))
@@ -787,16 +840,15 @@ class Releases:
                 path = os.path.join(home, rel)
                 if os.path.isfile(path):
                     os.remove(path)
-        expected = {}
-        try:
-            expected = json.loads(package.read("files.json"))
-        except KeyError:
-            pass
         count = 0
         for name in names:
-            if name in ("update.json",):
+            if name == "update.json":
                 continue
-            target = os.path.join(home, name)
+            if full and name not in expected and name != "files.json":
+                raise ValueError(f"The package is damaged: {name} is not in its file list.")
+            target = os.path.join(root, name)
+            if not os.path.abspath(target).startswith(os.path.abspath(root) + os.sep):
+                raise ValueError(f"Invalid path in the package: {name}")
             os.makedirs(os.path.dirname(target), exist_ok=True)
             with package.open(name) as src, open(target, "wb") as dst:
                 shutil.copyfileobj(src, dst, 1 << 20)
@@ -805,6 +857,16 @@ class Releases:
             count += 1
             if count % 200 == 0:
                 ui.status(f"Installing... {count}/{len(names)} files")
+        if full:
+            for folder in ("Maple2", "GameData", "client-patch", "client-mods", "LICENSES"):
+                shutil.rmtree(os.path.join(home, folder), ignore_errors=True)
+            for entry in os.listdir(root):
+                source, target = os.path.join(root, entry), os.path.join(home, entry)
+                if os.path.isdir(source):
+                    shutil.copytree(source, target, dirs_exist_ok=True, copy_function=os.replace)
+                else:
+                    os.replace(source, target)
+            shutil.rmtree(root, ignore_errors=True)
         return count
 
     @staticmethod
@@ -817,6 +879,7 @@ class Releases:
                 return
         ui.status("Installing the .NET 8 runtime for the servers (about 90 MB, into the program folder)...")
         script = os.path.join(home, "updates", "dotnet-install.sh")
+        ui.status("Fetching Microsoft's dotnet-install.sh from dot.net (the only download from outside GitHub)...")
         Releases.download("https://dot.net/v1/dotnet-install.sh", script, ui, "dotnet-install.sh")
         subprocess.run(["bash", script, "--runtime", "aspnetcore", "--channel", "8.0", "--install-dir", os.path.join(home, "dotnet"), "--no-path"],
                        check=True, stdout=subprocess.DEVNULL)
