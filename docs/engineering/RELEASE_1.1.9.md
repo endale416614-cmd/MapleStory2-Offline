@@ -66,11 +66,11 @@ location `..\Signing\update-signing-key.pem`; `Launcher/UpdateKey.cs` holds its 
 ## Local 1.1.9 package (built 2026-10-17, not published)
 
 `py -I tools/package_release.py 1.1.9 --manifest` (fixed the same day: under `py -I` the packager could not import
-`sign_update`). Rebuilt the same day from Maple2 `aaaab0b0` (GameMode redesign): Setup 531.9 MB, full zip 462.2 MB,
-`release.json` + `release.json.sig`.
+`sign_update`). Current build: main `4d19298` with Maple2 `43340957` (GameMode redesign, Meret Market layout, review
+finding 1): Setup 532.0 MB (557,790,206 bytes), full zip 462.2 MB, `release.json` + `release.json.sig`.
 Checks on it:
 - `release.json` signature verifies with the launcher's key; both listed files match size and sha256.
-- `VERSION` 1.1.9; `GameData/data-build.json` records Maple2 `aaaab0b0` (no input hashes: `MS2_DATA_FOLDER` was not set).
+- `VERSION` 1.1.9; `GameData/data-build.json` records Maple2 `43340957`; Meret catalog 7,785 entries (no input hashes: `MS2_DATA_FOLDER` was not set).
 - No save, log, `launcher.ini`, install file, key or portrait in the folder; no machine path, e-mail or token in any file
   (the text "PRIVATE KEY" occurs only as a PEM label inside .NET and MySqlConnector libraries); test-kit mod disabled.
 - Against the 1.1.8 `files.json`: no file removed; added `GameData/data-build.json`; changed are the servers, launcher,
@@ -80,6 +80,11 @@ Checks on it:
   VERSION 1.1.9. The World server then started from that install on the packaged runtime against the 1.1.8 test save
   (no errors in 25 s; resets and 19 world bosses scheduled). After the redesign: Setup over 1.1.8 again keeps the save
   (14 files identical); World + Game reach "Channel 1 has become active" under both modes with 0 errors.
+  Rerun on the current build (2026-10-17, game closed): the 1.1.8 Setup into a fresh scratch folder with a copy of the
+  1.1.8 test save and the 1.1.8 Linux example as `launcher.ini`; the 1.1.9 Setup over it: save byte-identical (14 files),
+  `launcher.ini` untouched by Setup, install id kept, VERSION 1.1.9. First 1.1.9 launcher start: the 4 gameplay lines set
+  to `true` commented out, the other lines unchanged. World + Game from that install: "Channel 1 has become active",
+  0 errors, Meret catalog 7,785 entries, under Legacy and under Adapted. All pass.
 - Upload when releasing, as for 1.1.1-1.1.8: the Setup renamed to `MapleStory2-Offline-Setup.exe` (the release notes link
   `releases/latest/download/` to that name), with `release.json` + `release.json.sig` regenerated for that file name
   (`publish/upload-1.1.9/`, signature verified). No update zip (see Signing key change) and, as before, no full zip.
