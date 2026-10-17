@@ -118,6 +118,9 @@ Some quests or places can get stuck in this offline version. Type these in the c
   /killall   kills every monster on the map (counts for quests, exp and drops)
   /unstuck   takes you back to Henesys (revives you first if you are dead)
   /freebies  on/off: everything you buy is free, whatever the currency
+  /give      gives an item by name: /give Red Potion 5 (a name that fits several items lists their ids)
+  /item      gives an item by id: /item 20000001 --amount 5 (add --rarity 1-6 to pick the rarity)
+  /find      searches ids by name: /find item potion (also map, npc, quest, skill, achievement)
 
 Uninstall: Start menu > "Uninstall MapleStory 2 Offline" (asks before deleting your saves).
 

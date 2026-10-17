@@ -56,6 +56,10 @@ Own your game. Own your character. Keep your progress. The full plan is in [VISI
 - Game mode: `GameMode=Adapted` (the default) switches the solo-friendly changes on; `GameMode=Legacy` keeps the original rules
   (original rates, 30-day mail, original dungeon limits and Meret Market, no cheat commands). The launcher asks once on a new
   install, and a single option in `launcher.ini` (for example `GrindRates=true`) still overrides the mode.
+- Cheat commands (`CheatCommands=true`, on in Adapted), typed in the chat box:
+  - `/give <item name> [count]` gives an item by its English name (`/give Red Potion 5`); a name that fits several items lists their ids.
+  - `/item <id>` gives an item by id (`--amount`, `--rarity`, `--drop`); without `--rarity` the item gets its own default rarity.
+  - `/find item <text>` searches item names and ids (also `map`, `npc`, `quest`, `skill`, `achievement`).
 - A plain-text problem report after every session (desktop folder "MapleStory 2 Offline Reports") to send with bug reports.
 
 Every change to the original game is listed in [docs/ADAPTATIONS.md](docs/ADAPTATIONS.md).
