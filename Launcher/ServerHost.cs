@@ -84,16 +84,26 @@ internal sealed class ServerHost : IDisposable {
         if (File.Exists(Path.Combine(settings.GameDataDir, "maple-data.db"))) {
             info.Environment["SQLITE_DATA_DIR"] = settings.GameDataDir;
         }
+        info.Environment["OFFLINE_PROFILE"] = settings.GameMode;
         info.Environment["OFFLINE_TESTKIT"] = settings.TestKit ? "true" : "false";
         info.Environment["OFFLINE_TRIGGER_TRACE"] = settings.TriggerTrace ? "true" : "false";
-        info.Environment["OFFLINE_DUNGEON_ALL_DROPS"] = settings.DungeonAllDrops ? "true" : "false";
-        info.Environment["OFFLINE_UNLIMITED_DUNGEON_CLEARS"] = settings.UnlimitedDungeonClears ? "true" : "false";
-        info.Environment["OFFLINE_GRIND"] = settings.GrindRates ? "true" : "false";
-        info.Environment["OFFLINE_MAIL_NEVER_EXPIRES"] = settings.MailNeverExpires ? "true" : "false";
-        info.Environment["OFFLINE_CLASS_DROPS"] = settings.ClassDropsOnly ? "true" : "false";
-        info.Environment["OFFLINE_PET_TAMING"] = settings.PetTaming ? "true" : "false";
-        info.Environment["OFFLINE_DUNGEON_EPIC_GEAR"] = settings.DungeonEpicGear ? "true" : "false";
-        info.Environment["OFFLINE_CHEATS"] = settings.CheatCommands ? "true" : "false";
+        // An option no ini file names sends nothing, so the server's default for the game mode applies.
+        foreach ((string variable, bool? value) in new (string, bool?)[] {
+            ("OFFLINE_DUNGEON_ALL_DROPS", settings.DungeonAllDrops),
+            ("OFFLINE_UNLIMITED_DUNGEON_CLEARS", settings.UnlimitedDungeonClears),
+            ("OFFLINE_GRIND", settings.GrindRates),
+            ("OFFLINE_MAIL_NEVER_EXPIRES", settings.MailNeverExpires),
+            ("OFFLINE_CLASS_DROPS", settings.ClassDropsOnly),
+            ("OFFLINE_PET_TAMING", settings.PetTaming),
+            ("OFFLINE_DUNGEON_EPIC_GEAR", settings.DungeonEpicGear),
+            ("OFFLINE_CHEATS", settings.CheatCommands),
+        }) {
+            if (value is { } flag) {
+                info.Environment[variable] = flag ? "true" : "false";
+            } else {
+                info.Environment.Remove(variable); // the player's own environment must not leak in
+            }
+        }
 
         var log = new StreamWriter(new FileStream(LogPath(name), FileMode.Create, FileAccess.Write, FileShare.ReadWrite)) {
             AutoFlush = true,

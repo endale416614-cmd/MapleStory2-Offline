@@ -134,12 +134,17 @@ class Settings:
         self.server_configuration = values.get("ServerConfiguration", "Release")
         self.test_kit = self._flag("TestKit", False)
         self.trigger_trace = self._flag("TriggerTrace", False)
-        self.dungeon_all_drops = self._flag("DungeonAllDrops", False)
-        self.unlimited_dungeon_clears = self._flag("UnlimitedDungeonClears", False)
-        self.grind_rates = self._flag("GrindRates", False)
-        self.mail_never_expires = self._flag("MailNeverExpires", False)
-        self.cheat_commands = self._flag("CheatCommands", True)
-        self.class_drops_only = self._flag("ClassDropsOnly", False)
+        # GameMode: "Legacy" (original rules) or "Adapted" (solo-friendly, also when not set). An option no ini file
+        # names is None: nothing is sent to the server, whose default for the mode applies.
+        self.game_mode = "Legacy" if values.get("GameMode", "").strip().lower() == "legacy" else "Adapted"
+        self.dungeon_all_drops = self._flag("DungeonAllDrops", None)
+        self.unlimited_dungeon_clears = self._flag("UnlimitedDungeonClears", None)
+        self.grind_rates = self._flag("GrindRates", None)
+        self.mail_never_expires = self._flag("MailNeverExpires", None)
+        self.cheat_commands = self._flag("CheatCommands", None)
+        self.class_drops_only = self._flag("ClassDropsOnly", None)
+        self.pet_taming = self._flag("PetTaming", None)
+        self.dungeon_epic_gear = self._flag("DungeonEpicGear", None)
         self.debug_reports = self._flag("DebugReports", True)
         self.backups_to_keep = self._int("BackupsToKeep", 10)
         auto = values.get("AutoUpdate", "off").strip().lower()
@@ -558,14 +563,19 @@ class ServerHost:
         env["SQLITE_DIR"] = s.save_dir
         if os.path.exists(os.path.join(s.game_data_dir, "maple-data.db")):
             env["SQLITE_DATA_DIR"] = s.game_data_dir
+        env["OFFLINE_PROFILE"] = s.game_mode
         flags = {
             "OFFLINE_TESTKIT": s.test_kit, "OFFLINE_TRIGGER_TRACE": s.trigger_trace,
             "OFFLINE_DUNGEON_ALL_DROPS": s.dungeon_all_drops, "OFFLINE_UNLIMITED_DUNGEON_CLEARS": s.unlimited_dungeon_clears,
             "OFFLINE_GRIND": s.grind_rates, "OFFLINE_MAIL_NEVER_EXPIRES": s.mail_never_expires,
             "OFFLINE_CLASS_DROPS": s.class_drops_only, "OFFLINE_CHEATS": s.cheat_commands,
+            "OFFLINE_PET_TAMING": s.pet_taming, "OFFLINE_DUNGEON_EPIC_GEAR": s.dungeon_epic_gear,
         }
         for key, value in flags.items():
-            env[key] = "true" if value else "false"
+            if value is None:
+                env.pop(key, None)  # the player's own environment must not leak in
+            else:
+                env[key] = "true" if value else "false"
         return env
 
     def start(self, name):
@@ -955,7 +965,11 @@ class Launcher:
                 ui.status("Launching MapleStory 2...")
                 self.install_client_patch()
                 self.set_mod("offline-testkit", s.test_kit)
-                self.set_mod("offline-dungeons", s.unlimited_dungeon_clears)
+                # Client mods follow the effective option: its own line in the ini, else the game mode's default.
+                adapted = s.game_mode == "Adapted"
+                self.set_mod("offline-dungeons", adapted if s.unlimited_dungeon_clears is None else s.unlimited_dungeon_clears)
+                self.set_mod("offline-pets", adapted if s.pet_taming is None else s.pet_taming)
+                self.set_mod("offline-shop", adapted)
                 self.prepare_prefix()
                 game = self.launch_game()
                 if report:

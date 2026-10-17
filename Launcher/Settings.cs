@@ -38,22 +38,30 @@ internal sealed class Settings {
     public bool TestKit { get; private init; }
     /// <summary>Logs every map-script state change and action to logs\game.log (quest/dungeon debugging).</summary>
     public bool TriggerTrace { get; private init; }
+    /// <summary>
+    /// "Legacy" (original rules) or "Adapted" (solo-friendly defaults, also when not set). The options below are null
+    /// when no ini file names them: the server then uses the default of this mode; a line in launcher.ini overrides it.
+    /// </summary>
+    public string GameMode { get; set; } = "Adapted";
+    /// <summary>True when GameMode is written in defaults.ini or launcher.ini (otherwise a first run asks the player).</summary>
+    public bool GameModeSet { get; set; }
+    public bool Adapted => GameMode == "Adapted";
     /// <summary>In dungeons every item of every drop table drops (monsters, breakables, clear reward).</summary>
-    public bool DungeonAllDrops { get; private init; }
+    public bool? DungeonAllDrops { get; private init; }
     /// <summary>Dungeon clear rewards limited to 9999 per week/day instead of the original few.</summary>
-    public bool UnlimitedDungeonClears { get; private init; }
+    public bool? UnlimitedDungeonClears { get; private init; }
     /// <summary>Grinding rates from offline-grind.json: scaled monster exp, more loot, upgrade-material drops.</summary>
-    public bool GrindRates { get; private init; }
+    public bool? GrindRates { get; private init; }
     /// <summary>Monsters and dungeon rewards only drop gear the player's class can wear.</summary>
-    public bool ClassDropsOnly { get; private init; }
+    public bool? ClassDropsOnly { get; private init; }
     /// <summary>Wild pets 3x as often, pet candy captures on a full gauge, taming items usable from level 10.</summary>
-    public bool PetTaming { get; private init; }
+    public bool? PetTaming { get; private init; }
     /// <summary>Weapons, armor and accessories dropped in dungeons are at least Epic where the item has Epic stats.</summary>
-    public bool DungeonEpicGear { get; private init; }
+    public bool? DungeonEpicGear { get; private init; }
     /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
-    public bool MailNeverExpires { get; private init; }
-    /// <summary>Chat commands /godmode, /killall, /unstuck and /freebies for getting past stuck quests (on unless CheatCommands=false).</summary>
-    public bool CheatCommands { get; private init; } = true;
+    public bool? MailNeverExpires { get; private init; }
+    /// <summary>Chat commands /godmode, /killall, /unstuck and /freebies for getting past stuck quests (on in Adapted unless CheatCommands=false, off in Legacy).</summary>
+    public bool? CheatCommands { get; private init; }
     /// <summary>
     /// Online update check when Play is pressed: "ask" (offer the newer version), "always" (install it without asking)
     /// or "off" (only manual updates). Skipped silently without internet.
@@ -87,22 +95,24 @@ internal sealed class Settings {
             Username = values.GetValueOrDefault("Username", defaults.Username),
             Password = values.GetValueOrDefault("Password", defaults.Password),
             ServerConfiguration = values.GetValueOrDefault("ServerConfiguration", defaults.ServerConfiguration),
-            TestKit = Flag(values, "TestKit", false),
-            TriggerTrace = Flag(values, "TriggerTrace", false),
-            DungeonAllDrops = Flag(values, "DungeonAllDrops", false),
-            UnlimitedDungeonClears = Flag(values, "UnlimitedDungeonClears", false),
-            GrindRates = Flag(values, "GrindRates", false),
-            MailNeverExpires = Flag(values, "MailNeverExpires", false),
-            CheatCommands = Flag(values, "CheatCommands", true),
-            ClassDropsOnly = Flag(values, "ClassDropsOnly", false),
-            PetTaming = Flag(values, "PetTaming", false),
-            DungeonEpicGear = Flag(values, "DungeonEpicGear", false),
+            GameMode = string.Equals(values.GetValueOrDefault("GameMode")?.Trim(), "Legacy", StringComparison.OrdinalIgnoreCase) ? "Legacy" : "Adapted",
+            GameModeSet = values.ContainsKey("GameMode"),
+            TestKit = Flag(values, "TestKit") ?? false,
+            TriggerTrace = Flag(values, "TriggerTrace") ?? false,
+            DungeonAllDrops = Flag(values, "DungeonAllDrops"),
+            UnlimitedDungeonClears = Flag(values, "UnlimitedDungeonClears"),
+            GrindRates = Flag(values, "GrindRates"),
+            MailNeverExpires = Flag(values, "MailNeverExpires"),
+            CheatCommands = Flag(values, "CheatCommands"),
+            ClassDropsOnly = Flag(values, "ClassDropsOnly"),
+            PetTaming = Flag(values, "PetTaming"),
+            DungeonEpicGear = Flag(values, "DungeonEpicGear"),
             AutoUpdate = (values.GetValueOrDefault("AutoUpdate") ?? defaults.AutoUpdate).Trim().ToLowerInvariant() switch {
                 "ask" or "true" or "yes" or "on" => "ask",
                 "always" or "auto" or "silent" => "always",
                 _ => "off",
             },
-            DebugReports = Flag(values, "DebugReports", true),
+            DebugReports = Flag(values, "DebugReports") ?? true,
             BackupsToKeep = int.TryParse(values.GetValueOrDefault("BackupsToKeep"), out int keep) ? keep : defaults.BackupsToKeep,
         };
     }
@@ -133,6 +143,7 @@ internal sealed class Settings {
         }
     }
 
-    private static bool Flag(Dictionary<string, string> values, string key, bool fallback) =>
-        bool.TryParse(values.GetValueOrDefault(key), out bool value) ? value : fallback;
+    /// <summary>The key's bool value, or null when no ini file sets it.</summary>
+    private static bool? Flag(Dictionary<string, string> values, string key) =>
+        bool.TryParse(values.GetValueOrDefault(key), out bool value) ? value : null;
 }

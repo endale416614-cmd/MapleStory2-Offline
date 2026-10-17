@@ -3,17 +3,19 @@
 # Folder of MapleStory2.exe (the x64 folder of your Steam install).
 #ClientDir=C:\Program Files (x86)\Steam\steamapps\common\MapleStory 2\x64
 
-# Gameplay options (offline edition additions; see docs/ADAPTATIONS.md)
-GrindRates=true
-DungeonAllDrops=true
-UnlimitedDungeonClears=true
-MailNeverExpires=true
-ClassDropsOnly=true
-PetTaming=true
-DungeonEpicGear=true
+# Rules: Adapted (solo-friendly changes, the default) or Legacy (the original game). See docs/ADAPTATIONS.md, A19.
+GameMode=Adapted
 
+# Single options win over the mode. Uncomment a line to turn that option on or off whatever the mode says.
+#GrindRates=true
+#DungeonAllDrops=true
+#UnlimitedDungeonClears=true
+#MailNeverExpires=true
+#ClassDropsOnly=true
+#PetTaming=true
+#DungeonEpicGear=true
 # Chat commands /godmode, /killall, /unstuck, /freebies (for quests or places you get stuck in).
-CheatCommands=true
+#CheatCommands=true
 
 # Online update check when you press Play: ask, always (no question) or off (manual updates only).
 AutoUpdate=ask

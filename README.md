@@ -53,6 +53,9 @@ Own your game. Own your character. Keep your progress. The full plan is in [VISI
 - The client is locked to this PC: connections to anything except `127.0.0.1` are blocked.
 - Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items.
 - Solo-friendly options: adjustable exp and drop rates, upgrade-material drops, dungeon reward options.
+- Game mode: `GameMode=Adapted` (the default) switches the solo-friendly changes on; `GameMode=Legacy` keeps the original rules
+  (original rates, 30-day mail, original dungeon limits and Meret Market, no cheat commands). The launcher asks once on a new
+  install, and a single option in `launcher.ini` (for example `GrindRates=true`) still overrides the mode.
 - A plain-text problem report after every session (desktop folder "MapleStory 2 Offline Reports") to send with bug reports.
 
 Every change to the original game is listed in [docs/ADAPTATIONS.md](docs/ADAPTATIONS.md).

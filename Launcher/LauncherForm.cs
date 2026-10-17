@@ -130,6 +130,7 @@ internal sealed class LauncherForm : Form {
                 return;
             }
 
+            AskGameMode();
             ClaimPorts();
 
             SetStatus("Backing up your save...");
@@ -171,9 +172,11 @@ internal sealed class LauncherForm : Form {
 
             SetStatus("Launching MapleStory 2...");
             InstallClientPatch();
+            // Client mods follow the effective option: its own line in the ini, else the game mode's default.
             SetMod("offline-testkit", settings.TestKit);
-            SetMod("offline-dungeons", settings.UnlimitedDungeonClears); // dungeon window shows the 9999 clear limits
-            SetMod("offline-pets", settings.PetTaming); // taming items usable from level 10
+            SetMod("offline-dungeons", settings.UnlimitedDungeonClears ?? settings.Adapted); // dungeon window shows the 9999 clear limits
+            SetMod("offline-pets", settings.PetTaming ?? settings.Adapted); // taming items usable from level 10
+            SetMod("offline-shop", settings.Adapted); // full Meret Market tabs, with the offline Meret catalog
             using Process game = LaunchGame();
             report?.Step("Game started");
             EventLog.Write("game", "started");
@@ -455,6 +458,33 @@ internal sealed class LauncherForm : Form {
         }
         report?.Step("Client patch installed");
         EventLog.Write("patch", "client patch installed into " + settings.ClientDir);
+    }
+
+    /// <summary>First run (no GameMode in the ini files, no save yet): the player picks the rules once. Existing installs stay Adapted.</summary>
+    private void AskGameMode() {
+        if (settings.GameModeSet || File.Exists(settings.SaveFile)) {
+            return;
+        }
+        var legacy = new TaskDialogCommandLinkButton("Original rules (Legacy)",
+            "The game as it was: original rates, 30-day mail, original dungeon limits, no cheat commands, original Meret Market.");
+        var adapted = new TaskDialogCommandLinkButton("Solo-friendly (Adapted)",
+            "Changes for playing alone: faster grinding, all dungeon drops, unlimited dungeon clears, pet taming, mail that never expires, " +
+            "the full Meret Market, and chat commands for stuck quests.");
+        var page = new TaskDialogPage {
+            Caption = Title,
+            Heading = "How do you want to play?",
+            Text = "You can change this later with GameMode=Legacy or GameMode=Adapted in launcher.ini, and switch single options on or off there.",
+            Icon = TaskDialogIcon.Information,
+            Buttons = { legacy, adapted },
+            AllowCancel = false,
+        };
+        Hide();
+        TaskDialogButton result = TaskDialog.ShowDialog(page);
+        Show();
+        settings.GameMode = result == legacy ? "Legacy" : "Adapted";
+        settings.GameModeSet = true;
+        settings.SaveUserValue("GameMode", settings.GameMode);
+        report?.Step("Game mode: " + settings.GameMode);
     }
 
     /// <summary>A client mod that follows a setting is only loaded while it is on (mod.json vs mod.json.disabled).</summary>

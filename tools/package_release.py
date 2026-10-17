@@ -39,17 +39,10 @@ ENV_DROP = {"MS2_DATA_FOLDER", "SQLITE_DIR", "SQLITE_DATA_DIR", "DB_IP", "DB_POR
 PLAYER_DEFAULTS = """# Default settings of this release (replaced by updates).
 # To change one, put the same line in launcher.ini - that file is yours and updates never touch it.
 
-# Solo-friendly rates (see GameRates in README.txt)
-GrindRates=true
-DungeonAllDrops=true
-UnlimitedDungeonClears=true
-MailNeverExpires=true
-ClassDropsOnly=true
-PetTaming=true
-DungeonEpicGear=true
-
-# Chat commands /godmode, /killall, /unstuck, /freebies (see Cheats in README.txt)
-CheatCommands=true
+# Rules: Adapted = solo-friendly changes (faster grinding, all dungeon drops, unlimited dungeon clears, pet taming,
+# mail that never expires, Meret Market, chat commands - see Settings in README.txt); Legacy = the original rules.
+# Single options (GrindRates, CheatCommands, ...) can still be set in launcher.ini and win over the mode.
+GameMode=Adapted
 
 # Updates: ask = offer a newer version when you press Play (needs internet, otherwise skipped),
 # always = install it without asking, off = only manual updates (Start menu > Install Update)
@@ -103,6 +96,10 @@ Settings
 --------
 defaults.ini lists the options. To change one, put the line in launcher.ini in your data folder
 (%LOCALAPPDATA%\MapleStory 2 Offline), for example:  GrindRates=false
+  GameMode               Adapted = solo-friendly changes (the options below, the Meret Market with Meret bought for Mesos,
+                         the chat commands); Legacy = the original rules (original rates, 30-day mail, original dungeon
+                         limits, original Meret Market, no chat commands). The launcher asks on the first start of a new
+                         install. An option below that you set yourself wins over the mode.
   GrindRates             faster exp, more drops, upgrade materials from monsters
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
@@ -110,7 +107,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   ClassDropsOnly         monsters and dungeon rewards only drop gear your class can wear
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
   DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
-  CheatCommands          the chat commands below (CheatCommands=false turns them off)
+  CheatCommands          the chat commands below (on in Adapted, off in Legacy; set it to true or false to override)
   AutoUpdate             ask / always / off - online update check when you press Play
   ClientDir              the game's x64 folder, if you moved the game
 
