@@ -37,8 +37,10 @@ GMS vs KMS, by id (KMS ids read from the consolidated files):
 KMS-only items are mostly cosmetics and gear (id prefixes 113, 117, 116, 122, 203, 118, 112). KMS-only quests
 include a later Epic Quest run (10003449-10003474) and mission/event quests (3000xxxx, 8900xxxx).
 
-Text: KMS ships `string/en` with 37,046 item names (GMS has 33,868), so part of the KMS-only content already has
-official English names. The later Epic Quest text (`questdescription_final.xml`) exists in Korean only.
+Text: KMS ships `string/en` with 37,046 item names (GMS has 33,868), but few of them cover KMS-only content: of the
+4,040 KMS-only items, 720 have an English name, 3,273 only a Korean name and 47 none. None of the 152 KMS-only NPCs
+has an English name. Where both exist, the English name matches the model file and the Korean one sometimes does not.
+The later Epic Quest text (`questdescription_final.xml`) exists in Korean only.
 
 Maps: KMS-only quests sampled so far use maps that GMS also has (e.g. 02000487). KMS keeps an empty `map/` folder
 ("kept to reference old map history"); its map metadata moved elsewhere (not yet located).
@@ -57,7 +59,11 @@ exe, and the server handshake accepts only protocol version 12 with locale NA
 client instead.
 
 Content is merged per record: NA records stay as they are, and KMS/JMS records are added only for ids NA does not
-have. The ingest locale stays "NA". Switching it to "KR" would change feature gates for every existing record
+have.
+
+Delivery (tested in game, 2026-10-17): the added records go into a repacked `Xml.m2d` built with `tools/M2dPack`
+(NA entries copied byte for byte, new entries appended). The server database is built by the normal ingest from the
+same repacked archive. The client mod loader is not needed for added XML. The ingest locale stays "NA". Switching it to "KR" would change feature gates for every existing record
 (shops, Meret Market, Global* overrides).
 
 ## 5. Obstacles found

@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    # Windows: the launcher is WinForms.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build servers
+        run: dotnet build Maple2/Maple2.sln -c Release
+      - name: Build launcher
+        run: dotnet build Launcher/MapleStory2Offline.csproj -c Release
+      - name: Test servers
+        # The data sweep (Category=Data) skips itself: CI has no game data.
+        run: dotnet test Maple2/Maple2.Server.Tests -c Release --no-build
+      - name: Converter self-test
+        run: dotnet run --project tools/KmsSplit -c Release -- --selftest

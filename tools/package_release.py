@@ -228,6 +228,27 @@ def assemble(stage, version):
     source = sqlite3.connect(f"file:{os.path.join(ROOT, 'SaveData', 'maple-data.db')}?mode=ro", uri=True)
     source.execute("VACUUM INTO ?", (put("GameData/maple-data.db"),))
     source.close()
+    write_data_build(put("GameData/data-build.json"), put("GameData/maple-data.db"))
+
+
+def write_data_build(path, db):
+    """Record which data the shipped maple-data.db was built from, so a later release can reproduce or diff it:
+    the ingest's per-table CRC32C checksums, the Maple2 commit, and (when MS2_DATA_FOLDER is set, as for the
+    ingest) the sha256 of the input archives. File names only; no machine paths."""
+    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    tables = dict(con.execute("SELECT TableName, Crc32C FROM checksum ORDER BY TableName"))
+    con.close()
+    commit = subprocess.run(["git", "-C", os.path.join(ROOT, "Maple2"), "rev-parse", "HEAD"],
+                            capture_output=True, text=True).stdout.strip()
+    inputs = {}
+    data = os.environ.get("MS2_DATA_FOLDER")
+    if data:
+        for name in ("Xml.m2d", "Xml.m2h", "Server.m2d", "Server.m2h", "Resource/Exported.m2d"):
+            if os.path.exists(os.path.join(data, name)):
+                inputs[name] = sha256(os.path.join(data, name))
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"maple2Commit": commit, "inputs": inputs, "tables": tables}, f, indent=1, sort_keys=True)
+        f.write("\n")
 
 
 SETUP_MAGIC = b"MS2OFFLINE-PAYLOAD-1"

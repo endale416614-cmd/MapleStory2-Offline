@@ -1,5 +1,5 @@
 // KMS consolidated XML -> NA per-id XML. Read-only on the clients.
-//   KmsSplit <kmsXml.m2d> <outDir> [--only-ids <file>] [--na <naXml.m2d>]   convert (--na: KMS-only ids)
+//   KmsSplit <kmsXml.m2d> <outDir> [--only-ids <file>] [--na <naXml.m2d>] [--model <Maple2.Model.dll>]   convert (--na: KMS-only ids, NA-default fill, required-attribute fill, item slot rule, npc effectdummy)
 //   KmsSplit --verify <kmsXml.m2d> <naXml.m2d> <reportDir> --sample 500      compare converted vs NA
 //   KmsSplit --selftest                                                     comparer self-check
 //   KmsSplit --paths <Xml.m2d> <prefix>...                                  element@attr frequency (dev aid)
@@ -47,6 +47,7 @@ static int RunConvert(string[] a) {
     var k = new Kms(kmsPath);
     using var na = naPath == null ? null : new Na(naPath);
     var skel = na == null ? null : Skeleton.Learn(na, null);
+    var rules = na == null ? null : NaRules.Learn(na.All()); // learned from ALL NA files of each kind
     var sb = new StringBuilder("kind\tkms_ids\tselected\twritten\tfrom_questdata\tfrom_kms_quest_file\tskipped\n");
     foreach (var kind in Layout.Kinds) {
         int total = 0, sel = 0, wrote = 0, fromQd = 0, fromFile = 0, skipped = 0, empty = 0;
@@ -57,24 +58,39 @@ static int RunConvert(string[] a) {
             sel++;
             string dest = Path.Combine(outDir, Layout.Path(kind, id));
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            if (kind == "quest" && k.QuestFiles.TryGetValue(id, out var raw)) { File.WriteAllBytes(dest, raw); fromFile++; wrote++; continue; }
+            if (kind == "quest" && k.QuestFiles.TryGetValue(id, out var raw)) {
+                var qd = rules == null ? null : Kms.Parse(raw);
+                if (qd != null && rules!.Apply(kind, qd) > 0) qd.Save(dest); else File.WriteAllBytes(dest, raw); // untouched files stay byte-exact
+                fromFile++; wrote++; continue;
+            }
             var doc = Conv.Make(k, kind, id);
             if (doc == null) { skipped++; continue; }
             if (!doc.Root!.Elements().Any()) { empty++; continue; } // KMS keeps bare placeholder records such as <item id=".."/>
             skel?.Fill(kind, doc);
             Conv.Repair(kind, doc);
+            if (kind == "item") rules?.Reissue(id, doc, b => {
+                static XElement? Pick(XDocument d) => d.Descendants("slots").FirstOrDefault(x => x.Descendants("asset").Any());
+                static long Next(XDocument d) => long.TryParse((string?)d.Descendants("tool").Select(t => t.Attribute("itemPreset")).FirstOrDefault(a => a != null), out long n) ? n : 0;
+                var docs = new List<(XDocument D, string Src)>();
+                if (na!.Ids["item"].Contains(b)) docs.Add((Kms.Parse(na.Get(Layout.Path("item", b))), "NA")); // NA preferred, KMS only if NA has no assets
+                if (Conv.Make(k, "item", b) is { } bd) docs.Add((bd, "KMS"));
+                foreach (var (d, src) in docs) if (Pick(d) is { } sl) return (sl, src, 0L);
+                return (null, "", docs.Count > 0 ? Next(docs[0].D) : 0L);
+            });
             if (kind == "item" && model != null)
                 foreach (var (el, attr, val) in EnumCheck.ItemEnumErrors(doc, model)) {
                     string key = $"{el.Name}@{attr}=\"{val}\" -> " + (el.Name == "slot" ? "slot removed" : "\"\"");
                     lossy[key] = lossy.GetValueOrDefault(key) + 1;
                     if (el.Name == "slot") el.Remove(); else el.SetAttributeValue(attr, "");
                 }
+            rules?.Apply(kind, doc); // after the enum check: fill, then item slot rule, then npc effectdummy
             doc.Save(dest); wrote++;
             if (kind == "quest") fromQd++;
         }
         sb.AppendLine($"{kind}\t{total}\t{sel}\t{wrote}\t{fromQd}\t{fromFile}\t{skipped}	{empty}");
     }
     foreach (var (kk, n) in lossy) sb.AppendLine($"lossy	{n}	{kk}");
+    if (rules != null) foreach (var (kk, n) in rules.Counts) sb.AppendLine($"rule	{n}	{kk}");
     Console.Write(sb);
     File.WriteAllText(outDir.TrimEnd(Path.DirectorySeparatorChar, (char)47) + ".summary.tsv", sb.ToString()); // outside outDir: it is packed as an overlay
     return 0;
@@ -268,6 +284,11 @@ sealed class Na : IDisposable {
         Console.WriteLine($"NA per-id entries: {total}, path scheme mismatches: {bad}");
     }
     public void Dispose() => r.Dispose();
+    // every NA per-id file, ascending id per kind (deterministic "first file wins" choices)
+    public IEnumerable<(string Kind, XDocument Doc)> All() {
+        foreach (var kind in Layout.Kinds)
+            foreach (long id in Ids[kind].OrderBy(x => x)) yield return (kind, Kms.Parse(Get(Layout.Path(kind, id))));
+    }
 }
 
 // ---------- NA defaults: attribute/element statistics learned from NA files ----------
@@ -332,6 +353,110 @@ sealed class Skeleton {
                 if (!e.Elements(c).Any() && cn.Instances >= 0.9 * n.Instances && cn.Instances <= 1.05 * n.Instances) e.Add(new XElement(c));
                 foreach (var ce in e.Elements(c)) FillEl(kind, ce, path + "/" + c);
             }
+    }
+}
+
+// ---------- in-game verified client fixes, learned from ALL NA files (no sampling) ----------
+//  1 fill:  an attribute present in >= 98% of the NA elements at an element path (names only, no sibling index) is added
+//           when missing, with the most common NA value; the NA client crashes at start-up (0xC000000D) on missing ones.
+//  2 slots: item <slot name=X><asset replace ani> = the dominant NA combination for slot X (rigid attachments 0/0,
+//           skinned clothing 1/1, HR 1/0); runs after the fill so the fill cannot bring back a wrong value.
+//  3 dummy: npc <effectdummy> missing -> copy from the NA npc with the same <model kfm>, else the NA npc whose
+//           <capsule height> is closest.
+sealed class NaRules {
+    const double Threshold = 0.98;
+    sealed class Cnt { public int C; public Dictionary<string, int> Vals = new(); }
+    sealed class El { public int N; public Dictionary<string, Cnt> Attrs = new(); }
+    readonly Dictionary<string, List<(string Attr, string Val)>> required = new(); // "kind|path" -> attributes to add
+    readonly Dictionary<string, (string Replace, string Ani)> slotRule = new();
+    readonly Dictionary<string, XElement> dummyByKfm = new();
+    readonly List<(double Height, XElement Block)> dummies = new();
+    public readonly SortedDictionary<string, int> Counts = new();
+    void Count(string key, int n) { if (n > 0) Counts[key] = Counts.GetValueOrDefault(key) + n; }
+
+    static string Kfm(XDocument d) => d.Descendants("model").Select(m => (string?)m.Attribute("kfm")).FirstOrDefault(v => v != null) ?? "";
+    static double Height(XDocument d) => double.TryParse(d.Descendants("capsule").Select(c => (string?)c.Attribute("height")).FirstOrDefault(v => v != null),
+        System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var h) ? h : 0;
+
+    public static NaRules Learn(IEnumerable<(string Kind, XDocument Doc)> docs) {
+        var r = new NaRules();
+        var stats = new Dictionary<string, Dictionary<string, El>>();
+        var slotTally = new Dictionary<string, Dictionary<(string, string), int>>();
+        void Walk(Dictionary<string, El> st, XElement e, string p) {
+            if (!st.TryGetValue(p, out var s)) st[p] = s = new();
+            s.N++;
+            foreach (var a in e.Attributes().Where(a => !a.IsNamespaceDeclaration)) {
+                if (!s.Attrs.TryGetValue(a.Name.LocalName, out var c)) s.Attrs[a.Name.LocalName] = c = new();
+                c.C++; c.Vals[a.Value] = c.Vals.GetValueOrDefault(a.Value) + 1;
+            }
+            foreach (var ch in e.Elements()) Walk(st, ch, p + "/" + ch.Name.LocalName);
+        }
+        foreach (var (kind, doc) in docs) {
+            if (!stats.TryGetValue(kind, out var st)) stats[kind] = st = new();
+            Walk(st, doc.Root!, doc.Root!.Name.LocalName);
+            if (kind == "item")
+                foreach (var s in doc.Descendants("slot").Where(s => s.Attribute("name") != null))
+                    foreach (var a in s.Descendants("asset")) {
+                        string slot = (string)s.Attribute("name")!;
+                        if (!slotTally.TryGetValue(slot, out var t)) slotTally[slot] = t = new();
+                        var k = (((string?)a.Attribute("replace")) ?? "0", ((string?)a.Attribute("ani")) ?? "0");
+                        t[k] = t.GetValueOrDefault(k) + 1;
+                    }
+            if (kind == "npc" && doc.Descendants("effectdummy").FirstOrDefault(e => !e.IsEmpty) is { } ed) {
+                var block = new XElement(ed);
+                string kfm = Kfm(doc);
+                if (kfm.Length > 0) r.dummyByKfm.TryAdd(kfm, block);
+                r.dummies.Add((Height(doc), block));
+            }
+        }
+        foreach (var (kind, st) in stats)
+            foreach (var (path, s) in st) {
+                var req = s.Attrs.Where(a => (double)a.Value.C / s.N >= Threshold).Select(a => (a.Key, a.Value.Vals.OrderByDescending(v => v.Value).First().Key)).ToList();
+                if (req.Count > 0) r.required[kind + "|" + path] = req;
+            }
+        foreach (var (slot, t) in slotTally) { var best = t.OrderByDescending(v => v.Value).First().Key; r.slotRule[slot] = best; }
+        return r;
+    }
+
+    // 4 re-issues: <tool itemPreset="B"> with empty <slots /> is invisible when worn; take B slots (NA file, else converted KMS).
+    // Run before the enum check (so copied KMS slots are checked too); rule 2 then normalises them in Apply.
+    // slotsOf(x) = (slots with assets or null, source label, x own itemPreset or 0); chains are followed up to 5 hops, cycle-safe.
+    public void Reissue(long id, XDocument doc, Func<long, (XElement? Slots, string Src, long Next)> slotsOf) {
+        foreach (var env in doc.Root!.Elements("environment")) {
+            if (!long.TryParse((string?)env.Element("tool")?.Attribute("itemPreset"), out long b) || b == id) continue;
+            if (env.Element("slots") is not { } sl || sl.Descendants("asset").Any()) continue;
+            long first = b; XElement? src = null; string from = ""; var seen = new HashSet<long> { id };
+            for (int hop = 0; hop < 5 && b != 0 && seen.Add(b); hop++) { (src, from, b) = slotsOf(b); if (src != null) break; }
+            if (src == null) { Count($"item re-issue slots: none available (kept empty): {id} -> {first}", 1); continue; }
+            sl.ReplaceWith(new XElement(src)); Count($"item re-issue slots copied from {from}", 1);
+        }
+    }
+
+    // returns the number of changes made to doc
+    public int Apply(string kind, XDocument doc) {
+        int fill = Fill(kind, doc.Root!, doc.Root!.Name.LocalName), slots = 0, dummy = 0;
+        if (kind == "item")
+            foreach (var s in doc.Descendants("slot").Where(s => s.Attribute("name") != null && slotRule.ContainsKey((string)s.Attribute("name")!)))
+                foreach (var a in s.Descendants("asset")) {
+                    var (rep, ani) = slotRule[(string)s.Attribute("name")!];
+                    if ((string?)a.Attribute("replace") != rep || (string?)a.Attribute("ani") != ani) { a.SetAttributeValue("replace", rep); a.SetAttributeValue("ani", ani); slots++; }
+                }
+        if (kind == "npc" && dummies.Count > 0 && !doc.Descendants("effectdummy").Any(e => !e.IsEmpty)) { // a bare <effectdummy /> counts as missing
+            foreach (var e in doc.Descendants("effectdummy").ToList()) e.Remove();
+            string kfm = Kfm(doc);
+            if (dummyByKfm.TryGetValue(kfm, out var b)) Count("npc effectdummy from same model", 1);
+            else { double h = Height(doc); b = dummies.MinBy(d => Math.Abs(d.Height - h)).Block; Count("npc effectdummy from nearest capsule height", 1); }
+            doc.Root!.Add(new XElement(b)); dummy++;
+        }
+        Count("attributes added by fill (" + kind + ")", fill); Count("item slot assets rewritten", slots);
+        return fill + slots + dummy;
+    }
+    int Fill(string kind, XElement e, string path) {
+        int n = 0;
+        if (required.TryGetValue(kind + "|" + path, out var list))
+            foreach (var (a, v) in list) if (e.Attribute(a) == null) { e.SetAttributeValue(a, v); n++; }
+        foreach (var c in e.Elements().ToList()) n += Fill(kind, c, path + "/" + c.Name.LocalName);
+        return n;
     }
 }
 
@@ -640,6 +765,40 @@ static class Cmp {
         // 6 path scheme
         Check("path scheme", Layout.Item(11300001) == "item/1/13/11300001.xml" && Layout.Npc(2040998) == "npc/02/04/02040998.xml"
             && Layout.Skill(1) == "skill/00/00000001.xml" && Layout.Skill(100000000) == "skill/100/100000000.xml" && Layout.Quest(10001000) == "quest/10001000.xml");
+        // 7 NA rules: slot replace/ani follow the dominant NA combination per slot, applied after the fill
+        XDocument D(string s) => XDocument.Parse(s);
+        string ItemXml(string slot, string rep, string ani) => $"<ms2><environment><slots><slot name=\"{slot}\"><asset replace=\"{rep}\" ani=\"{ani}\"/></slot></slots></environment></ms2>";
+        var naItems = new[] { ("item", D(ItemXml("CP", "0", "0"))), ("item", D(ItemXml("CP", "0", "0"))), ("item", D(ItemXml("CL", "1", "1"))), ("item", D(ItemXml("HR", "1", "0"))), ("item", D(ItemXml("HR", "1", "0"))), ("item", D(ItemXml("HR", "0", "0"))) };
+        var ruleItems = NaRules.Learn(naItems);
+        var kmsItem = D("<ms2><environment><slots><slot name=\"CP\"><asset replace=\"1\" ani=\"1\"/></slot><slot name=\"HR\"><asset replace=\"1\" ani=\"1\"/></slot><slot name=\"CL\"><asset/></slot><slot name=\"ZZ\"><asset replace=\"1\" ani=\"1\"/></slot></slots></environment></ms2>");
+        ruleItems.Apply("item", kmsItem);
+        string Rep(string slot) { var a = kmsItem.Descendants("slot").First(s => (string)s.Attribute("name")! == slot).Element("asset")!; return a.Attribute("replace")?.Value + "/" + a.Attribute("ani")?.Value; }
+        Check("slot rule: CP 0/0, HR 1/0, CL 1/1, unknown slot untouched", Rep("CP") == "0/0" && Rep("HR") == "1/0" && Rep("CL") == "1/1" && Rep("ZZ") == "1/1");
+        // 8 NA rules: effectdummy copied from same kfm, else nearest capsule height; npc with one is left alone
+        string NpcXml(string kfm, string h, string dummy) => $"<ms2><environment><model kfm=\"{kfm}\"/><capsule height=\"{h}\"/></environment>{(dummy == "" ? "" : $"<effectdummy><dummy tag=\"{dummy}\"/></effectdummy>")}</ms2>";
+        var ruleNpc = NaRules.Learn(new[] { ("npc", D(NpcXml("a", "10", "A"))), ("npc", D(NpcXml("b", "100", "B"))) });
+        string Dummy(string kfm, string h, string dummy) { var d = D(NpcXml(kfm, h, dummy)); ruleNpc.Apply("npc", d); return string.Join(",", d.Descendants("dummy").Select(x => (string)x.Attribute("tag")!)); }
+        Check("effectdummy: same model, nearest height, existing kept", Dummy("b", "10", "") == "B" && Dummy("zz", "30", "") == "A" && Dummy("zz", "90", "") == "B" && Dummy("a", "10", "KEEP") == "KEEP");
+        var bare = D("<ms2><environment><model kfm=\"a\"/></environment><effectdummy /></ms2>"); ruleNpc.Apply("npc", bare);
+        Check("effectdummy: bare <effectdummy /> counts as missing", bare.Descendants("effectdummy").Count() == 1 && bare.Descendants("dummy").Count() == 1);
+        // 10 re-issue: empty slots take the preset item slots (NA first, else KMS), then rule 2 normalises them
+        var rr = NaRules.Learn(new[] { ("item", D(ItemXml("CP", "0", "0"))) });
+        string Tool(string slots) => $"<ms2><environment><tool itemPreset=\"7\"/>{slots}</environment></ms2>";
+        var reis = D(Tool("<slots/>")); rr.Reissue(5, reis, b => (b == 7 ? D(ItemXml("CP", "1", "1")).Descendants("slots").First() : null, "NA", 0L)); rr.Apply("item", reis);
+        var none = D(Tool("<slots/>")); rr.Reissue(5, none, _ => (null, "KMS", 0L));
+        var own = D(Tool("<slots/>")); rr.Reissue(7, own, _ => (D(ItemXml("CP", "1", "1")).Descendants("slots").First(), "NA", 0L));
+        var has = D(Tool(ItemXml("CL", "1", "1").Replace("<ms2><environment>", "").Replace("</environment></ms2>", ""))); rr.Reissue(5, has, _ => (D(ItemXml("CP", "1", "1")).Descendants("slots").First(), "NA", 0L));
+        // 2-hop chain 5 -> 7 -> 9 (9 has assets); cycle 5 -> 8 -> 5
+        (XElement?, string, long) Chain(long x) => x switch { 7 => (null, "NA", 9), 9 => (D(ItemXml("CP", "1", "1")).Descendants("slots").First(), "KMS", 0), 8 => (null, "NA", 5), _ => (null, "", 0) };
+        var hop2 = D(Tool("<slots/>")); rr.Reissue(5, hop2, Chain);
+        var cyc = D("<ms2><environment><tool itemPreset=\"8\"/><slots/></environment></ms2>"); rr.Reissue(5, cyc, Chain);
+        Check("re-issue chain: 2 hops resolved, cycle ends empty", hop2.Descendants("asset").Count() == 1 && !cyc.Descendants("asset").Any());
+        Check("re-issue slots: copied+rule2, none stays empty, self/non-empty untouched", reis.Descendants("asset").Count() == 1 && (string)reis.Descendants("asset").First().Attribute("replace")! == "0"
+            && !none.Descendants("asset").Any() && !own.Descendants("asset").Any() && has.Descendants("slot").Single().Attribute("name")!.Value == "CL");
+        // 9 NA rules: attribute fill at >= 98% presence, most common value; rarer attributes are not added
+        var ruleFill = NaRules.Learn(Enumerable.Range(0, 100).Select(i => ("npc", D($"<ms2><environment><collision x=\"{(i < 60 ? 1 : 2)}\"{(i == 0 ? " rare=\"1\"" : "")}/></environment></ms2>"))));
+        var fd = D("<ms2><environment><collision/></environment></ms2>"); ruleFill.Apply("npc", fd);
+        Check("fill: x added with most common value, rare not", (string?)fd.Descendants("collision").First().Attribute("x") == "1" && fd.Descendants("collision").First().Attribute("rare") == null);
         Console.WriteLine(fail == 0 ? "selftest passed" : $"selftest FAILED ({fail})");
         return fail == 0;
     }
