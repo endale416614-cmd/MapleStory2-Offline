@@ -110,4 +110,4 @@ Release `v1.1.9` on `82c52a8`, marked Latest: `MapleStory2-Offline-Setup.exe` (5
 full zip. Before upload: Setup sha256 and size matched `release.json`; `release.json.sig` verified with `openssl dgst
 -sha256 -verify` against the `UpdateKey.cs` public key. After upload: the `releases/latest/download/release.json` link
 serves the uploaded file (sha256 equal). Release notes state the Setup-only install and the key change, and list the
-Setup sha256. Still open: a 1.1.8 launcher against the live release must show the Setup-only prompt.
+Setup sha256. Live check 2026-10-17: the 1.1.8 launcher (`--check-updates`, portable test copy) against the published release wrote "1.1.9 available, full Setup only", downloaded nothing, exit 0; the GUI path shows the "install with its full Setup" prompt from that same result.
