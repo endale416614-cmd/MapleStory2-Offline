@@ -9,7 +9,7 @@ Creates in publish/:
   MapleStory2-Offline-Update-<ver>.zip  only with --base: every file changed since that release + update.json
                                         (cumulative: works on the base version and every patch after it)
   MapleStory2-Offline-<ver>/files.json  sha256 of every release file; keep it, the next --base needs it
-  release.json + release.json.sig       only with --base: size and sha256 of Setup, full zip and update zip, signed;
+  release.json + release.json.sig       with --base or --manifest: size and sha256 of Setup, full zip (and update zip), signed;
                                         upload both with the release (launchers from 1.1.9 check the update against it)
 
 The release never contains saves, logs, reports, launcher.ini, developer settings or the .NET SDK.
@@ -306,6 +306,7 @@ def main():
     parser.add_argument("--base", help="folder of the last FULL release (with its files.json) to build an update zip against")
     parser.add_argument("--notes", default="", help="one-line release notes shown to the player after updating")
     parser.add_argument("--no-build", action="store_true", help="package the existing builds")
+    parser.add_argument("--manifest", action="store_true", help="write and sign release.json also without --base (Setup-only release)")
     parser.add_argument("--sign-key", help="update signing key (default ../Signing/update-signing-key.pem)")
     args = parser.parse_args()
 
@@ -329,6 +330,7 @@ def main():
     print("building", setup)
     make_setup(os.path.join(ROOT, "publish", "launcher", "MapleStory 2 Offline.exe"), full_zip, setup)
 
+    assets = [setup, full_zip]
     if args.base:
         with open(os.path.join(args.base, "files.json"), encoding="utf-8") as f:
             base_files = json.load(f)
@@ -351,9 +353,13 @@ def main():
         zip_folder(stage, update_zip, only=changed + ["files.json"], extra={"update.json": json.dumps(update, indent=1)})
         import sign_update
         sign_update.sign(update_zip, args.sign_key)
-        # After the zip is signed: signing rewrites its comment, so its sha256 changes.
+        assets.append(update_zip)
+
+    if args.base or args.manifest:
+        import sign_update
+        # After the update zip is signed: signing rewrites its comment, so its sha256 changes.
         release = os.path.join(out, "release.json")
-        write_release(release, args.version, args.notes, [setup, full_zip, update_zip])
+        write_release(release, args.version, args.notes, assets)
         sign_update.sign_manifest(release, args.sign_key)
 
     for name in sorted(os.listdir(out)):
