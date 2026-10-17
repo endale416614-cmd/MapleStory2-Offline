@@ -12,6 +12,7 @@
     <ItemGroup>
         <Compile Include="..\Launcher\ReleaseManifest.cs" Link="Linked\ReleaseManifest.cs" />
         <Compile Include="..\Launcher\UpdateKey.cs" Link="Linked\UpdateKey.cs" />
+        <Compile Include="..\Launcher\LauncherIni.cs" Link="Linked\LauncherIni.cs" />
     </ItemGroup>
 
     <ItemGroup>

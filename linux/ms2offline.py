@@ -119,10 +119,46 @@ def windows_path(path):
 # ---------------------------------------------------------------------------------------------------------------------
 # Settings: defaults.ini (shipped, replaced by updates) then launcher.ini (yours), "Key=Value" lines.
 # ---------------------------------------------------------------------------------------------------------------------
+MODE_OPTIONS = ("grindrates", "dungeonalldrops", "unlimiteddungeonclears", "classdropsonly", "pettaming", "dungeonepicgear")
+
+
+def without_pre_mode_options(lines):
+    """A launcher.ini from before the game modes (the installer copied the example, all options "=true") would keep
+    GameMode=Legacy adapted: comment those lines out (true is the Adapted default anyway). Lines set to false stay; a
+    file that names GameMode is never changed. Returns the new lines, or None when nothing changes.
+    Same rule as Launcher/LauncherIni.cs."""
+    result, changed = [], False
+    for line in lines:
+        if "=" not in line or line.lstrip().startswith("#"):
+            result.append(line)
+            continue
+        key, value = (part.strip() for part in line.split("=", 1))
+        if key.lower() == "gamemode":
+            return None
+        if key.lower() in MODE_OPTIONS and value.lower() == "true":
+            result.append(f"#{line.strip()}  (1.1.9: now set by the game mode)")
+            changed = True
+            continue
+        result.append(line)
+    return result if changed else None
+
+
+def migrate_launcher_ini(path):
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = without_pre_mode_options(f.read().splitlines())
+        if lines is not None:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+    except OSError:
+        pass  # missing or read-only: the options then still win over the mode, as in 1.1.8
+
+
 class Settings:
     def __init__(self, home):
         self.home = home
         values = {}
+        migrate_launcher_ini(os.path.join(home, "launcher.ini"))
         for name in ("defaults.ini", "launcher.ini"):
             self._read(values, os.path.join(home, name))
         self.values = values

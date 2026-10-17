@@ -82,6 +82,7 @@ internal sealed class Settings {
         (string dataRoot, bool installed, string installId) = InstallInfo.Read(root);
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         ReadInto(values, Path.Combine(root, DefaultsFile));
+        LauncherIni.Migrate(Path.Combine(dataRoot, UserFile));
         ReadInto(values, Path.Combine(dataRoot, UserFile));
         root = values.GetValueOrDefault("Root", root);
 
