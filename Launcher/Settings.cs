@@ -43,7 +43,7 @@ internal sealed class Settings {
     /// when no ini file names them: the server then uses the default of this mode; a line in launcher.ini overrides it.
     /// </summary>
     public string GameMode { get; set; } = "Adapted";
-    /// <summary>True when GameMode is written in defaults.ini or launcher.ini (otherwise a first run asks the player).</summary>
+    /// <summary>True when GameMode is written in defaults.ini or launcher.ini.</summary>
     public bool GameModeSet { get; set; }
     public bool Adapted => GameMode == "Adapted";
     /// <summary>In dungeons every item of every drop table drops (monsters, breakables, clear reward).</summary>
@@ -58,10 +58,12 @@ internal sealed class Settings {
     public bool? PetTaming { get; private init; }
     /// <summary>Weapons, armor and accessories dropped in dungeons are at least Epic where the item has Epic stats.</summary>
     public bool? DungeonEpicGear { get; private init; }
-    /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days.</summary>
+    /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days (on in both modes unless set).</summary>
     public bool? MailNeverExpires { get; private init; }
-    /// <summary>Chat commands /godmode, /killall, /unstuck and /freebies for getting past stuck quests (on in Adapted unless CheatCommands=false, off in Legacy).</summary>
+    /// <summary>Chat commands /godmode, /killall, /unstuck, /freebies, /give, /item, /find (on in both modes unless CheatCommands=false).</summary>
     public bool? CheatCommands { get; private init; }
+    /// <summary>Party-size dungeons open to a smaller group, even alone, except Cathy Mart (Adapted default).</summary>
+    public bool? PartyDungeons { get; private init; }
     /// <summary>
     /// Online update check when Play is pressed: "ask" (offer the newer version), "always" (install it without asking)
     /// or "off" (only manual updates). Skipped silently without internet.
@@ -104,6 +106,7 @@ internal sealed class Settings {
             GrindRates = Flag(values, "GrindRates"),
             MailNeverExpires = Flag(values, "MailNeverExpires"),
             CheatCommands = Flag(values, "CheatCommands"),
+            PartyDungeons = Flag(values, "PartyDungeons"),
             ClassDropsOnly = Flag(values, "ClassDropsOnly"),
             PetTaming = Flag(values, "PetTaming"),
             DungeonEpicGear = Flag(values, "DungeonEpicGear"),

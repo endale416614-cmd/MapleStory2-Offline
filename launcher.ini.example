@@ -3,7 +3,8 @@
 # Folder of MapleStory2.exe (the x64 folder of your Steam install).
 #ClientDir=C:\Program Files (x86)\Steam\steamapps\common\MapleStory 2\x64
 
-# Rules: Adapted (solo-friendly changes, the default) or Legacy (the original game). See docs/ADAPTATIONS.md, A19.
+# Rules: Adapted (solo-friendly changes, the default) or Legacy (the original game). The launcher asks at every start
+# ("Choose how to play") and writes the choice here. See docs/ADAPTATIONS.md, A19.
 GameMode=Adapted
 
 # Single options win over the mode. Uncomment a line to turn that option on or off whatever the mode says.
@@ -11,6 +12,7 @@ GameMode=Adapted
 #DungeonAllDrops=true
 #UnlimitedDungeonClears=true
 #MailNeverExpires=true
+#PartyDungeons=true
 #ClassDropsOnly=true
 #PetTaming=true
 #DungeonEpicGear=true

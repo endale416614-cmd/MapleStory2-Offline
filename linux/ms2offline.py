@@ -142,6 +142,7 @@ class Settings:
         self.grind_rates = self._flag("GrindRates", None)
         self.mail_never_expires = self._flag("MailNeverExpires", None)
         self.cheat_commands = self._flag("CheatCommands", None)
+        self.party_dungeons = self._flag("PartyDungeons", None)
         self.class_drops_only = self._flag("ClassDropsOnly", None)
         self.pet_taming = self._flag("PetTaming", None)
         self.dungeon_epic_gear = self._flag("DungeonEpicGear", None)
@@ -570,6 +571,7 @@ class ServerHost:
             "OFFLINE_GRIND": s.grind_rates, "OFFLINE_MAIL_NEVER_EXPIRES": s.mail_never_expires,
             "OFFLINE_CLASS_DROPS": s.class_drops_only, "OFFLINE_CHEATS": s.cheat_commands,
             "OFFLINE_PET_TAMING": s.pet_taming, "OFFLINE_DUNGEON_EPIC_GEAR": s.dungeon_epic_gear,
+            "OFFLINE_PARTY_DUNGEONS": s.party_dungeons,
         }
         for key, value in flags.items():
             if value is None:
@@ -969,7 +971,7 @@ class Launcher:
                 adapted = s.game_mode == "Adapted"
                 self.set_mod("offline-dungeons", adapted if s.unlimited_dungeon_clears is None else s.unlimited_dungeon_clears)
                 self.set_mod("offline-pets", adapted if s.pet_taming is None else s.pet_taming)
-                self.set_mod("offline-shop", adapted)
+                self.set_mod("offline-shop", True)  # full Meret Market in both modes
                 self.prepare_prefix()
                 game = self.launch_game()
                 if report:

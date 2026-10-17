@@ -53,10 +53,16 @@ Own your game. Own your character. Keep your progress. The full plan is in [VISI
 - The client is locked to this PC: connections to anything except `127.0.0.1` are blocked.
 - Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items.
 - Solo-friendly options: adjustable exp and drop rates, upgrade-material drops, dungeon reward options.
-- Game mode: `GameMode=Adapted` (the default) switches the solo-friendly changes on; `GameMode=Legacy` keeps the original rules
-  (original rates, 30-day mail, original dungeon limits and Meret Market, no cheat commands). The launcher asks once on a new
-  install, and a single option in `launcher.ini` (for example `GrindRates=true`) still overrides the mode.
-- Cheat commands (`CheatCommands=true`, on in Adapted), typed in the chat box:
+- Two ways to play, picked in a "Choose how to play" window every time you start the game (your last choice is selected):
+  - **Legacy Mode**: the original online-era rules and balance: original exp and drop rates, dungeon clear limits and party
+    requirements. Nothing is changed for solo play, so content built for a party stays closed.
+  - **Offline Adapted Mode**: built for playing alone: faster exp and more loot, unlimited dungeon clear rewards, Epic dungeon
+    gear, easier pet taming, and party-size dungeons open to you (except Cathy Mart, which needs a full group).
+  - Both modes keep Meret pouches, the full Meret Market, mail that never expires and the chat commands. Your characters work in
+    either mode. To switch, close the game and start it again.
+  - Advanced: the choice is stored as `GameMode=Legacy|Adapted` in `launcher.ini`, and a single option there (for example
+    `GrindRates=true`) still overrides the mode.
+- Cheat commands (`CheatCommands=true`, on in both modes), typed in the chat box:
   - `/give <item name> [count]` gives an item by its English name (`/give Red Potion 5`); a name that fits several items lists their ids.
   - `/item <id>` gives an item by id (`--amount`, `--rarity`, `--drop`); without `--rarity` the item gets its own default rarity.
   - `/find item <text>` searches item names and ids (also `map`, `npc`, `quest`, `skill`, `achievement`).

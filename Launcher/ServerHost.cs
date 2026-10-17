@@ -97,6 +97,7 @@ internal sealed class ServerHost : IDisposable {
             ("OFFLINE_PET_TAMING", settings.PetTaming),
             ("OFFLINE_DUNGEON_EPIC_GEAR", settings.DungeonEpicGear),
             ("OFFLINE_CHEATS", settings.CheatCommands),
+            ("OFFLINE_PARTY_DUNGEONS", settings.PartyDungeons),
         }) {
             if (value is { } flag) {
                 info.Environment[variable] = flag ? "true" : "false";

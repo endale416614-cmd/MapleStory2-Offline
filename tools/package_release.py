@@ -42,9 +42,9 @@ ENV_DROP = {"MS2_DATA_FOLDER", "SQLITE_DIR", "SQLITE_DATA_DIR", "DB_IP", "DB_POR
 PLAYER_DEFAULTS = """# Default settings of this release (replaced by updates).
 # To change one, put the same line in launcher.ini - that file is yours and updates never touch it.
 
-# Rules: Adapted = solo-friendly changes (faster grinding, all dungeon drops, unlimited dungeon clears, pet taming,
-# mail that never expires, Meret Market, chat commands - see Settings in README.txt); Legacy = the original rules.
-# Single options (GrindRates, CheatCommands, ...) can still be set in launcher.ini and win over the mode.
+# Rules: Adapted = solo-friendly changes (faster grinding, more loot, unlimited dungeon clears, Epic dungeon gear,
+# pet taming, party-size dungeons - see Settings in README.txt); Legacy = the original rules. The launcher asks at
+# every start and writes the choice to launcher.ini. Single options (GrindRates, ...) set in launcher.ini win over it.
 GameMode=Adapted
 
 # Updates: ask = offer a newer version when you press Play (needs internet, otherwise skipped),
@@ -99,18 +99,19 @@ Settings
 --------
 defaults.ini lists the options. To change one, put the line in launcher.ini in your data folder
 (%LOCALAPPDATA%\MapleStory 2 Offline), for example:  GrindRates=false
-  GameMode               Adapted = solo-friendly changes (the options below, the Meret Market with Meret bought for Mesos,
-                         the chat commands); Legacy = the original rules (original rates, 30-day mail, original dungeon
-                         limits, original Meret Market, no chat commands). The launcher asks on the first start of a new
-                         install. An option below that you set yourself wins over the mode.
+  GameMode               Picked in the "Choose how to play" window at every start (no need to edit this).
+                         Adapted = built for playing alone (the options below); Legacy = the original online-era rules.
+                         Both keep Meret pouches, the full Meret Market, mail that never expires and the chat commands.
+                         An option below that you set yourself wins over the mode.
   GrindRates             faster exp, more drops, upgrade materials from monsters
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
-  MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days)
+  MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days; on in both modes)
+  PartyDungeons          party-size dungeons open to a smaller group or one player (not Cathy Mart, which needs 4)
   ClassDropsOnly         monsters and dungeon rewards only drop gear your class can wear
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
   DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
-  CheatCommands          the chat commands below (on in Adapted, off in Legacy; set it to true or false to override)
+  CheatCommands          the chat commands below (on in both modes; set it to false to turn them off)
   AutoUpdate             ask / always / off - online update check when you press Play
   ClientDir              the game's x64 folder, if you moved the game
 

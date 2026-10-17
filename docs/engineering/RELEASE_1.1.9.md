@@ -20,7 +20,7 @@ Nothing may be labelled 1.2.0 until that release is packaged.
 | Shops, enchant, boxes and black market validate before consuming; safe defaults for added save columns | `Maple2` `e66cf648` | same run |
 | Launcher: log writer lifetime, backup check prompt, setup swap rollback; Linux staged install with hash check | `db8712f` | launcher build passed; no launcher tests exist |
 | Developer tools `ClientDiff`, `KmsSplit`, `M2dPack` and engineering docs (not shipped to players) | `3a8dec6` | selftests pass; see BACKLOG.md |
-| `GameMode=Legacy\|Adapted` preset (R12-07, shipped early). Behaviour change: a new install without a save asks once for the mode; existing installs and an unset or unknown value stay `Adapted` (the 1.1.8 rules). `Legacy` turns the solo-friendly adaptations off (original rates, 30-day mail, original dungeon limits and Meret Market, no cheat commands); a single option line in `launcher.ini` still wins. Release `defaults.ini` and `launcher.ini.example` list `GameMode` instead of every option. Linux launcher gains `GameMode`, `PetTaming`, `DungeonEpicGear` and the pets/shop mod toggles. See ADAPTATIONS.md A19 | `Maple2` `f6d3588b`; `1ca4440` | `OfflineProfileTest` in the server suite (276 passed, 17 skipped, 2026-10-17); launcher build passed; not played under `Legacy` |
+| `GameMode=Legacy\|Adapted` preset (R12-07, shipped early; redesigned 2026-10-17 at the maintainer's request for players with no technical knowledge). Behaviour change: a "Choose how to play" window at every start (Legacy Mode / Offline Adapted Mode, last choice selected, Quit / Play; the choice is written to `launcher.ini`, no editing needed). Existing installs and an unset or unknown value stay `Adapted` (the 1.1.8 rules plus A20). `Legacy` turns off the solo-friendly adaptations (grinding rates, all dungeon drops, unlimited clears, Epic dungeon gear, pet taming, class-only drops, party-size dungeons) and keeps Meret pouches, the full Meret Market, mail that never expires and the chat commands. New option `PartyDungeons` (A20). A single option line in `launcher.ini` still wins. Linux launcher: same rules and options, no window (`GameMode` in its ini). See ADAPTATIONS.md A19, A20 | `Maple2` `f6d3588b`, `aaaab0b0`; `1ca4440` and the redesign commit on `main` | server suite 303 passed, 16 skipped (2026-10-17; `OfflineProfileTest` incl. both-mode options and the party-size door rule); window rendered and checked in both states; World + Game servers started from the packaged install under `Legacy` and under `Adapted` (Meret catalog 7,657 entries loaded in both, no errors). Not played in the client: the window's Quit/Play path and the party-size dungeons (A20) need a play session |
 | `/give <item name> [count]` cheat (R12-25, shipped early). Behaviour changes when `CheatCommands` is on (default in Adapted): `/item` and `/find` no longer need admin rights; `/item` without `--rarity` uses the item's data rarity instead of rarity 1 (gear from `/item` now has base stats). See README and ADAPTATIONS.md | `Maple2` `05ca9d2c`; `56b5e1e` | `ItemNameResolverTest` in the same run; in-game spot checks not recorded here |
 
 The superproject's `Maple2` and `_dl/Agarcium` submodule pointers are not yet committed at these commits.
@@ -65,18 +65,20 @@ location `..\Signing\update-signing-key.pem`; `Launcher/UpdateKey.cs` holds its 
 ## Local 1.1.9 package (built 2026-10-17, not published)
 
 `py -I tools/package_release.py 1.1.9 --manifest` (fixed the same day: under `py -I` the packager could not import
-`sign_update`). Output in `publish/`: Setup 531.9 MB, full zip 462.2 MB, `release.json` + `release.json.sig`.
+`sign_update`). Rebuilt the same day from Maple2 `aaaab0b0` (GameMode redesign): Setup 531.9 MB, full zip 462.2 MB,
+`release.json` + `release.json.sig`.
 Checks on it:
 - `release.json` signature verifies with the launcher's key; both listed files match size and sha256.
-- `VERSION` 1.1.9; `GameData/data-build.json` records Maple2 `de966192` (no input hashes: `MS2_DATA_FOLDER` was not set).
-- No save, log, `launcher.ini`, install file, key or portrait in the folder; no machine path, e-mail or token in any file;
-  test-kit mod disabled.
+- `VERSION` 1.1.9; `GameData/data-build.json` records Maple2 `aaaab0b0` (no input hashes: `MS2_DATA_FOLDER` was not set).
+- No save, log, `launcher.ini`, install file, key or portrait in the folder; no machine path, e-mail or token in any file
+  (the text "PRIVATE KEY" occurs only as a PEM label inside .NET and MySqlConnector libraries); test-kit mod disabled.
 - Against the 1.1.8 `files.json`: no file removed; added `GameData/data-build.json`; changed are the servers, launcher,
   `README.txt`, `defaults.ini`, `VERSION`, `offline-testkit.json`, the .NET 8.0.31 to 8.0.32 runtime files and
   `maple-data.db` (rewritten by `VACUUM INTO`, same content, check 5).
 - The real Setup over a fresh 1.1.8 scratch install: save and `launcher.ini` byte-identical (15 files), install id kept,
   VERSION 1.1.9. The World server then started from that install on the packaged runtime against the 1.1.8 test save
-  (no errors in 25 s; resets and 19 world bosses scheduled).
+  (no errors in 25 s; resets and 19 world bosses scheduled). After the redesign: Setup over 1.1.8 again keeps the save
+  (14 files identical); World + Game reach "Channel 1 has become active" under both modes with 0 errors.
 - Upload when releasing: Setup, full zip, `release.json`, `release.json.sig`. No update zip (see Signing key change).
 
 ## Readiness checks (run before packaging 1.1.9)
