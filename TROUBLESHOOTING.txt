@@ -1,0 +1,32 @@
+MapleStory 2 Offline - troubleshooting
+======================================
+A play-session report (Desktop\MapleStory 2 Offline Reports) names a section of this file next to each problem it
+recognises, for example "see TROUBLESHOOTING.txt [T3]". If your problem is not here, post the whole report on our Discord.
+
+[T1] Server error in a game action
+  The server failed while handling something you did (a click, a skill, a menu). Usually only that action is lost.
+  Post the report on Discord: the error and the lines below it tell us what to fix.
+
+[T2] Game feature the server does not have yet
+  The game asked for something the server does not handle (the report lists the packet numbers). Nothing is broken;
+  that button or menu just does nothing. Post the report if the feature matters to you.
+
+[T3] Map script missing
+  A map has no script for one of its triggers, so a quest or dungeon step may not continue there. Leave and re-enter
+  the map; if it stays stuck, post the report (its "Trigger states" section shows where the scripts were).
+
+[T4] Map without server navigation data
+  Monsters and NPCs on this map cannot walk. It is a gap in the server data, not in your install. Post the report.
+
+[T5] Save file in use by another program
+  Another program held the save open (an antivirus scan, a backup or sync tool, or a second launcher). Close the other
+  launcher, exclude the SaveData folder from the scan or sync, and start again. The save is not damaged, but progress
+  since the last save may be lost.
+
+[T6] Save from a newer version
+  This save was written by a newer version of MapleStory 2 Offline. Install that version (or a newer one); this one
+  cannot open it.
+
+[T7] A server port is taken by another program
+  Another program, or a server left over from a crash, uses a port the servers need. Restart the PC (or close the
+  other program) and start again.

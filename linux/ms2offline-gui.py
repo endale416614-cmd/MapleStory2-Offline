@@ -124,6 +124,25 @@ class Window(QtWidgets.QMainWindow):
         self.client_button.clicked.connect(self.choose_client)
         self.folder_button.clicked.connect(lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(home)))
 
+        # Problem reports, only when this build has the report service: opt-in, the box starts unticked, and ticking it
+        # (by click or by an accessibility tool: toggled, not clicked) first shows what a report contains.
+        self._confirming = False
+        if ms2offline.ProblemReport.url() is not None:
+            reports = QtWidgets.QHBoxLayout()
+            self.report_box = QtWidgets.QCheckBox("Send problem reports to the developer automatically")
+            self.report_box.setChecked(self.launcher.settings.send_reports == "always")
+            self.report_box.toggled.connect(self.on_report_box)
+            what = QtWidgets.QPushButton("What is sent?")
+            what.setFlat(True)
+            what.clicked.connect(lambda: QtWidgets.QMessageBox.information(self, TITLE, ms2offline.WHAT_IS_SENT))
+            report_button = QtWidgets.QPushButton("Report a problem...")
+            report_button.clicked.connect(self.report_problem)
+            for widget in (self.report_box, what):
+                reports.addWidget(widget)
+            reports.addStretch(1)
+            reports.addWidget(report_button)
+            layout.addLayout(reports)
+
         self.log_view = QtWidgets.QPlainTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setMaximumBlockCount(500)
@@ -178,6 +197,74 @@ class Window(QtWidgets.QMainWindow):
     def on_finished(self, name):
         self.set_busy(False)
         self.refresh()
+
+    def on_report_box(self, checked):
+        if self._confirming:
+            return
+        if checked:
+            box = QtWidgets.QMessageBox(self)
+            box.setWindowTitle(TITLE)
+            box.setIcon(QtWidgets.QMessageBox.Icon.Information)
+            box.setText("Send problem reports automatically?")
+            box.setInformativeText("When a session ends with a problem, its report goes to the developer without asking. "
+                                   "You can untick this any time.\n\n" + ms2offline.WHAT_IS_SENT)
+            turn_on = box.addButton("Turn on", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+            cancel = box.addButton(QtWidgets.QMessageBox.StandardButton.Cancel)
+            box.setDefaultButton(cancel)
+            box.exec()
+            if box.clickedButton() is not turn_on:
+                self._confirming = True
+                self.report_box.setChecked(False)
+                self._confirming = False
+                return
+        try:
+            settings = ms2offline.Settings(self.home)
+            value = ms2offline.Settings.send_reports_after_checkbox(settings.send_reports, checked)
+            settings.save_user_value("SendReports", value)
+            self.launcher.settings.send_reports = value
+        except OSError as ex:  # an uncaught error in a Qt slot would end the program
+            QtWidgets.QMessageBox.warning(self, TITLE, f"launcher.ini could not be written: {ex}")
+
+    def report_problem(self):
+        """The player's own words with a report of the latest session; the answer after "what is sent" is the consent."""
+        launcher = self.launcher
+        try:
+            names, unreadable = ms2offline.ProblemReport.names(launcher.settings)
+            if unreadable:
+                QtWidgets.QMessageBox.warning(self, TITLE, launcher.unreadable_save_text(unreadable) +
+                                              " If the game is running, close it and try again.")
+                return
+            note, ok = QtWidgets.QInputDialog.getMultiLineText(self, TITLE, "What happened? A few words help (optional):")
+            if not ok:
+                return
+            note = note.strip() or None
+            report = ms2offline.SessionReport(launcher.settings)
+            report.step("Report a problem (sent by the player)")
+            raw = report.raw_text()
+            preview = launcher.write_preview(ms2offline.ProblemReport.for_upload(raw, names) +
+                                             (f"\n\n-- Your note --\n{ms2offline.ProblemReport.note(note, names)}" if note else ""))
+        except Exception as ex:  # noqa: BLE001 - an uncaught error in a Qt slot would end the program
+            QtWidgets.QMessageBox.warning(self, TITLE, f"The report could not be made: {ex}")
+            return
+        buttons = QtWidgets.QMessageBox.StandardButton
+        if QtWidgets.QMessageBox.question(self, TITLE, f"{ms2offline.WHAT_IS_SENT}\n\nThe exact text: {preview}\n\nSend this report?",
+                                          buttons.Yes | buttons.No, buttons.No) != buttons.Yes:
+            return
+
+        def work():
+            try:
+                path = launcher.queue_report("manual", raw, note, names)
+            except OSError as ex:
+                launcher.ui.error(f"The report could not be saved: {ex}")
+                return
+            sent = set()
+            launcher.send_queued_reports(sent)
+            launcher.ui.status("Thank you! Your report was sent to the developer." if path in sent else
+                               "Your report is saved and will be sent the next time the launcher starts with internet."
+                               if os.path.exists(path) else "The report service did not take this report.")
+
+        # Its own thread, not self.run: a report during a session must not end the window's busy state.
+        threading.Thread(target=work, daemon=True).start()
 
     def play(self):
         if not ms2offline.Client.find(ms2offline.Settings(self.home)) and not self.choose_client(ask=True):

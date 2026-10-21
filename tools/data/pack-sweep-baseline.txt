@@ -1,0 +1,3 @@
+# Sweep errors about the pack's added maps that are known and tracked (PK-01 acceptance 4 fails only on NEW lines).
+# Portal 52000189:8 -> 52000191:38: PK-04, a KMS data fact (kept). The 16 navmesh lines went with PK-03 (2026-10-19).
+- 52000189_qd portal 8 targets portal 38 on map 52000191, which has no such portal

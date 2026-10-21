@@ -1,0 +1,2 @@
+# Content-pack overlay files are shipped byte-for-byte (the client compares them); no line-ending conversion.
+tools/data/pack-overlay/** -text

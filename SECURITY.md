@@ -19,9 +19,16 @@ file does not match the listed size and sha256. Releases without `release.json` 
 full zip are not yet checked automatically; compare them with `release.json` by hand (for example `certutil -hashfile
 <file> SHA256`).
 
-A way to reach the game servers from another computer, to make the client connect elsewhere, or to make the launcher
-install an update that was not signed with the project's key or that writes outside the program folder counts as a
-security problem.
+From 1.2.0 the launcher can send problem reports, only after the player agrees (a question each time, or the
+"send automatically" checkbox) or uses Report a problem. A report is the session report text with the Windows user name,
+PC name, character and account names and the game client's own log lines removed; it goes over HTTPS to the project's
+report service (`tools/report-service`), which stores it for 90 days and lets nobody read it without the maintainer's
+token. The diagnostics zip and the save are never uploaded.
+
+A way to reach the game servers from another computer, to make the client connect elsewhere, to make the launcher
+install an update that was not signed with the project's key or that writes outside the program folder, to make it send
+a report without the player's consent or with the names above, or to read reports from the service without the token
+counts as a security problem.
 
 ## Reporting a vulnerability
 

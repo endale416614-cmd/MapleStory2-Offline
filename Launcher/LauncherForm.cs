@@ -37,7 +37,6 @@ internal sealed class LauncherForm : Form {
         ClientSize = new Size(440, 152);
         BackColor = Color.FromArgb(28, 30, 36);
         ForeColor = Color.White;
-        TopMost = true;
 
         var picture = new PictureBox {
             Image = new Icon(Icon, 64, 64).ToBitmap(),
@@ -79,6 +78,11 @@ internal sealed class LauncherForm : Form {
         };
         discord.LinkClicked += (_, _) => Community.OpenDiscord();
         Controls.AddRange([picture, title, subtitle, status, progress, discord]);
+
+        // Borderless: drag the window by any part but the link.
+        foreach (Control control in new Control[] { this, picture, title, subtitle, status, progress }) {
+            control.MouseDown += DragWindow;
+        }
     }
 
     protected override async void OnShown(EventArgs e) {
@@ -107,6 +111,7 @@ internal sealed class LauncherForm : Form {
         string? error = null;
         try {
             EventLog.Init(settings);
+            _ = ReportDialogs.SendQueuedAsync(settings); // reports the player agreed to earlier, in the background
             if (Process.GetProcessesByName(GAME_EXE).Length > 0) {
                 throw new InvalidOperationException("MapleStory 2 is already running. Close it first.");
             }
@@ -149,6 +154,20 @@ internal sealed class LauncherForm : Form {
                     throw new OperationCanceledException();
                 }
             }
+            SetStatus(settings.UnifiedContent ? "Preparing the unified content..." : "Checking the game files...");
+            ContentPackFlow.Result content = await Task.Run(() => ContentPackFlow.Prepare(settings.UnifiedContent, settings.ClientRoot,
+                settings.ContentPackDir, settings.GameDataDir, ContentPack.ApplyElevated), token);
+            EventLog.Write("content", $"pack={content.AppliedVersion ?? "none"} data={content.DataDir} warning={content.Warning ?? "-"} error={content.Error ?? "-"}");
+            if (content.Error != null) {
+                throw new InvalidOperationException(content.Warning == null ? content.Error : content.Warning + "\n\n" + content.Error);
+            }
+            if (content.Warning != null) {
+                report?.Problem(content.Warning);
+                Hide();
+                MessageBox.Show(content.Warning, Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Show();
+            }
+            host.DataDir = content.DataDir;
             host.PrepareLogs();
             Directory.CreateDirectory(settings.SaveDir); // first run: no save yet, and File.Delete throws on a missing folder
             File.Delete(host.SaveStatusFile);
@@ -256,9 +275,37 @@ internal sealed class LauncherForm : Form {
         } else if (report is { HasProblems: true } && reportPath != null) {
             Community.ShowProblem("Something went wrong during this session." + ReportHint(reportPath), Title, MessageBoxIcon.Warning);
         }
+        if (report is { HasProblems: true }) {
+            await OfferReportAsync(report);
+        }
 
         finished = true;
         Close();
+    }
+
+    /// <summary>A session with a problem: its report goes to the developer per SendReports ("ask" asks first, saying what is sent).</summary>
+    private async Task OfferReportAsync(SessionReport sessionReport) {
+        if (ProblemReport.Url() == null || settings.SendReports == "never") {
+            return;
+        }
+        try {
+            string raw = await Task.Run(sessionReport.RawText);
+            (List<string> names, string? unreadable) = ProblemReport.Names(settings.DataRoot);
+            if (unreadable != null) {
+                EventLog.Write("report", "not offered: could not read " + unreadable);
+                MessageBox.Show(ReportDialogs.UnreadableSave(settings, unreadable), Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (settings.SendReports == "ask" && !ReportDialogs.AskToSend(settings, ProblemReport.ForUpload(raw, names))) {
+                return;
+            }
+            ReportDialogs.Queue(settings, "problem", raw, null, names);
+            Show();
+            SetStatus("Sending the problem report...");
+            await ReportDialogs.SendQueuedAsync(settings);
+        } catch (Exception ex) {
+            EventLog.Write("report", "problem report not queued: " + ex.Message);
+        }
     }
 
     private static string ReportHint(string? reportPath) => reportPath == null ? "" :
@@ -266,6 +313,17 @@ internal sealed class LauncherForm : Form {
         "Please post that file with your report (or use \"Export Diagnostics\" in the Start menu).";
 
     private void SetStatus(string text) => status.Text = text;
+
+    /// <summary>
+    /// Moves the window when dragging it by any part except the Discord link.
+    /// </summary>
+    private void DragWindow(object? sender, MouseEventArgs e) {
+        if (e.Button == MouseButtons.Left) {
+            ((Control) sender!).Capture = false;
+            Message move = Message.Create(Handle, 0xA1, 2, IntPtr.Zero); // WM_NCLBUTTONDOWN on the caption: Windows moves the window
+            WndProc(ref move);
+        }
+    }
 
     /// <summary>
     /// Stops servers this installation left running and refuses to start when another program holds a port.
@@ -467,7 +525,9 @@ internal sealed class LauncherForm : Form {
 
     /// <summary>Every start: "Choose how to play" with the last choice selected. False when the player quits.</summary>
     private bool ChooseGameMode() {
-        using var chooser = new ModeChooser(settings.GameMode, Icon!);
+        bool canSend = ProblemReport.Url() != null;
+        using var chooser = new ModeChooser(settings.GameMode, Icon!, settings.DataRoot, settings.Profile,
+            canSend ? settings.SendReports : null, canSend ? (IWin32Window owner) => ReportDialogs.ReportProblemFrom(owner, settings) : null);
         Hide();
         DialogResult result = chooser.ShowDialog();
         Show();
@@ -480,6 +540,15 @@ internal sealed class LauncherForm : Form {
             settings.SaveUserValue("GameMode", settings.GameMode);
         }
         report?.Step("Game mode: " + settings.GameMode);
+        if (chooser.Profile != settings.Profile) {
+            settings.Profile = chooser.Profile;
+            settings.SaveUserValue("Profile", settings.Profile);
+        }
+        report?.Step("Save profile: " + (settings.Profile.Length == 0 ? "main" : settings.Profile));
+        if (chooser.SendReports is { } sendReports && sendReports != settings.SendReports) {
+            settings.SendReports = sendReports;
+            settings.SaveUserValue("SendReports", sendReports);
+        }
         EventLog.Write("mode", settings.GameMode);
         return true;
     }

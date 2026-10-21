@@ -36,6 +36,10 @@ page), or get it with the community downloader ([Mushroom Launcher](https://gith
 "Install client") and point the launcher at that folder. Do not start the game from Steam itself; it would try the
 Nexon launcher. Always start it from the launcher.
 
+## Installing .NET yourself
+
+The launcher asks before it downloads https://dot.net/v1/dotnet-install.sh (Microsoft's script, the only download from outside GitHub); to do it yourself run `bash dotnet-install.sh --runtime aspnetcore --channel 8.0 --install-dir <program folder>/dotnet --no-path`.
+
 ## Use
 
 The menu entry **MapleStory 2 Offline** opens a small window (`ms2offline-gui.py`, PyQt6) with Play, Stop servers,
@@ -51,13 +55,24 @@ ms2offline update        install a newer release if there is one
 ms2offline client        show / --dir set / --steam install the game client
 ms2offline prefix        create or refresh the Proton prefix
 ms2offline report        write a session report from the latest logs
+ms2offline report-problem  send the developer a problem report with your own words (--note "...")
 ms2offline diagnostics   zip logs and reports for a bug report (--include-save adds your save)
 ms2offline unpatch       put the game's own NxCharacter64.dll back
 ```
 
+Problem reports (from 1.2.0, opt-in): after a session with a problem the launcher asks whether it may send a report to
+the developer, and writes the exact text to `reports/to-send.txt` first. Tick **Send problem reports to the developer
+automatically** in the window to skip the question (it shows what a report contains before it turns on), or use
+**Report a problem...** / `ms2offline report-problem`. A report holds the servers' error and warning lines, the
+launcher's steps, versions and folders, and a random install number; never your user name, computer name, character,
+account or save names, chat, the game client's own text, your save or your game files. Without internet it waits for
+the next start. `SendReports=ask`, `always` or `never` in `launcher.ini` changes the choice.
+
 Settings: `launcher.ini` in the program folder (see `launcher.ini.example` here). The gameplay options are the same
 keys as on Windows. Linux-only keys: `Proton` (which Proton build; default GE-Proton10-28 when installed, else the
-newest GE-Proton), `Prefix`, `LaunchEnv` (extra environment for the game, e.g. MangoHud), `ClientConsole`.
+newest GE-Proton), `Prefix`, `LaunchEnv` (extra environment for the game, e.g. MangoHud), `ClientConsole`, and `Profile`.
+
+Downloads are installed only when the release's signed file list verifies (needs the `openssl` command).
 
 ## How it maps to the Windows launcher
 
@@ -68,7 +83,7 @@ newest GE-Proton), `Prefix`, `LaunchEnv` (extra environment for the game, e.g. M
 | `GetExtendedTcpTable` port guard | `ss -ltnp` + `/proc` |
 | servers: `Maple2.Server.X.exe` + bundled Windows .NET | `dotnet/dotnet Maple2.Server.X.dll` (private Linux ASP.NET Core 8 runtime from Microsoft's install script) |
 | game: `MapleStory2.exe` started directly | `umu-run MapleStory2.exe ...` (Proton), same arguments, `--mods` as a `Z:\` path |
-| signed update zips verified with the project's key | release packages fetched from GitHub over HTTPS and checked against the package's own `files.json` (no signature check: Python's standard library has no ECDSA) |
+| signed update zips verified with the project's key | release packages fetched from GitHub over HTTPS, installed only when their signed release.json verifies with the project's key (openssl, ECDSA P-256 / SHA-256, as on Windows) and each file matches its sha256 |
 | reports on the Desktop | `reports/` in the program folder |
 | MessageBox / TaskDialog | the window's dialogs; on the command line kdialog / zenity / notify-send, or the terminal |
 

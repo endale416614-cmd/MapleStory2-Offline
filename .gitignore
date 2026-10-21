@@ -22,3 +22,6 @@ client-patch/
 __pycache__/
 *.pyc
 .vs/
+
+# Cloudflare CLI (tools/report-service): local state, never committed
+.wrangler/

@@ -230,7 +230,8 @@ Format: id, objective; files; depends on; acceptance; tests; complexity/risk; ti
   (`JobTable.cs:13-14`); implement `start_tutorial` minimally or document the no-op; delete-character cleanup for item, quest,
   achievement and dungeon rows (`GameStorage.User.cs:671-682`). Depends: R12-07, R12-11. Accept: skip lands the character on Lith Harbor
   2000062 with the skip items; a Lv1 of each of the 12 classes reaches Lith Harbor under both modes (manual matrix, recorded);
-  deleting a character leaves no rows with its id. Tests: unit for cleanup; manual matrix sheet. Medium / medium. T2 + maintainer play.
+  deleting a character leaves no quest, achievement, dungeon-record or item rows with its id (amended 2026-10-19: medal, shop data,
+  mail and pet-bag rows stay as harmless orphans, ids are never reused). Tests: unit for cleanup; manual matrix sheet. Medium / medium. T2 + maintainer play.
 - **R12-13** Linux parity. `linux/ms2offline.py`: GameMode + the two missing flags + `offline-pets` toggle; verify `release.json`
   sha256 for downloaded assets (stdlib `hashlib`); remove or gate the `dot.net` fetch behind an explicit prompt and document it.
   Depends: R12-06, R12-07. Accept: option list identical to Windows; tampered asset refused. Tests: Python unit test for the verify function. Low / low. T2.
@@ -271,6 +272,7 @@ Format: id, objective; files; depends on; acceptance; tests; complexity/risk; ti
 - **R12-18** Raid data extract: from the sweep (R12-04) list every dungeon with `GroupType`, `MinUserCount`, `MaxUserCount`,
   `PlayerCountFactorId`, `MaxRevivalCount`; from `--probe-all` list xblocks whose triggers use `count_users`/`user_count` with n > 1.
   Depends: R12-02. Accept: `docs/engineering/RAIDS.md` table. Low / low. T1.
+- **R12-30** Reverse Fair Fight damage floor (directive 4, design in `docs/engineering/RFF_DESIGN.md`): new `Maple2.Server.Game/Util/OfflineFairFight.cs` (`OfflineProfile.Flag("OFFLINE_FAIR_FIGHT", true)`, `offline-rff.json`), one call after `Actor.cs:148`; off under Legacy, with more than one player in the field, for DoT, const, percent-of-HP damage and invincible targets. Depends: R12-07; pending review of the note. Accept: the note's 7 scenarios (3-6 as unit tests on `Floor`, 1, 2, 7 as recorded play with the floored-hit log). High / medium. T3 + maintainer play.
 - **R12-19** Voice experiment (manual, no code): on a copy of the NA client, set `voiceIndex` in `Config\GameOption.xml` to 1 and
   to 0 with JMS `MS2Sound_Voice*_jp.fsb` and KMS `*_Kor_def.fsb` banks copied into `Data\Sound`; record which NPC lines play, which
   are silent, and any crash. Depends: none. Accept: a written result for each index value and bank set. T0 maintainer.
@@ -392,7 +394,8 @@ Known issues carried over: client patch cannot be rebuilt from source on current
 
 ## Deliverable 12: Open decisions
 
-1. **Vision ordering.** 1.2.0 as "modes and foundations" (this plan) versus continuing the unified edition (vision 2) as the
+1. **Vision ordering.** Decided 2026-10-18: 1.2.0 ships the unified content through the launcher plus the open modes items; see
+   [PLAN_1.2.0_UNIFIED_CONTENT.md](PLAN_1.2.0_UNIFIED_CONTENT.md). Pilots R12-14 to R12-20 move to 1.3.0. Original text: 1.2.0 as "modes and foundations" (this plan) versus continuing the unified edition (vision 2) as the
    next release. Default: this plan; the unified track continues on its own branch after the U-02 crash is understood.
    Alternative: 1.2.0 = unified edition, and this plan becomes 1.3.0; cost is that the clock/sweep/manifest foundations wait.
 2. **Default mode for existing installs.** Default `Adapted` (behaviour unchanged for 1.1.x players) versus asking everyone

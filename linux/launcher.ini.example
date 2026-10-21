@@ -17,6 +17,8 @@ GameMode=Adapted
 #PetTaming=true
 #DungeonEpicGear=true
 #PartyDungeons=true
+#FairFight=true
+#BlackMarket=true
 # Same in both modes (on unless set to false):
 #MailNeverExpires=true
 # Chat commands /godmode, /killall, /unstuck, /freebies, /give, /item, /find.
@@ -27,6 +29,13 @@ AutoUpdate=ask
 
 # After every session a plain-text report goes to the "reports" folder in the program folder.
 DebugReports=true
+
+# Problem reports to the developer after a session with a problem: ask (default), always (the checkbox in the window)
+# or never. Each question shows what a report contains; your names, chat and save are never sent.
+#SendReports=ask
+
+# Unified content (Korean and Japanese records and art) on the Global client: true (default) or false (pure Global game; Play removes it again).
+#UnifiedContent=true
 
 # ---- Linux ----
 # Proton build for the game: a name in ~/.local/share/Steam/compatibilitytools.d, a folder, or "GE-Proton"
@@ -41,6 +50,9 @@ DebugReports=true
 
 # Shows the client patch's own console log window (debugging).
 ClientConsole=false
+
+# Save profile: a sub-folder of SaveData for a separate game ("" = the main save), as on Windows.
+#Profile=
 
 # Developer options - leave off for normal play.
 TestKit=false

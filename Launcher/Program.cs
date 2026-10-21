@@ -6,11 +6,12 @@ namespace MapleStory2Offline;
 /// Entry point. Player actions (each also a Start menu shortcut):
 ///   (no arguments)          play; or, when this exe carries the program package, run Setup
 ///   --export-diagnostics    save a diagnostics zip on the desktop (works when the game cannot start)
+///   --report-problem        send the developer a problem report with the player's own words (when the build has a report service)
 ///   --install-update        pick a downloaded update zip and install it
 ///   --uninstall             remove the program (asks about saves)
-/// Helpers: --install-patch/--remove-patch &lt;client dir&gt; (run elevated by the launcher), --report, and for automated
+/// Helpers: --install-patch/--remove-patch &lt;client dir&gt; (run elevated by the launcher), --apply-content-pack/--restore-content-pack &lt;client dir&gt; &lt;pack dir&gt;, --report, --triage &lt;report or log&gt;, and for automated
 /// tests --setup-silent --dir &lt;folder&gt; --data &lt;folder&gt; [--no-shortcuts] [--no-registry], --apply-updates, --check-updates,
-/// --export-diagnostics --quiet [--include-save], --uninstall --quiet [--delete-data].
+/// --export-diagnostics --quiet [--include-save], --uninstall --quiet [--delete-data], --prepare-content.
 /// Silent modes write their outcome to "last-result.txt" in the data (or target) folder and set the exit code.
 /// </summary>
 internal static class Program {
@@ -34,6 +35,30 @@ internal static class Program {
             string patchDir = Settings.Load().PatchDir;
             return (args[0] == "--install-patch" ? ClientLocator.InstallPatch(args[1], patchDir) : ClientLocator.RemovePatch(args[1], patchDir)) ? 0 : 1;
         }
+        if (args.Length == 3 && args[0] is "--apply-content-pack" or "--restore-content-pack") {
+            // Started elevated by ContentPack.ApplyElevated when the game folder is write-protected.
+            try {
+                bool success = args[0] == "--apply-content-pack" 
+                    ? ContentPack.Apply(args[1], args[2]) 
+                    : ContentPack.Restore(args[1], args[2]);
+                return success ? 0 : 1;
+            } catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException) {
+                Console.Error.WriteLine(ex.Message);
+                return 2;
+            } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+                Console.Error.WriteLine(ex.Message);
+                return 1;
+            }
+        }
+        if (Has(args, "--triage")) {
+            // For the maintainer: the known problems of a player's report or server log, written next to it.
+            string? input = Value(args, "--triage");
+            if (input == null || !File.Exists(input)) {
+                return 2;
+            }
+            File.WriteAllText(input + ".triage.txt", Triage.Describe(File.ReadLines(input)));
+            return 0;
+        }
 
         Settings? settings = null;
         try {
@@ -41,6 +66,16 @@ internal static class Program {
             EventLog.Init(settings);
             if (Has(args, "--export-diagnostics")) {
                 return ExportDiagnostics(settings, quiet, Has(args, "--include-save"), Value(args, "--to"));
+            }
+            if (Has(args, "--report-problem")) {
+                // Start menu "Report a Problem": the player's own words with a report of the latest session.
+                if (ProblemReport.Url() == null) {
+                    Community.ShowProblem($"This version cannot send problem reports. Please post the newest report from the \"{SessionReport.FolderName}\" " +
+                                          "folder on your desktop instead.", Title, MessageBoxIcon.Information);
+                    return 1;
+                }
+                ReportDialogs.ReportProblem(settings);
+                return 0;
             }
             if (Has(args, "--report")) {
                 MakeReportNow(settings);
@@ -83,6 +118,24 @@ internal static class Program {
                 WriteResult(settings.DataRoot, listeners.Count == 0 ? "ports free" : string.Join(Environment.NewLine,
                     listeners.Select(l => $"port {l.Port}: {l.Name} pid {l.ProcessId} {(PortGuard.IsOwnServer(l, settings) ? "OWN" : "FOREIGN")}")));
                 return listeners.Any(l => !PortGuard.IsOwnServer(l, settings)) ? 1 : 0;
+            }
+            if (Has(args, "--prepare-content")) {
+                // Test/support aid: the content step of Play (apply or remove the unified content, data lock) without the game.
+                if (ClientLocator.Find(settings.ClientDir) is not { } client) {
+                    WriteResult(settings.DataRoot, "FAILED: game folder not found");
+                    return 1;
+                }
+                settings.ClientDir = client;
+                ContentPackFlow.Result content = ContentPackFlow.Prepare(settings.UnifiedContent, settings.ClientRoot,
+                    settings.ContentPackDir, settings.GameDataDir, ContentPack.ApplyElevated);
+                EventLog.Write("content", $"pack={content.AppliedVersion ?? "none"} data={content.DataDir} warning={content.Warning ?? "-"} error={content.Error ?? "-"}");
+                var lines = new List<string> { $"pack {content.AppliedVersion ?? "none"}", $"data {content.DataDir}" };
+                if (content.Warning != null) {
+                    lines.Add("warning: " + content.Warning);
+                }
+                lines.Add(content.Error == null ? "ok" : "FAILED: " + content.Error);
+                WriteResult(settings.DataRoot, string.Join(Environment.NewLine, lines));
+                return content.Error == null ? 0 : 1;
             }
         } catch (Exception ex) {
             ReportCrash(settings, ex);
@@ -232,11 +285,12 @@ internal static class Program {
     /// <summary>Last resort: the launcher itself failed. Still leave a report on the desktop.</summary>
     private static void ReportCrash(Settings? settings, Exception? ex) {
         string? path = null;
+        SessionReport? report = null;
         try {
             settings ??= Settings.Load();
             EventLog.Write("crash", ex?.ToString() ?? "unknown");
             if (settings.DebugReports) {
-                var report = new SessionReport(settings);
+                report = new SessionReport(settings);
                 report.Problem("The launcher crashed: " + ex);
                 path = report.Write();
             }
@@ -248,7 +302,32 @@ internal static class Program {
                               (path == null ? "" : $"\n\nA report was saved in the \"{SessionReport.FolderName}\" folder on your desktop. " +
                                                    "Please attach it to your report."),
             Title, MessageBoxIcon.Error);
+        if (settings != null && report != null) {
+            QueueCrashReport(settings, report);
+        }
         Environment.Exit(1);
+    }
+
+    /// <summary>A crashing launcher cannot wait for an upload: the report is queued (asked first when SendReports=ask) and sent at the next start.</summary>
+    private static void QueueCrashReport(Settings settings, SessionReport report) {
+        try {
+            if (ProblemReport.Url() == null || settings.SendReports == "never") {
+                return;
+            }
+            (List<string> names, string? unreadable) = ProblemReport.Names(settings.DataRoot);
+            if (unreadable != null) {
+                EventLog.Write("report", "crash report not queued: could not read " + unreadable); // its character names would stay in
+                return;
+            }
+            if (settings.SendReports == "ask" && MessageBox.Show(
+                    "Send a problem report about this error to the developer? It goes out the next time the launcher starts.\n\n" + ReportDialogs.WhatIsSent,
+                    Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) {
+                return;
+            }
+            ReportDialogs.Queue(settings, "crash", report.RawText(), null, names);
+        } catch (Exception) {
+            // the report stays on the desktop
+        }
     }
 
     private static void WriteResult(string folder, string text) {

@@ -13,9 +13,17 @@
         <Compile Include="..\Launcher\ReleaseManifest.cs" Link="Linked\ReleaseManifest.cs" />
         <Compile Include="..\Launcher\UpdateKey.cs" Link="Linked\UpdateKey.cs" />
         <Compile Include="..\Launcher\LauncherIni.cs" Link="Linked\LauncherIni.cs" />
+        <Compile Include="..\Launcher\ContentPack.cs" Link="Linked\ContentPack.cs" />
+        <Compile Include="..\Launcher\ContentPackFlow.cs" Link="Linked\ContentPackFlow.cs" />
+        <Compile Include="..\Launcher\Settings.cs" Link="Linked\Settings.cs" />
+        <Compile Include="..\Launcher\InstallInfo.cs" Link="Linked\InstallInfo.cs" />
+        <Compile Include="..\Launcher\Triage.cs" Link="Linked\Triage.cs" />
+        <Compile Include="..\Launcher\ProblemReport.cs" Link="Linked\ProblemReport.cs" />
     </ItemGroup>
 
     <ItemGroup>
+        <!-- ProblemReport reads the names in the save (same version as the launcher) -->
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
         <PackageReference Include="NUnit" Version="3.14.0" />
         <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />

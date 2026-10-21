@@ -5,6 +5,7 @@
 Creates in publish/:
   MapleStory2-Offline-<ver>/            the release folder (what players get)
   MapleStory2-Offline-Setup-<ver>.exe   installer for players (launcher + program zip appended)
+  MapleStory2-Offline-Setup.exe         the same installer under the name the README's download link uses
   MapleStory2-Offline-<ver>.zip         full download (portable: extract and run)
   MapleStory2-Offline-Update-<ver>.zip  only with --base: every file changed since that release + update.json
                                         (cumulative: works on the base version and every patch after it)
@@ -63,7 +64,8 @@ PLAYER_README = r"""MapleStory 2 (Offline) {version}
 ==============================
 
 MapleStory 2 as a single-player game on your own PC. The game never connects to the internet; only the
-launcher asks GitHub whether a newer version exists when you press Play (AutoUpdate, see Settings).
+launcher asks GitHub whether a newer version exists when you press Play (AutoUpdate, see Settings), and
+sends a problem report to the developer when you agree (SendReports, see Problems?).
 
 You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library it is found
 automatically. Otherwise the launcher shows where to get it the first time you start.
@@ -92,8 +94,16 @@ Problems?
 Report bugs on Discord: https://discord.gg/bEEc9QsRx
 Start menu > "MapleStory 2 Offline - Export Diagnostics" saves one zip file on your desktop - send
 that file with your bug report. It works even when the game does not start. Your Windows user
-name and PC name are removed; your save is only included if you say yes.
+name and PC name are removed; your save is only included if you say yes. This file is never uploaded.
 After every session a short report is also written to "MapleStory 2 Offline Reports" on the desktop.
+
+Problem reports: after a session with a problem the launcher asks whether it may send that report to the
+developer. Tick "Send problem reports to the developer automatically" in the "Choose how to play" window
+to skip the question. Both first show what a report contains: error messages and server log lines,
+versions, launcher settings, basic PC details and a random install number. Never sent: your Windows user
+name and PC name, character and account names, chat, save and game files. "Report a problem..." (in that
+window; a new install also has it in the Start menu) sends your own words with it. Without internet a report
+waits for the next start.
 
 Settings
 --------
@@ -103,17 +113,22 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
                          Adapted = built for playing alone (the options below); Legacy = the original online-era rules.
                          Both keep Meret pouches, the full Meret Market, mail that never expires and the chat commands.
                          An option below that you set yourself wins over the mode.
-  GrindRates             faster exp, more drops, upgrade materials from monsters
+  GrindRates             faster exp, more drops, upgrade materials and Meret from monsters
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
   MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days; on in both modes)
   PartyDungeons          party-size dungeons open to a smaller group or one player (not Cathy Mart, which needs 4)
-  ClassDropsOnly         monsters and dungeon rewards only drop gear your class can wear
+  FairFight              bosses and group-dungeon monsters scaled for one player: each hit does at least a solo share of their health
+  BlackMarket            the Black Market has items for sale: a new pick every time you press Play
+  UnifiedContent         the extra content of the content pack (1.2.0: new cosmetics); false puts the original game files back
+  ClassDropsOnly         monsters and dungeon rewards only drop gear made for your class
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
   DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
   CheatCommands          the chat commands below (on in both modes; set it to false to turn them off)
   AutoUpdate             ask / always / off - online update check when you press Play
+  SendReports            ask / always / never - problem reports to the developer (see Problems?; launcher.ini only)
   ClientDir              the game's x64 folder, if you moved the game
+                         With TestKit=true the admin chat commands work too: /warp <map id>, /goto <map name>, /npc <npc id>
 
 Cheats
 ------
@@ -160,6 +175,38 @@ def copy_tree(src, dst, skip_ext=()):
             copy(path, os.path.join(dst, os.path.relpath(path, src)))
 
 
+def add_content_pack(stage, pack_dir):
+    """Unified content (Q-4 a): the folder from tools/build_content_pack.py --data-db ships as ContentPack/.
+    Refuses a pack whose server data was not built for it (the launcher's data lock would stop every Play)."""
+    with open(os.path.join(pack_dir, "pack.json"), encoding="utf-8") as f:
+        pack = json.load(f)
+        version = pack["version"]
+    data_build = os.path.join(pack_dir, "GameData", "data-build.json")
+    if not os.path.isfile(os.path.join(pack_dir, "GameData", "maple-data.db")) or not os.path.isfile(data_build):
+        sys.exit(f"{pack_dir}: GameData/maple-data.db or GameData/data-build.json is missing (build the pack with --data-db)")
+    with open(data_build, encoding="utf-8") as f:
+        data_pack = json.load(f).get("contentPack")
+    if data_pack != version:
+        sys.exit(f"{pack_dir}: GameData was built for pack {data_pack}, but pack.json is {version}")
+    for folder, _, names in os.walk(pack_dir):
+        for name in names:
+            if name == "apply-journal.json" or name.endswith(".tmp"):
+                continue  # written by the launcher at runtime
+            path = os.path.join(folder, name)
+            copy(path, os.path.join(stage, "ContentPack", os.path.relpath(path, pack_dir)))
+
+    # Write COMPATIBILITY.txt from pack.json
+    compatibility_content = f"MapleStory 2 Offline content pack {version}\n\nThe pack applies to the Global (Steam) client whose archives are exactly these (path, size in bytes, SHA-256):\n"
+    for archive in pack.get("archives", []):
+        compatibility_content += f"  {archive['path']}  {archive['globalSize']}  {archive['globalSha256']}\n"
+    compatibility_content += "\nWith any other build of these files (a game update, a modified client) the launcher starts the Global game without\nthe pack and says so; the pack is never applied over archives it does not know.\n"
+
+    with open(os.path.join(stage, "COMPATIBILITY.txt"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(compatibility_content)
+
+    return version
+
+
 def build(version):
     env = dict(os.environ, DOTNET_ROOT=os.path.dirname(DOTNET), DOTNET_CLI_TELEMETRY_OPTOUT="1")
     run([DOTNET, "build", os.path.join(ROOT, "Maple2", "Maple2.sln"), "-c", "Release", "-m:4", "-v:q", f"-p:Version={version}"], env=env)
@@ -182,6 +229,9 @@ def assemble(stage, version):
         f.write(PLAYER_DEFAULTS)
     with open(put("README.txt"), "w", encoding="utf-8") as f:
         f.write(PLAYER_README.format(version=version))
+
+    # TROUBLESHOOTING.txt
+    copy(os.path.join(ROOT, "TROUBLESHOOTING.txt"), put("TROUBLESHOOTING.txt"))
 
     # Licenses of everything shipped.
     copy(os.path.join(ROOT, "LICENSE"), put("LICENSES/MapleStory2-Offline-AGPL-3.0.txt"))
@@ -214,7 +264,7 @@ def assemble(stage, version):
     # Only the tracked web data (shop banner). profiles/, guildmark/, blueprint/... are written at runtime by the
     # build PC's own game (character portraits) and must never ship.
     copy_tree(os.path.join(maple, "Maple2.Server.Web", "Data", "system"), put("Maple2/Maple2.Server.Web/Data/system"))
-    for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-testkit.json"):
+    for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-market.json", "offline-testkit.json"):
         copy(os.path.join(maple, name), put(f"Maple2/{name}"))
 
     # Portable .env: no machine paths (the launcher passes the folders), no MySQL credentials.
@@ -310,6 +360,7 @@ def main():
     parser.add_argument("--no-build", action="store_true", help="package the existing builds")
     parser.add_argument("--manifest", action="store_true", help="write and sign release.json also without --base (Setup-only release)")
     parser.add_argument("--sign-key", help="update signing key (default ../Signing/update-signing-key.pem)")
+    parser.add_argument("--content-pack", help="content pack folder (build_content_pack.py --data-db) to ship as ContentPack/")
     args = parser.parse_args()
 
     out = os.path.join(ROOT, "publish")
@@ -322,6 +373,8 @@ def main():
         build(args.version)
     print("assembling", stage)
     assemble(stage, args.version)
+    if args.content_pack:
+        print("content pack", add_content_pack(stage, args.content_pack))
     files = manifest(stage)
 
     full_zip = os.path.join(out, f"MapleStory2-Offline-{args.version}.zip")
@@ -332,7 +385,12 @@ def main():
     print("building", setup)
     make_setup(os.path.join(ROOT, "publish", "launcher", "MapleStory 2 Offline.exe"), full_zip, setup)
 
-    assets = [setup, full_zip]
+    # The README links the unversioned name, and the Linux launcher installs only files release.json lists (RC-03).
+    alias = os.path.join(out, "MapleStory2-Offline-Setup.exe")
+    print("copying", alias)
+    shutil.copyfile(setup, alias)
+
+    assets = [setup, alias, full_zip]
     if args.base:
         with open(os.path.join(args.base, "files.json"), encoding="utf-8") as f:
             base_files = json.load(f)

@@ -22,14 +22,20 @@ internal sealed class Settings {
     public string DotnetDir => Path.Combine(Root, "dotnet");
     public string LogDir => Path.Combine(DataRoot, "logs");
     public string ReportDir => Path.Combine(DataRoot, "reports");
+    /// <summary>Problem reports waiting to be sent to the developer (ProblemReport).</summary>
+    public string ReportQueueDir => Path.Combine(DataRoot, "report-queue");
     public string PatchDir => Path.Combine(Root, "client-patch");
     /// <summary>Client data mods (XML replacements) loaded by the client patch, one folder per mod.</summary>
     public string ModsDir => Path.Combine(Root, "client-mods");
-    public string SaveDir => Path.Combine(DataRoot, "SaveData");
+    public string SaveDir => SaveDirFor(DataRoot, Profile);
+    public static string SaveDirFor(string dataRoot, string profile) => profile.Length == 0 ? Path.Combine(dataRoot, "SaveData") : Path.Combine(dataRoot, "SaveData", profile);
     public string SaveFile => Path.Combine(SaveDir, "game-server.db");
     public string BackupDir => Path.Combine(SaveDir, "backups");
+    /// <summary>Save profile: a sub-folder of SaveData ("" = the main save). Picked in the "Choose how to play" window.</summary>
+    public string Profile { get; set; } = "";
     /// <summary>Game data built from the client; in releases it lives apart from the save so updates can replace it.</summary>
     public string GameDataDir => Path.Combine(Root, "GameData");
+    public string ContentPackDir => Path.Combine(Root, "ContentPack");
     public string UpdateDir => Path.Combine(DataRoot, "updates");
     public int BackupsToKeep { get; private init; } = 10;
     /// <summary>Server build to run: Release (normal rules) or Debug (developer cheats).</summary>
@@ -64,6 +70,14 @@ internal sealed class Settings {
     public bool? CheatCommands { get; private init; }
     /// <summary>Party-size dungeons open to a smaller group, even alone, except Cathy Mart (Adapted default).</summary>
     public bool? PartyDungeons { get; private init; }
+    /// <summary>Reverse Fair Fight: a solo player's hits on bosses and group-dungeon monsters do at least a solo-sized share of their health (Adapted default).</summary>
+    public bool? FairFight { get; private init; }
+    /// <summary>Offline Black Market: listings by a synthetic seller from offline-market.json, a new pick at every Play (Adapted default).</summary>
+    public bool? BlackMarket { get; private init; }
+    /// <summary>
+    /// Unified content (KMS/JMS records and art) applied to the client before Play; false keeps the pure Global game.
+    /// </summary>
+    public bool UnifiedContent { get; private init; } = true;
     /// <summary>
     /// Online update check when Play is pressed: "ask" (offer the newer version), "always" (install it without asking)
     /// or "off" (only manual updates). Skipped silently without internet.
@@ -71,9 +85,16 @@ internal sealed class Settings {
     public string AutoUpdate { get; private init; } = "off";
     /// <summary>Writes a plain-text report of every session to the desktop for bug reports (on unless DebugReports=false).</summary>
     public bool DebugReports { get; private init; } = true;
+    /// <summary>
+    /// Problem reports to the developer after a session with a problem: "ask" (default), "always" (the checkbox in
+    /// "Choose how to play") or "never". Nothing is sent without one of these choices (docs/engineering/DIAGNOSTIC_REPORTS.md).
+    /// </summary>
+    public string SendReports { get; set; } = "ask";
 
     /// <summary>Folder of MapleStory2.exe (the client's x64 folder); found automatically when not set.</summary>
     public string ClientDir { get; set; } = "";
+    /// <summary>The game's install folder (the parent of the x64 folder in ClientDir); content pack paths start here.</summary>
+    public string ClientRoot => Path.GetFullPath(Path.Combine(ClientDir, ".."));
     public string Username { get; private init; } = "offline";
     public string Password { get; private init; } = "offline";
 
@@ -84,6 +105,8 @@ internal sealed class Settings {
         ReadInto(values, Path.Combine(root, DefaultsFile));
         LauncherIni.Migrate(Path.Combine(dataRoot, UserFile));
         ReadInto(values, Path.Combine(dataRoot, UserFile));
+        var own = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        ReadInto(own, Path.Combine(dataRoot, UserFile));
         root = values.GetValueOrDefault("Root", root);
 
         string versionFile = Path.Combine(root, "VERSION");
@@ -108,6 +131,8 @@ internal sealed class Settings {
             MailNeverExpires = Flag(values, "MailNeverExpires"),
             CheatCommands = Flag(values, "CheatCommands"),
             PartyDungeons = Flag(values, "PartyDungeons"),
+            FairFight = Flag(values, "FairFight"),
+            BlackMarket = Flag(values, "BlackMarket"),
             ClassDropsOnly = Flag(values, "ClassDropsOnly"),
             PetTaming = Flag(values, "PetTaming"),
             DungeonEpicGear = Flag(values, "DungeonEpicGear"),
@@ -117,9 +142,24 @@ internal sealed class Settings {
                 _ => "off",
             },
             DebugReports = Flag(values, "DebugReports") ?? true,
+            // Only the player's own launcher.ini: a shipped defaults.ini must never turn sending on.
+            SendReports = ParseSendReports(own.GetValueOrDefault("SendReports")),
             BackupsToKeep = int.TryParse(values.GetValueOrDefault("BackupsToKeep"), out int keep) ? keep : defaults.BackupsToKeep,
+            UnifiedContent = Flag(values, "UnifiedContent") ?? true,
+            // A hand-edited name the chooser would refuse (e.g. "..\x") means the main save, never a folder outside SaveData.
+            Profile = ValidateProfile(values.GetValueOrDefault("Profile", "")) == null ? values.GetValueOrDefault("Profile", "").Trim() : "",
         };
     }
+
+    /// <summary>launcher.ini SendReports: "always" or "never" when written so (or as true/yes, false/no/off), else "ask".</summary>
+    public static string ParseSendReports(string? value) => (value ?? "").Trim().ToLowerInvariant() switch {
+        "always" or "true" or "yes" => "always",
+        "never" or "false" or "no" or "off" => "never",
+        _ => "ask",
+    };
+
+    /// <summary>SendReports after the "send automatically" checkbox: ticked is always, unticking always goes back to asking, never stays.</summary>
+    public static string SendReportsAfterCheckbox(string current, bool ticked) => ticked ? "always" : current == "always" ? "ask" : current;
 
     /// <summary>Stores one choice in the player's launcher.ini (adds or replaces the line, keeps the rest).</summary>
     public void SaveUserValue(string key, string value) {
@@ -150,4 +190,24 @@ internal sealed class Settings {
     /// <summary>The key's bool value, or null when no ini file sets it.</summary>
     private static bool? Flag(Dictionary<string, string> values, string key) =>
         bool.TryParse(values.GetValueOrDefault(key), out bool value) ? value : null;
+
+    /// <summary>null when the name can be a profile folder, else the message for the player.</summary>
+    public static string? ValidateProfile(string name) {
+        string trimmed = name.Trim();
+        if (trimmed.Length == 0) {
+            return null; // main save
+        }
+        if (trimmed.Length > 32) {
+            return "Use letters, digits, spaces, - or _ (up to 32 characters).";
+        }
+        foreach (char c in trimmed) {
+            if (!(char.IsLetterOrDigit(c) || c is ' ' or '-' or '_')) {
+                return "Use letters, digits, spaces, - or _ (up to 32 characters).";
+            }
+        }
+        if (string.Equals(trimmed, "backups", StringComparison.OrdinalIgnoreCase)) {
+            return "That name is reserved.";
+        }
+        return null;
+    }
 }

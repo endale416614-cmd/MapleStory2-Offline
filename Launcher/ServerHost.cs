@@ -13,6 +13,9 @@ internal sealed class ServerHost : IDisposable {
     private readonly List<(string Name, Process Process)> servers = [];
     private readonly IntPtr job;
 
+    /// <summary>Server data folder for this session (ContentPackFlow.Prepare); the Global GameData when unset.</summary>
+    public string? DataDir { get; set; }
+
     public ServerHost(Settings settings) {
         this.settings = settings;
         job = CreateKillOnCloseJob();
@@ -32,7 +35,7 @@ internal sealed class ServerHost : IDisposable {
     public void PrepareLogs() {
         Directory.CreateDirectory(settings.LogDir);
         string history = Path.Combine(settings.LogDir, "history");
-        string[] last = ServerNames.Select(LogPath).Where(File.Exists).ToArray();
+        string[] last = ServerNames.Select(LogPath).Append(TriggerRingFile).Where(File.Exists).ToArray();
         if (last.Length > 0) {
             string target = Path.Combine(history, File.GetLastWriteTime(last[0]).ToString("yyyy-MM-dd_HH-mm-ss"));
             Directory.CreateDirectory(target);
@@ -51,6 +54,9 @@ internal sealed class ServerHost : IDisposable {
 
     /// <summary>The save-status file the game server writes when a character enters the world or is saved on leaving.</summary>
     public string SaveStatusFile => Path.Combine(settings.SaveDir, "save-status.json");
+
+    /// <summary>The last 200 trigger state changes the game server writes (R12-21).</summary>
+    public string TriggerRingFile => Path.Combine(settings.LogDir, "trigger-ring.log");
 
     public void Start(string name) {
         string projectDir = Path.Combine(settings.ServerDir, $"Maple2.Server.{name}");
@@ -78,14 +84,20 @@ internal sealed class ServerHost : IDisposable {
         info.Environment["OFFLINE_MODE"] = "true";
         info.Environment["DB_PROVIDER"] = "sqlite";
         info.Environment["OFFLINE_SAVE_STATUS_FILE"] = SaveStatusFile;
+        info.Environment["OFFLINE_TRIGGER_RING_FILE"] = TriggerRingFile;
         info.Environment["OFFLINE_LAUNCH_ID"] = EventLog.SessionId;
         // Saves next to the launcher; release builds keep the game data in GameData so updates can replace it.
         info.Environment["SQLITE_DIR"] = settings.SaveDir;
-        if (File.Exists(Path.Combine(settings.GameDataDir, "maple-data.db"))) {
-            info.Environment["SQLITE_DATA_DIR"] = settings.GameDataDir;
+        string dataDir = DataDir ?? settings.GameDataDir;
+        if (File.Exists(Path.Combine(dataDir, "maple-data.db"))) {
+            info.Environment["SQLITE_DATA_DIR"] = dataDir;
         }
         info.Environment["OFFLINE_PROFILE"] = settings.GameMode;
         info.Environment["OFFLINE_TESTKIT"] = settings.TestKit ? "true" : "false";
+        if (settings.TestKit) {
+            // The dungeon harness drops chat command files there (V-03g): it types nothing after the world loads.
+            info.Environment["OFFLINE_TESTKIT_INBOX"] = Path.Combine(settings.LogDir, "testkit-inbox");
+        }
         info.Environment["OFFLINE_TRIGGER_TRACE"] = settings.TriggerTrace ? "true" : "false";
         // An option no ini file names sends nothing, so the server's default for the game mode applies.
         foreach ((string variable, bool? value) in new (string, bool?)[] {
@@ -98,6 +110,8 @@ internal sealed class ServerHost : IDisposable {
             ("OFFLINE_DUNGEON_EPIC_GEAR", settings.DungeonEpicGear),
             ("OFFLINE_CHEATS", settings.CheatCommands),
             ("OFFLINE_PARTY_DUNGEONS", settings.PartyDungeons),
+            ("OFFLINE_FAIR_FIGHT", settings.FairFight),
+            ("OFFLINE_MARKET", settings.BlackMarket),
         }) {
             if (value is { } flag) {
                 info.Environment[variable] = flag ? "true" : "false";

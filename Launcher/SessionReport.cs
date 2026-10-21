@@ -20,7 +20,8 @@ internal sealed class SessionReport {
     private const int ReportsToKeep = 15;
     private const int LogTailLines = 150;
     private static readonly string[] ServerNames = ["Game", "World", "Login", "Web"];
-    private static readonly Regex LogLine = new(@"^(?<time>\d\d:\d\d:\d\d\.\d{3})\s+(?<source>\S*)\s*\[(?<level>[A-Z]{3})\]\s*<\d+>\s*(?<message>.*)$");
+    // The servers format times with the PC's time separator: ':' in most regions, '.' in e.g. Finnish or Danish.
+    private static readonly Regex LogLine = new(@"^(?<time>\d\d[:.]\d\d[:.]\d\d\.\d{3})\s+(?<source>\S*)\s*\[(?<level>[A-Z]{3})\]\s*<\d+>\s*(?<message>.*)$");
     private static readonly Regex Numbers = new(@"\d+(\.\d+)?");
 
     private readonly Settings settings;
@@ -100,6 +101,12 @@ internal sealed class SessionReport {
     /// <summary>The report text, redacted (also used by the diagnostics export).</summary>
     public string BuildText() => Redact(Build());
 
+    /// <summary>
+    /// The report before its redaction, only for ProblemReport.ForUpload, which drops the game client's text while its
+    /// markers are intact and then redacts. Never written or shown as it is.
+    /// </summary>
+    public string RawText() => Build();
+
     private string Build() {
         DateTime ended = DateTime.Now;
         List<LogProblem> logProblems = ServerNames.SelectMany(ScanServerLog).ToList();
@@ -135,6 +142,9 @@ internal sealed class SessionReport {
             foreach (string detail in problem.Details) {
                 text.AppendLine("      " + detail);
             }
+            if (Triage.Classify(problem.Sample + "\n" + string.Join("\n", problem.Details)) is { } known) {
+                text.AppendLine($"      Known problem: {known.Category} (see TROUBLESHOOTING.txt {known.Section})");
+            }
         }
 
         Section(text, "Character");
@@ -150,6 +160,9 @@ internal sealed class SessionReport {
             Section(text, $"Server log: {server} (last {LogTailLines} lines)");
             text.AppendLine(Tail(Path.Combine(settings.LogDir, $"{server.ToLowerInvariant()}.log"), LogTailLines));
         }
+
+        Section(text, "Trigger states (the last 200 state changes of all maps, oldest first)");
+        text.AppendLine(Tail(Path.Combine(settings.LogDir, "trigger-ring.log"), 200));
 
         Section(text, "Game client log (last 80 lines)");
         string clientRoot = ClientLocator.Find(settings.ClientDir) ?? settings.ClientDir;
@@ -265,6 +278,8 @@ internal sealed class SessionReport {
         }
         text.AppendLine($"Original DLL backup : {(File.Exists(Path.Combine(clientDir, "NxCharacter64.dll.bak")) ? "present" : "not yet (made on first start)")}");
         text.AppendLine($"Save file           : {(File.Exists(settings.SaveFile) ? $"{new FileInfo(settings.SaveFile).Length / 1024} KB" : "MISSING")}");
+        text.AppendLine($"Save profile        : {(settings.Profile.Length == 0 ? "main" : settings.Profile)}");
+        text.AppendLine(ContentPack.Describe(detected == null ? settings.ClientDir : Path.GetFullPath(Path.Combine(detected, "..")), settings.ContentPackDir));
 
         string ini = Path.Combine(settings.DataRoot, "launcher.ini");
         text.AppendLine("launcher.ini:");
@@ -338,22 +353,8 @@ internal sealed class SessionReport {
         }
     }
 
-    /// <summary>Removes the Windows user name, PC name and machine id.</summary>
-    public static string Redact(string text) {
-        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (profile.Length > 3) {
-            text = text.Replace(profile, "%USERPROFILE%", StringComparison.OrdinalIgnoreCase);
-        }
-        foreach (string secret in new[] { Environment.UserName, Environment.MachineName }) {
-            if (secret.Length >= 3) {
-                text = Regex.Replace(text, $@"\b{Regex.Escape(secret)}\b", "<redacted>", RegexOptions.IgnoreCase);
-            }
-        }
-        text = Regex.Replace(text, @"Machine: [0-9a-fA-F-]{8,}", "Machine: <redacted>");
-        // Login server: Logging in to game as { ..., "machineId": "<client hardware id>", ... }
-        return Regex.Replace(text, @"(machine[ _-]?id[""']?\s*[:=]\s*[""']?)[0-9a-fA-F][0-9a-fA-F-]{7,}", "$1<redacted>",
-            RegexOptions.IgnoreCase);
-    }
+    /// <summary>Removes the Windows user name, PC name and machine id (ProblemReport.Redact, shared with the uploads).</summary>
+    public static string Redact(string text) => ProblemReport.Redact(text);
 
     private static string JobName(int job) => job switch {
         10 => "Beginner", 100 or 101 => "Knight", 200 or 201 => "Berserker", 300 or 301 => "Wizard", 400 or 401 => "Priest",

@@ -97,6 +97,7 @@ static int Overlay(string baseM2d, string dir, string outM2d, bool reencode) {
     using (var src = reencode ? null : File.OpenRead(baseM2d)) // 2.3.7 M2dReader maps the file exclusively
     using (var baseReader = reencode ? new M2dReader(baseM2d) : null)
     using (var dst = new BinaryWriter(File.Create(outM2d))) {
+        var deferred = new List<(int Slot, byte[] Data)>(); // replaced entries: new data goes after all base blocks
         int i = 0;
         foreach (var (e, data) in plan) {
             i++;
@@ -108,6 +109,13 @@ static int Overlay(string baseM2d, string dir, string outM2d, bool reencode) {
                 src!.Seek((long)hdr.Offset, SeekOrigin.Begin);
                 src.ReadExactly(block);
                 hdr.Offset = offset; hdr.FileIndex = i;
+            } else if (hdr != null && !reencode) {
+                // Replaced base entry: keep its original block here so the base bytes stay a prefix (append-only).
+                block = new byte[hdr.EncodedFileSize];
+                src!.Seek((long)hdr.Offset, SeekOrigin.Begin);
+                src.ReadExactly(block);
+                hdr.Offset = offset; hdr.FileIndex = i;
+                deferred.Add((newEntries.Count, data!));
             } else {
                 byte[] plain = data ?? baseReader!.GetBytes(e);
                 var flag = hdr?.BufferFlag ?? (Encryption.Aes | Encryption.Zlib);
@@ -121,6 +129,21 @@ static int Overlay(string baseM2d, string dir, string outM2d, bool reencode) {
             }
             dst.Write(block);
             newEntries.Add(new PackFileEntry { Index = i, Hash = e.Hash, Name = e.Name, TreeName = e.TreeName, FileHeader = hdr });
+        }
+        
+        foreach (var (slot, data) in deferred) {
+            ulong offset = (ulong)dst.BaseStream.Position;
+            PackFileEntry entry = newEntries[slot];
+            var flag = entry.FileHeader.BufferFlag;
+            byte[] block = Encode(version, data, flag, out uint sz, out uint cz, out uint ez);
+            IPackFileHeader hdr = version switch {
+                PackVersion.MS2F => PackFileHeaderVer1.CreateHeader(entry.Index, flag, offset, (byte[])data.Clone()),
+                PackVersion.NS2F => PackFileHeaderVer2.CreateHeader(entry.Index, flag, offset, (byte[])data.Clone()),
+                _ => PackFileHeaderVer3.CreateHeader(version, entry.Index, flag, offset, (byte[])data.Clone()),
+            };
+            hdr.FileSize = sz; hdr.CompressedFileSize = cz; hdr.EncodedFileSize = ez;
+            dst.Write(block);
+            entry.FileHeader = hdr;
         }
     }
 

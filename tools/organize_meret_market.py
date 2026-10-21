@@ -3,7 +3,7 @@ r"""Organizes the offline Meret Market so it is easy to browse (docs/ADAPTATIONS
   python -I tools/organize_meret_market.py [--db SaveData/maple-data.db] [--check]
 
 Rewrites the tab of each entry in Maple2/offline-meret-catalog.json from the game data, adds the Meret furniture that no
-shop sells, and writes the matching tab list into the client mod client-mods/offline-shop (Xml/table/na/
+shop sells, and writes the matching tab list into the client mod client-mods/offline-shop (Xml/table/
 meratmarketcategory.xml, section 100000). Running it again changes nothing. --check only reports what would change.
 
   Featured (tab 10)            every capsule: gacha capsules, random pet capsules, "Capsule"/"Crate" boxes
@@ -27,7 +27,8 @@ import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(ROOT, "Maple2", "offline-meret-catalog.json")
-MOD_XML = os.path.join(ROOT, "client-mods", "offline-shop", "Data", "Xml", "table", "na", "meratmarketcategory.xml")
+# The client requests regional tables without the locale folder (it adds "na/" below the mod hook), so the mod serves table/<name>.xml.
+MOD_XML = os.path.join(ROOT, "client-mods", "offline-shop", "Data", "Xml", "table", "meratmarketcategory.xml")
 
 FEATURED, PACKAGES, OUTFITS, CRATE_SPOTLIGHT, SUMMONS, PETS, FUNCTIONAL = 10, 40000, 40100, 40110, 40200, 40203, 40300
 TEMPLATES, FURNITURE = 40700, 40800

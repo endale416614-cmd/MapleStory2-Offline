@@ -187,7 +187,7 @@ internal static class Setup {
         }
     }
 
-    /// <summary>"--uninstall": restore the game DLL, remove shortcuts, registry entry and program; ask about data.</summary>
+    /// <summary>"--uninstall": restore the game DLL and the Global game archives, remove shortcuts, registry entry and program; ask about data.</summary>
     public static void Uninstall(Settings settings, bool quiet = false, bool deleteData = false) {
         if (!quiet && MessageBox.Show($"Uninstall {ProductName}?", ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) {
             return;
@@ -196,8 +196,23 @@ internal static class Setup {
             MessageBox.Show("Close MapleStory 2 first.", ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        if (ClientLocator.Find(settings.ClientDir) is { } client && !ClientLocator.RemovePatch(client, settings.PatchDir)) {
+        string? client = ClientLocator.Find(settings.ClientDir);
+        if (client != null && !ClientLocator.RemovePatch(client, settings.PatchDir)) {
             ClientLocator.InstallPatchElevated(client, "--remove-patch");
+        }
+        if (client != null && File.Exists(Path.Combine(settings.ContentPackDir, ContentPack.FileName))) {
+            // The unified content sits in the game's archives; the pack folder (needed to remove it) goes with the program.
+            settings.ClientDir = client;
+            try {
+                if (!ContentPack.Restore(settings.ClientRoot, settings.ContentPackDir)) {
+                    ContentPack.ApplyElevated(settings.ClientRoot, settings.ContentPackDir, "--restore-content-pack");
+                }
+            } catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException or IOException or UnauthorizedAccessException) {
+                if (!quiet) {
+                    MessageBox.Show($"The unified content could not be removed from the game folder:\n{ex.Message}\n\nAfter the uninstall, verify the game files in Steam.",
+                        ProductName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
         }
 
         if (!quiet) {
@@ -261,6 +276,8 @@ internal static class Setup {
         Shortcut(Path.Combine(StartMenuDir, $"{ProductName}.lnk"), launcher, "", workingDir, "Play MapleStory 2 offline");
         Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Export Diagnostics.lnk"), launcher, "--export-diagnostics", workingDir,
             "Save a diagnostics file on the desktop to send with a bug report");
+        Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Report a Problem.lnk"), launcher, "--report-problem", workingDir,
+            "Send the developer a problem report with your own words");
         Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Install Update.lnk"), launcher, "--install-update", workingDir, "Install a downloaded update zip");
         Shortcut(Path.Combine(StartMenuDir, $"Uninstall {ProductName}.lnk"), launcher, "--uninstall", workingDir, "Remove MapleStory 2 Offline");
         Shortcut(DesktopShortcut, launcher, "", workingDir, "Play MapleStory 2 offline");

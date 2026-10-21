@@ -1,0 +1,15 @@
+# Cloudflare Worker of the problem-report service; deploy steps in README.md.
+name = "ms2-reports"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+# node:zlib (a gzip bomb stops at its output limit) and Buffer
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ms2-reports"
+database_id = "<your D1 database id>"
+
+# Daily cleanup: reports older than 90 days are deleted.
+[triggers]
+crons = ["17 3 * * *"]

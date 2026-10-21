@@ -6,8 +6,9 @@ namespace MapleStory2Offline;
 /// <summary>
 /// Online update check (launcher.ini AutoUpdate): asks GitHub for the latest release of this project and downloads its
 /// update file into the updates folder, where <see cref="UpdateInstaller"/> verifies and installs it like a manual
-/// update. Only the launcher goes online, only for this, and any failure (no internet, timeout, unexpected answer)
-/// just means "no update" - the game always starts. Nothing about the player or the PC is sent.
+/// update. Only the launcher goes online: for this, and for problem reports the player agreed to (ReportDialogs). Any
+/// failure (no internet, timeout, unexpected answer) just means "no update" - the game always starts. Nothing about the
+/// player or the PC is sent with the update check.
 /// </summary>
 internal static class UpdateChecker {
     public const string Repository = "endale416614-cmd/MapleStory2-Offline";

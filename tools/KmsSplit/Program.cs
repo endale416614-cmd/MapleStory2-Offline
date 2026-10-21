@@ -2,6 +2,7 @@
 //   KmsSplit <kmsXml.m2d> <outDir> [--only-ids <file>] [--na <naXml.m2d>] [--model <Maple2.Model.dll>]   convert (--na: KMS-only ids, NA-default fill, required-attribute fill, item slot rule, npc effectdummy)
 //   KmsSplit --verify <kmsXml.m2d> <naXml.m2d> <reportDir> --sample 500      compare converted vs NA
 //   KmsSplit --selftest                                                     comparer self-check
+//   KmsSplit --fix-skin <dir>                                               converted item files under <dir>/item: skin="1" where skinType is set (in place)
 //   KmsSplit --paths <Xml.m2d> <prefix>...                                  element@attr frequency (dev aid)
 using System.Text;
 using System.Xml.Linq;
@@ -13,6 +14,7 @@ if (args[0] == "--selftest") return Cmp.SelfTest() ? 0 : 1;
 if (args[0] == "--validate") return args.Length < 2 ? Usage() : Validate(args[1], args.Length > 3 && args[2] == "--model" ? args[3] : null);
 if (args[0] == "--paths") return args.Length < 2 ? Usage() : Paths(args[1], args.Skip(2).ToArray());
 if (args[0] == "--verify") return args.Length < 4 ? Usage() : Verify(args[1], args[2], args[3], args.Length > 5 && args[4] == "--sample" ? int.Parse(args[5]) : 500);
+if (args[0] == "--fix-skin") return args.Length < 2 ? Usage() : Conv.FixSkinFiles(args[1]);
 if (args.Length < 2) return Usage();
 return RunConvert(args);
 
@@ -574,6 +576,34 @@ static class Conv {
     }
     static string PresetDir(string id) => id.Length == 8 && id[0] == '1' && id.All(char.IsDigit) ? $"{id[0]}/{id.Substring(1, 2)}/" : "";
 
+    // NA writes skin="1" on cosmetics: KMS skinType set goes with NA skin=1 for 8,028 of 8,094 shared item ids. KMS has no
+    // skin attribute and the NA-default fill writes 0, so the outfit window and the Outfit tab missed the item (PC2-F1).
+    public static void SkinRule(XElement prop) {
+        if (prop.Attribute("skinType") != null && (string?)prop.Attribute("skin") is null or "0") prop.SetAttributeValue("skin", "1");
+    }
+
+    // The same rule on converted XML text: only skin="0" inside a <property> tag that has skinType changes.
+    public static string FixSkinText(string xml) => System.Text.RegularExpressions.Regex.Replace(xml, "<property\\b[^>]*>",
+        m => m.Value.Contains(" skinType=\"") ? System.Text.RegularExpressions.Regex.Replace(m.Value, "(?<=\\s)skin=\"0\"", "skin=\"1\"") : m.Value);
+
+    // FixSkinText on every converted item file under <dir>/item, keeping each file's bytes otherwise (byte-order mark,
+    // line ends). Returns 0.
+    public static int FixSkinFiles(string dir) {
+        int files = 0, changed = 0;
+        foreach (var path in Directory.EnumerateFiles(System.IO.Path.Combine(dir, "item"), "*.xml", SearchOption.AllDirectories)) {
+            files++;
+            byte[] bytes = File.ReadAllBytes(path);
+            bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+            string text = Encoding.UTF8.GetString(bytes, bom ? 3 : 0, bytes.Length - (bom ? 3 : 0));
+            string fixedText = FixSkinText(text);
+            if (fixedText == text) continue;
+            File.WriteAllBytes(path, (bom ? new byte[] { 0xEF, 0xBB, 0xBF } : Array.Empty<byte>()).Concat(Encoding.UTF8.GetBytes(fixedText)).ToArray());
+            changed++;
+        }
+        Console.WriteLine($"fix-skin: {changed} of {files} item files changed");
+        return 0;
+    }
+
     // ----- items: itemdata (+ itemmodel slots/customize) -----
     public static XDocument Item(Kms k, long id) {
         var root = new XElement("ms2");
@@ -588,6 +618,7 @@ static class Conv {
                 else if (icon.Length > 0 && icon.All(char.IsDigit)) prop.SetAttributeValue("slotIcon", $"./Data/Resource/Image/item/icon/{icon}.png");
                 else if (icon.Contains("/customize/")) { prop.SetAttributeValue("slotIconCustom", icon); prop.SetAttributeValue("slotIcon", "icon0.png"); }
                 prop.SetAttributeValue("presetPath", PresetDir(id.ToString("D8")));
+                SkinRule(prop);
             }
             var tool = env.Element("tool");
             if (tool != null) tool.SetAttributeValue("itemPresetPath", PresetDir(A(tool, "itemPreset")));
@@ -869,6 +900,30 @@ static class Cmp {
         var ruleFill = NaRules.Learn(Enumerable.Range(0, 100).Select(i => ("npc", D($"<ms2><environment><collision x=\"{(i < 60 ? 1 : 2)}\"{(i == 0 ? " rare=\"1\"" : "")}/></environment></ms2>"))));
         var fd = D("<ms2><environment><collision/></environment></ms2>"); ruleFill.Apply("npc", fd);
         Check("fill: x added with most common value, rare not", (string?)fd.Descendants("collision").First().Attribute("x") == "1" && fd.Descendants("collision").First().Attribute("rare") == null);
+        // skin rule (KMS-02)
+        var cosmetic = new XElement("property", new XAttribute("skinType", "2"));
+        Conv.SkinRule(cosmetic);
+        var plain = new XElement("property", new XAttribute("type", "1"));
+        Conv.SkinRule(plain);
+        Check("skin rule sets skin=1 where skinType is set", (string?)cosmetic.Attribute("skin") == "1" && plain.Attribute("skin") == null);
+        Check("skin text fix touches only cosmetics",
+            Conv.FixSkinText("<property skinType=\"2\" skin=\"0\" slotMax=\"1\">") == "<property skinType=\"2\" skin=\"1\" slotMax=\"1\">"
+            && Conv.FixSkinText("<property type=\"1\" skin=\"0\">") == "<property type=\"1\" skin=\"0\">"
+            && Conv.FixSkinText("<limit skin=\"0\" /><property skin=\"0\" skinType=\"1\" />") == "<limit skin=\"0\" /><property skin=\"1\" skinType=\"1\" />");
+        string tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kmssplit-skin-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(System.IO.Path.Combine(tmp, "item", "1", "10"));
+        string withBom = System.IO.Path.Combine(tmp, "item", "1", "10", "1.xml"), noBom = System.IO.Path.Combine(tmp, "item", "1", "10", "2.xml");
+        File.WriteAllBytes(withBom, new byte[] { 0xEF, 0xBB, 0xBF }.Concat(Encoding.UTF8.GetBytes("<ms2>\r\n<property skinType=\"2\" skin=\"0\" />\r\n</ms2>")).ToArray());
+        byte[] plainBytes = Encoding.UTF8.GetBytes("<ms2><property type=\"1\" skin=\"0\" /></ms2>");
+        File.WriteAllBytes(noBom, plainBytes);
+        Conv.FixSkinFiles(tmp);
+        byte[] fixedBytes = File.ReadAllBytes(withBom);
+        Check("fix-skin keeps the byte-order mark and line ends",
+            fixedBytes.Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF })
+            && Encoding.UTF8.GetString(fixedBytes, 3, fixedBytes.Length - 3) == "<ms2>\r\n<property skinType=\"2\" skin=\"1\" />\r\n</ms2>");
+        Check("fix-skin leaves other files byte-identical", File.ReadAllBytes(noBom).SequenceEqual(plainBytes));
+        Directory.Delete(tmp, recursive: true);
+
         Console.WriteLine(fail == 0 ? "selftest passed" : $"selftest FAILED ({fail})");
         return fail == 0;
     }

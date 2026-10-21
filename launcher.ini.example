@@ -13,6 +13,8 @@ GameMode=Adapted
 #UnlimitedDungeonClears=true
 #MailNeverExpires=true
 #PartyDungeons=true
+#FairFight=true
+#BlackMarket=true
 #ClassDropsOnly=true
 #PetTaming=true
 #DungeonEpicGear=true
@@ -24,6 +26,16 @@ AutoUpdate=ask
 
 # After every session a plain-text report goes to "MapleStory 2 Offline Reports" on the desktop.
 DebugReports=true
+
+# Problem reports to the developer after a session with a problem: ask (default), always (the checkbox in
+# "Choose how to play") or never. Each question shows what a report contains; your names, chat and save are never sent.
+#SendReports=ask
+
+# Unified content (Korean and Japanese records and art) on the Global client: true (default) or false (pure Global game; Play removes it again).
+#UnifiedContent=true
+
+# Save profile: a sub-folder of SaveData for a separate game ("" = the main save). Picked in the "Choose how to play" window.
+#Profile=
 
 # Developer options - leave off for normal play.
 TestKit=false

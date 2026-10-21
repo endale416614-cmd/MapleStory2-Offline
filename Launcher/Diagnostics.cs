@@ -11,7 +11,7 @@ namespace MapleStory2Offline;
 /// "Export Diagnostics": one zip on the desktop with everything needed to investigate a problem, made without
 /// starting the game or the servers. Text is redacted (Windows user/PC name, machine id). Logs are size-capped;
 /// missing, locked or unreadable files are listed instead of failing the export. The save is only included when the
-/// player agrees. Nothing is uploaded.
+/// player agrees. The zip is never uploaded (problem reports, ReportDialogs, send only the session report text).
 /// </summary>
 internal static class Diagnostics {
     private const long MaxFileBytes = 5L * 1024 * 1024;
@@ -68,7 +68,9 @@ internal static class Diagnostics {
             text.AppendLine($"Patch {dll,-18}: {state} ({Identity(installed)})");
         }
         text.AppendLine($"Game data       : {DatabaseIdentity(Path.Combine(settings.GameDataDir, "maple-data.db"), notes) ?? DatabaseIdentity(Path.Combine(settings.SaveDir, "maple-data.db"), notes) ?? "NOT FOUND"}");
+        text.AppendLine($"Pack game data  : {DatabaseIdentity(Path.Combine(settings.ContentPackDir, "GameData", "maple-data.db"), notes) ?? "none"}");
         text.AppendLine($"Save            : {DatabaseIdentity(settings.SaveFile, notes) ?? "no save yet"}");
+        text.AppendLine($"Save profile    : {(settings.Profile.Length == 0 ? "main" : settings.Profile)}");
         text.AppendLine();
 
         try {
