@@ -50,7 +50,7 @@ each get a bounded pilot, not full coverage. (3) Torrents are deferred; a signed
 
 Cross-cutting facts found on the way:
 - Blocker carried over: the `Xml.m2d` build used for the 1.1.8 `maple-data.db` is not recorded (ingest from the raw client reproduces only 10 of 23 table checksums). `PROJECT_STATUS.md`.
-- Client patch cannot be rebuilt (`C1047`, prebuilt MinHook). Any change needing a new hook is blocked until fixed. `PROJECT_STATUS.md`.
+- Client patch build fixed 2026-10-21 (BT-14: MinHook vendored as source); it was unbuildable (`C1047`, prebuilt MinHook) when this plan was written.
 - The U-02 test instance (NA client + overlay `Xml.m2d` with 4,795 KMS records) logged one client crash, exit `0xC000000D`, on its first launch; four later launches opened the game window; the test outcome is not recorded. The overlay path is therefore unproven.
 - `README.md:10` links `MapleStory2-Offline-Setup.exe` (unversioned); `package_release.py` emits `-Setup-<ver>.exe`. The alias is created by hand and undocumented. `UpdateKey.cs:5` cites `docs/RELEASING.md`, which does not exist.
 - `UpdateInstaller.ParseVersion` drops non-numeric suffixes, so `1.2.0-beta` equals `1.2.0`; GitHub prereleases are skipped by `/releases/latest`, so a prerelease tag is safe from auto-update but a prerelease asset name must not be mistaken for the final.
@@ -291,7 +291,7 @@ webseed), "MS2 Tools" bundle definition, U-05..U-14.
 
 | Area | Automated | Manual | Needs unavailable thing |
 |---|---|---|---|
-| Clean build | CI (R12-03): both solutions, 3 tools | fresh clone with `--recurse-submodules` builds on a second machine | client patch build (`C1047`) stays manual until fixed |
+| Clean build | CI (R12-03): both solutions, 3 tools | fresh clone with `--recurse-submodules` builds on a second machine | client patch build stays manual (Visual Studio C++ workload) |
 | Regression | `dotnet test` 237+; sweep fixture; `KmsSplit --selftest`; `M2dPack selftest` | 1.1.8 save loads, plays, saves under 1.2.0 | |
 | New game Lv1 | cleanup unit test; profile path tests | 12 classes × 2 modes reach Lith Harbor (matrix sheet) | |
 | Save/load, restart | `SaveSafetyTest`; stamp test | restart mid-dungeon; update 1.1.8→1.2.0 keeps save and `launcher.ini` | |
@@ -325,7 +325,7 @@ behaviour was not exercised (e.g. a raid pilot with no recorded solo clear) is r
 | 7 | Solo raid pilot trivialises or remains impossible | high | low | no scaling data verified | pilot on 2 dungeons; factors in a json | drop or ship as experimental option |
 | 8 | Seasonal overlay collides with ingested events or deletes progress | medium | medium | `GameEventManager.cs:46-49` deletes inactive values | change expiry rule; distinct id range for overlay | disable overlay file |
 | 9 | Manifest/Setup verification breaks installs for old launchers | low | high | old launchers parse `update.json` loosely | new assets are additive; test 1.1.1 launcher against the 1.2.0 release | republish without manifest |
-| 10 | Client patch unbuildable (`C1047`) blocks a needed hook | low for this plan | medium | `PROJECT_STATUS.md` | plan avoids new hooks | rebuild MinHook from source |
+| 10 | Client patch unbuildable (`C1047`) blocks a needed hook | low for this plan | medium | `PROJECT_STATUS.md` | plan avoids new hooks | done 2026-10-21: MinHook built from source (BT-14) |
 | 11 | U-02 overlay archive crash recurs | medium | medium (unified track) | exit `0xC000000D` logged | record the test outcome; keep unified track out of 1.2.0 | |
 | 12 | Untracked tools lost before commit | medium | medium | `git status` | R12-01 first | |
 | 13 | Linux launcher installs tampered asset | low | high | no signature check | R12-13 sha256 pin | advise manual install |
@@ -371,7 +371,7 @@ Experimental (shipped only if the pilot passed; otherwise removed from this list
 Already in 1.1.8 (unchanged): one-click launcher, SQLite saves with backups, signed updates, loopback-only client, Meret
 economy, solo-friendly options, session reports.
 
-Known issues carried over: client patch cannot be rebuilt from source on current MSVC (C1047); Korean/Japanese content
+Known issues carried over: Korean/Japanese content
 (unified edition) is not part of this release.
 ```
 

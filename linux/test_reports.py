@@ -245,6 +245,76 @@ class ConsentTest(unittest.TestCase):
         self.assertIn("main save", launcher.ui.infos[0])
 
 
+class NoticeTest(unittest.TestCase):
+    """Launcher.show_report_notice (1.2.1): once, only to a player who never chose, and never answered unseen."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.home = self.tmp.name
+        patch = mock.patch.dict(os.environ, {"MS2OFFLINE_REPORT_URL": "http://test.local"})
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def launcher(self, ini, answer=True):
+        with open(os.path.join(self.home, "launcher.ini"), "w") as f:
+            f.write(ini)
+        launcher = ms2offline.Launcher.__new__(ms2offline.Launcher)  # no servers, no lock: only the notice
+        launcher.home, launcher.settings = self.home, ms2offline.Settings(self.home)
+        launcher.ui = types.SimpleNamespace(gui=True, tty=False, questions=[], errors=[])  # the window's UI
+        launcher.ui.ask = lambda text, default=False: launcher.ui.questions.append(default) or answer
+        launcher.ui.error = launcher.ui.errors.append
+        return launcher
+
+    def written(self):
+        with open(os.path.join(self.home, "launcher.ini"), encoding="utf-8") as f:
+            return f.read()
+
+    def test_yes_keeps_reports_automatic_and_no_asks(self):
+        yes = self.launcher("")
+        self.assertEqual(yes.settings.send_reports, "ask", "nothing goes automatically before the answer")
+        yes.show_report_notice()
+        self.assertEqual((yes.ui.questions, yes.settings.send_reports, yes.settings.report_notice_pending), ([True], "always", False))
+        self.assertIn("SendReports=always", self.written())
+        self.assertIn("ReportNotice=1", self.written())
+        no = self.launcher("", answer=False)
+        no.show_report_notice()
+        self.assertEqual(no.settings.send_reports, "ask")
+        self.assertIn("SendReports=ask", self.written())
+
+    def test_a_written_choice_gets_no_notice(self):
+        for choice in ("ask", "never", "always"):
+            launcher = self.launcher(f"SendReports={choice}\n")
+            launcher.show_report_notice()
+            self.assertEqual((launcher.ui.questions, launcher.settings.send_reports), ([], choice))
+
+    def test_no_notice_when_nobody_can_answer(self):
+        launcher = self.launcher("")
+        launcher.ui = ms2offline.UI.__new__(ms2offline.UI)
+        launcher.ui.gui, launcher.ui.tty = True, False  # a desktop without kdialog or zenity, no terminal
+        with mock.patch("shutil.which", lambda name: None):
+            launcher.show_report_notice()
+        self.assertEqual((launcher.settings.send_reports, launcher.settings.report_notice_pending), ("ask", True))
+        self.assertNotIn("ReportNotice", self.written())
+
+    def test_the_notice_fits_a_dialog(self):
+        wrapped = ms2offline.wrap_text(ms2offline.REPORT_NOTICE_TEXT)
+        self.assertLessEqual(max(len(line) for line in wrapped.split("\n")), 100)
+        self.assertEqual(wrapped.split(), ms2offline.REPORT_NOTICE_TEXT.split())
+
+    def test_a_written_choice_in_any_case_is_kept(self):
+        launcher = self.launcher("sendreports=never\n")
+        launcher.show_report_notice()
+        self.assertEqual((launcher.ui.questions, launcher.settings.send_reports), ([], "never"))
+
+    def test_the_launcher_has_its_settings_and_ui(self):
+        launcher = ms2offline.Launcher(self.home)
+        self.assertTrue(launcher.settings.report_notice_pending)
+        self.assertIsInstance(launcher.ui, ms2offline.UI)
+
+
 class DialogDefaultTest(unittest.TestCase):
     def ask(self, tool, default):
         ui = ms2offline.UI.__new__(ms2offline.UI)
@@ -339,6 +409,17 @@ class SettingsTest(unittest.TestCase):
             self.assertTrue(first and first != "unknown")
             self.assertEqual(settings.install_id, first)
 
+    def test_default_send_reports(self):
+        cases = {(None, 0): "ask", (None, 1): "always", ("", 1): "always", ("never", 1): "never", ("never", 0): "never",
+                 ("ask", 1): "ask", ("always", 0): "always"}
+        for (written, notice), expected in cases.items():
+            self.assertEqual(ms2offline.Settings.default_send_reports(written, notice), expected, (written, notice))
+
+    def test_needs_report_notice(self):
+        cases = {(None, 0): True, (None, 1): False, ("never", 0): False, ("ask", 0): False}
+        for (written, notice), expected in cases.items():
+            self.assertEqual(ms2offline.Settings.needs_report_notice(written, notice), expected, (written, notice))
+
     def test_parse_and_checkbox(self):
         cases = {None: "ask", "": "ask", " Always ": "always", "yes": "always", "NEVER": "never", "off": "never", "maybe": "ask"}
         for value, expected in cases.items():
@@ -346,6 +427,13 @@ class SettingsTest(unittest.TestCase):
         after = ms2offline.Settings.send_reports_after_checkbox
         self.assertEqual([after("ask", True), after("never", True), after("always", False), after("never", False), after("ask", False)],
                          ["always", "always", "ask", "never", "ask"])
+
+    def test_launcher_ini_with_report_notice(self):
+        with tempfile.TemporaryDirectory() as home:
+            with open(os.path.join(home, "launcher.ini"), "w") as f:
+                f.write("ReportNotice=1\n")
+            settings = ms2offline.Settings(home)
+            self.assertEqual((settings.send_reports, settings.report_notice_pending), ("always", False))
 
 
 if __name__ == "__main__":

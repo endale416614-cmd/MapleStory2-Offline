@@ -125,7 +125,7 @@ internal sealed class ModeChooser : Form {
         });
 
         if (sendReports != null) {
-            // Opt-in: never ticked by default, and ticking it first shows what a report contains.
+            // Ticked when reports go automatically (the default after the one-time notice); ticking it first shows what a report contains.
             autoReports = new CheckBox {
                 Text = "Send problem reports to the developer automatically",
                 Checked = sendReports == "always",

@@ -111,6 +111,11 @@ internal sealed class LauncherForm : Form {
         string? error = null;
         try {
             EventLog.Init(settings);
+            if (settings.ReportNoticePending && ProblemReport.Url() != null) {
+                Hide();
+                ReportDialogs.ShowReportNotice(null, settings); // before anything can be sent automatically
+                Show();
+            }
             _ = ReportDialogs.SendQueuedAsync(settings); // reports the player agreed to earlier, in the background
             if (Process.GetProcessesByName(GAME_EXE).Length > 0) {
                 throw new InvalidOperationException("MapleStory 2 is already running. Close it first.");
@@ -201,6 +206,8 @@ internal sealed class LauncherForm : Form {
             SetMod("offline-dungeons", settings.UnlimitedDungeonClears ?? settings.Adapted); // dungeon window shows the 9999 clear limits
             SetMod("offline-pets", settings.PetTaming ?? settings.Adapted); // taming items usable from level 10
             SetMod("offline-shop", true); // full Meret Market tabs, with the offline Meret catalog (both modes)
+            // The pack's own feature.xml has every feature the shop's has plus the pack's; served over it, the shop's hid them (D-4).
+            ClientMods.SetFile(settings.ModsDir, "offline-shop", Path.Combine("Data", "Xml", "table", "feature.xml"), content.AppliedVersion == null);
             using Process game = LaunchGame();
             report?.Step("Game started");
             EventLog.Write("game", "started");

@@ -3,9 +3,10 @@ using System.Diagnostics;
 namespace MapleStory2Offline;
 
 /// <summary>
-/// The player's side of problem reports (docs/engineering/DIAGNOSTIC_REPORTS.md): a report leaves the PC only after
-/// "Send", the "send automatically" checkbox, or the player's own Report a problem, and each of these first says what a
-/// report contains. Reports are queued (ProblemReport) and sent right away or at a later start.
+/// The player's side of problem reports (docs/engineering/DIAGNOSTIC_REPORTS.md): by default a report goes automatically
+/// once the one-time notice (ShowReportNotice) was shown; otherwise it leaves the PC only after "Send", the "send
+/// automatically" checkbox, or the player's own Report a problem. The notice and each of these first say what a report
+/// contains. Reports are queued (ProblemReport) and sent right away or at a later start.
 /// </summary>
 internal static class ReportDialogs {
     private const string Title = "MapleStory 2 (Offline)";
@@ -18,6 +19,7 @@ internal static class ReportDialogs {
         "• When you played: the session's date and times, and the launcher's steps\n" +
         "• Your MapleStory 2 Offline and content pack versions, your launcher settings, install folders and save size\n" +
         "• Your Windows version and basic PC details: processor, graphics card and driver, memory, screen size, free disk space\n" +
+        "• If the game crashed: which part of it crashed (program and module names, versions, error code and address from Windows' event log)\n" +
         "• Your last character's level, job and map (not its name)\n" +
         "• Which online addresses the game tried to reach (they are blocked offline)\n" +
         "• A random install number, so reports from the same PC can be grouped\n\n" +
@@ -27,6 +29,14 @@ internal static class ReportDialogs {
         "• What the game client itself writes (its log and its messages)\n" +
         "• Your save file and your game files\n\n" +
         "Reports go only to the MapleStory 2 Offline developer and are used only to find and fix bugs.";
+
+    /// <summary>The one-time notice's text (1.2.1).</summary>
+    public const string ReportNoticeText =
+        "From this version, when a session ends with a problem (a crash, a stuck loading screen, server errors) or the launcher itself fails, its report goes to the developer without asking.\n\n" +
+        "Every report helps the game's development: it shows exactly what broke and where, so fixes reach every player sooner. Keeping reports on is the easiest way to contribute to MapleStory 2 Offline. Want to do more? Share bugs and ideas on <a href=\"https://discord.gg/bEEc9QsRx\">Discord</a>, or contribute on <a href=\"https://github.com/endale416614-cmd/MapleStory2-Offline\">GitHub</a>.\n\n" +
+        "Details: <a href=\"https://github.com/endale416614-cmd/MapleStory2-Offline#problem-reports\">github.com/endale416614-cmd/MapleStory2-Offline#problem-reports</a>\n\n" +
+        WhatIsSent + "\n\n" +
+        "You can change this any time with the \"Send problem reports to the developer automatically\" checkbox in the \"Choose how to play\" window.";
 
     /// <summary>"What is sent?" next to the checkbox and in Report a problem.</summary>
     public static void ShowWhatIsSent(IWin32Window owner) {
@@ -52,6 +62,37 @@ internal static class ReportDialogs {
             DefaultButton = cancel,
         };
         return TaskDialog.ShowDialog(owner, page) == turnOn;
+    }
+
+    /// <summary>The one-time notice (1.2.1): reports now go automatically; saves the answer and ReportNotice.</summary>
+    public static void ShowReportNotice(IWin32Window? owner, Settings settings) {
+        var keep = new TaskDialogButton("Keep it on");
+        var ask = new TaskDialogButton("Ask me each time");
+        var page = new TaskDialogPage {
+            Caption = Title,
+            Heading = "Problem reports are now sent automatically",
+            Text = ReportNoticeText,
+            Icon = TaskDialogIcon.Information,
+            Buttons = { keep, ask },
+            DefaultButton = keep,
+            EnableLinks = true,
+        };
+        page.LinkClicked += (_, e) => {
+            try {
+                Process.Start(new ProcessStartInfo(e.LinkHref) { UseShellExecute = true });
+            } catch (Exception) {
+                // no browser: the notice can still be answered
+            }
+        };
+        // Only the button turns sending on: a notice closed any other way means asking.
+        bool on = (owner == null ? TaskDialog.ShowDialog(page) : TaskDialog.ShowDialog(owner, page)) == keep;
+        settings.SendReports = on ? "always" : "ask";
+        try {
+            settings.SaveUserValue("SendReports", settings.SendReports);
+            settings.SaveUserValue("ReportNotice", Settings.ReportNoticeVersion.ToString());
+        } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            // the answer counts for this run; launcher.ini could not be written, so the notice comes again next time
+        }
     }
 
     /// <summary>After a session with a problem (SendReports=ask): true = send. "Do this every time" stores always or never.</summary>

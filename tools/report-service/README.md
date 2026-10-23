@@ -1,7 +1,7 @@
 # Problem-report service
 
-The launchers send problem reports (only when the player agrees) to this small web service. It runs on Cloudflare,
-on the maintainer's own account. Design: [docs/engineering/DIAGNOSTIC_REPORTS.md](../../docs/engineering/DIAGNOSTIC_REPORTS.md) section 5.
+The launchers send problem reports (automatically after a one-time notice, unless the player chose to be asked each
+time or never) to this small web service. It runs on Cloudflare, on the maintainer's own account. Design: [docs/engineering/DIAGNOSTIC_REPORTS.md](../../docs/engineering/DIAGNOSTIC_REPORTS.md) section 5.
 
 - **Worker**: the program in `src/index.js`. Cloudflare runs it at `https://ms2-reports.<your-subdomain>.workers.dev`.
 - **D1 database** `ms2-reports`: holds the reports (gzip JSON, at most 512 KB each). A daily cleanup deletes reports

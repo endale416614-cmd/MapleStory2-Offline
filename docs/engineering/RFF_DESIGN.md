@@ -1,6 +1,6 @@
 # Reverse Fair Fight (RFF): damage-floor design note
 
-Status: design only, no code (directive rule: evidence before code). Implements `docs/PROJECT_DIRECTIVE.md` section 4.
+Status: design only, no code (directive rule: evidence before code).
 Implementation task: R12-30 in `RELEASE_PLAN_1.2.0.md` Deliverable 6. Written 2026-10-18 against the 1.1.9 tree and the
 shipped `SaveData/maple-data.db` (ingested 2026-10-17). Every `file:line` below is relative to `Maple2/`.
 

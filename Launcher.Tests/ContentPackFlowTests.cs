@@ -382,6 +382,44 @@ public class ContentPackFlowTests {
         Assert.That(modes, Is.Empty);
     }
 
+    // A client with an earlier pack (1.2.0's on a 1.2.1 update): another tail and header, the Global header backed up.
+    private byte[] EarlierPack() {
+        byte[] earlier = global.Concat(Bytes(new Random(3), 900)).ToArray();
+        File.WriteAllBytes(Archive, earlier);
+        File.WriteAllBytes(M2h, Bytes(new Random(4), 350));
+        File.WriteAllBytes(OrigM2h, origM2h);
+        return earlier;
+    }
+
+    [Test]
+    public void EarlierPack_UnifiedOn_ReplacedByThisPack() {
+        EarlierPack();
+        File.WriteAllText(Path.Combine(packDir, "GameData", "data-build.json"), "{\"contentPack\": \"1.2.0-test\"}");
+
+        var result = ContentPackFlow.Prepare(true, client, packDir, globalDataDir, (a, b, c) => false);
+        Assert.That(result.DataDir, Is.EqualTo(Path.Combine(packDir, "GameData")));
+        Assert.That(result.AppliedVersion, Is.EqualTo("1.2.0-test"));
+        Assert.That(result.Warning, Is.Null);
+        Assert.That(result.Error, Is.Null);
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(global.Concat(tail).ToArray()));
+        Assert.That(File.ReadAllBytes(M2h), Is.EqualTo(newM2h));
+        Assert.That(File.ReadAllBytes(OrigM2h), Is.EqualTo(origM2h));
+    }
+
+    [Test]
+    public void EarlierPack_UnifiedOff_RestoresGlobal() {
+        EarlierPack();
+
+        var result = ContentPackFlow.Prepare(false, client, packDir, globalDataDir, (a, b, c) => false);
+        Assert.That(result.DataDir, Is.EqualTo(globalDataDir));
+        Assert.That(result.AppliedVersion, Is.Null);
+        Assert.That(result.Warning, Is.Null);
+        Assert.That(result.Error, Is.Null);
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(global));
+        Assert.That(File.ReadAllBytes(M2h), Is.EqualTo(origM2h));
+        Assert.That(File.Exists(OrigM2h), Is.False);
+    }
+
     [Test]
     public void ApplyThrows_TamperedTail_WarnsAndStartsGlobal() {
         byte[] tampered = (byte[])tail.Clone();

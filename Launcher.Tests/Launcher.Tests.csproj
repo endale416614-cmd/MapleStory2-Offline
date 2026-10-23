@@ -19,6 +19,8 @@
         <Compile Include="..\Launcher\InstallInfo.cs" Link="Linked\InstallInfo.cs" />
         <Compile Include="..\Launcher\Triage.cs" Link="Linked\Triage.cs" />
         <Compile Include="..\Launcher\ProblemReport.cs" Link="Linked\ProblemReport.cs" />
+        <Compile Include="..\Launcher\ClientMods.cs" Link="Linked\ClientMods.cs" />
+        <Compile Include="..\Launcher\CrashEvent.cs" Link="Linked\CrashEvent.cs" />
     </ItemGroup>
 
     <ItemGroup>

@@ -29,6 +29,7 @@ internal sealed class SessionReport {
     private readonly List<string> timeline = [];
     private readonly List<string> problems = [];
     private int? gameExitCode;
+    private string? crashEvent;
 
     public SessionReport(Settings settings) {
         this.settings = settings;
@@ -62,6 +63,10 @@ internal sealed class SessionReport {
             Step("Game closed normally");
         } else {
             Problem($"The game closed unexpectedly (exit code {exitCode} = 0x{exitCode:X8}{DescribeExitCode(exitCode.Value)})");
+            // An NTSTATUS error code is a crash, which Windows logs as Application Error 1000.
+            if (unchecked((uint) exitCode.Value) >= 0xC0000000) {
+                crashEvent = CrashEvent.Read(DateTime.Now);
+            }
         }
     }
 
@@ -147,6 +152,11 @@ internal sealed class SessionReport {
             }
         }
 
+        if (crashEvent != null) {
+            Section(text, "Game crash (Windows event log)");
+            text.AppendLine(crashEvent);
+        }
+
         Section(text, "Character");
         text.AppendLine(DescribeCharacter());
 
@@ -169,8 +179,9 @@ internal sealed class SessionReport {
         string? clientLog = NewestFile(Path.Combine(Path.GetDirectoryName(clientRoot) ?? clientRoot, "ms2log"), "MS2Log*.txt");
         text.AppendLine(clientLog == null ? "(none)" : $"{Path.GetFileName(clientLog)}:\n{Tail(clientLog, 80)}");
 
-        Section(text, "Offline guard log (last 20 lines)");
-        text.AppendLine(Tail(Path.Combine(clientRoot, "offline_guard.log"), 20));
+        // Every launch logs ~24 "hook ... INSTALLED" lines; only blocked connections and REFUSED hooks matter here.
+        Section(text, "Offline guard log (last 20 blocked or refused lines)");
+        text.AppendLine(Tail(Path.Combine(clientRoot, "offline_guard.log"), 20, line => !line.EndsWith(" INSTALLED")));
 
         text.AppendLine();
         text.AppendLine("-- end of report --");
@@ -319,8 +330,8 @@ internal sealed class SessionReport {
         }
     }
 
-    private static string Tail(string path, int count) {
-        List<string> lines = ReadLines(path).ToList();
+    private static string Tail(string path, int count, Func<string, bool>? keep = null) {
+        List<string> lines = ReadLines(path).Where(keep ?? (_ => true)).ToList();
         if (lines.Count == 0) {
             return "(empty or missing)";
         }

@@ -20,6 +20,7 @@ switch (args[0]) {
     case "info" when args.Length == 2: return Info(args[1]);
     case "selftest" when args.Length == 2: return SelfTest(args[1]);
     case "list" when args.Length == 2: foreach (var e in Load(args[1]).Stream.FileList) Console.Write(e.ToString()); return 0;
+    case "extract" when args.Length == 4: return Extract(args[1], args[2], args[3]);
     default: return Usage();
 }
 
@@ -66,6 +67,20 @@ static int Info(string m2d) {
     Console.WriteLine($"index==position+1 for all: {seq}; data contiguous from 0 in index order: {contig} (end={pos})");
     Console.WriteLine($"fileString endsWithCRLF={(fs[^2] == 13 && fs[^1] == 10)} withHash={s.FileList.Count(e => !string.IsNullOrEmpty(e.Hash))} backslashNames={s.FileList.Count(e => e.Name.Contains('\\'))}");
     foreach (var e in s.FileList.Take(2).Concat(s.FileList.TakeLast(1))) Console.WriteLine("  " + e.ToString().TrimEnd());
+    return 0;
+}
+
+// Writes the entries whose name starts with <prefix> (for example "npc/") under <outDir> as UTF-8 text.
+static int Extract(string m2d, string prefix, string outDir) {
+    using var reader = new M2dReader(m2d);
+    int count = 0;
+    foreach (var entry in reader.Files.Where(f => Norm(f.Name).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))) {
+        string path = Path.Combine(outDir, Norm(entry.Name));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, reader.GetString(entry), new UTF8Encoding(false));
+        count++;
+    }
+    Console.WriteLine($"{count} entries");
     return 0;
 }
 

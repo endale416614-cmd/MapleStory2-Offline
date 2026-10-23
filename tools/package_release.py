@@ -4,14 +4,15 @@
 
 Creates in publish/:
   MapleStory2-Offline-<ver>/            the release folder (what players get)
-  MapleStory2-Offline-Setup-<ver>.exe   installer for players (launcher + program zip appended)
-  MapleStory2-Offline-Setup.exe         the same installer under the name the README's download link uses
-  MapleStory2-Offline-<ver>.zip         full download (portable: extract and run)
+  MapleStory2-Offline-Setup-<ver>.exe   installer for players (launcher + program zip appended), kept locally
+  MapleStory2-Offline-Setup.exe         the same installer under the published name (README download link)
+  MapleStory2-Offline-<ver>.zip         the program package inside the Setup (portable copy, kept locally)
   MapleStory2-Offline-Update-<ver>.zip  only with --base: every file changed since that release + update.json
                                         (cumulative: works on the base version and every patch after it)
   MapleStory2-Offline-<ver>/files.json  sha256 of every release file; keep it, the next --base needs it
-  release.json + release.json.sig       with --base or --manifest: size and sha256 of Setup, full zip (and update zip), signed;
+  release.json + release.json.sig       with --base or --manifest: size and sha256 of the published Setup (and update zip), signed;
                                         upload both with the release (launchers from 1.1.9 check the update against it)
+  upload-<ver>/                         exactly the files to publish: MapleStory2-Offline-Setup.exe, the update zip, release.json, release.json.sig
 
 The release never contains saves, logs, reports, launcher.ini, developer settings or the .NET SDK.
 """
@@ -65,14 +66,14 @@ PLAYER_README = r"""MapleStory 2 (Offline) {version}
 
 MapleStory 2 as a single-player game on your own PC. The game never connects to the internet; only the
 launcher asks GitHub whether a newer version exists when you press Play (AutoUpdate, see Settings), and
-sends a problem report to the developer when you agree (SendReports, see Problems?).
+sends a problem report to the developer after a session with a problem (SendReports, see Problems?).
 
 You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library it is found
 automatically. Otherwise the launcher shows where to get it the first time you start.
 
 Install and play
 ----------------
-Run "MapleStory2-Offline-Setup-{version}.exe" and click Install (no administrator rights needed).
+Run "MapleStory2-Offline-Setup.exe" and click Install (no administrator rights needed).
 Then start "MapleStory 2 Offline" from the desktop or the Start menu.
   - First start: it finds the game (or asks you once) and installs the offline patch into it.
     Windows may ask for permission if the game is under "Program Files".
@@ -97,13 +98,14 @@ that file with your bug report. It works even when the game does not start. Your
 name and PC name are removed; your save is only included if you say yes. This file is never uploaded.
 After every session a short report is also written to "MapleStory 2 Offline Reports" on the desktop.
 
-Problem reports: after a session with a problem the launcher asks whether it may send that report to the
-developer. Tick "Send problem reports to the developer automatically" in the "Choose how to play" window
-to skip the question. Both first show what a report contains: error messages and server log lines,
-versions, launcher settings, basic PC details and a random install number. Never sent: your Windows user
-name and PC name, character and account names, chat, save and game files. "Report a problem..." (in that
-window; a new install also has it in the Start menu) sends your own words with it. Without internet a report
-waits for the next start.
+Problem reports: from 1.2.1 the launcher sends a report to the developer automatically after a session
+with a problem; the first start shows a one-time notice where you can choose "Ask me each time" instead.
+Every report helps the game's development. Untick "Send problem reports to the developer automatically"
+in the "Choose how to play" window to be asked again. The notice and every question first show what a
+report contains: error messages and server log lines, versions, launcher settings, basic PC details and
+a random install number. Never sent: your Windows user name and PC name, character and account names,
+chat, save and game files. "Report a problem..." (in that window; a new install also has it in the Start
+menu) sends your own words with it. Without internet a report waits for the next start.
 
 Settings
 --------
@@ -119,14 +121,14 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days; on in both modes)
   PartyDungeons          party-size dungeons open to a smaller group or one player (not Cathy Mart, which needs 4)
   FairFight              bosses and group-dungeon monsters scaled for one player: each hit does at least a solo share of their health
-  BlackMarket            the Black Market has items for sale: a new pick every time you press Play
+  BlackMarket            the Black Market sells gear near your level, upgrade materials, gems and potions: a new pick every time you press Play
   UnifiedContent         the extra content of the content pack (1.2.0: new cosmetics); false puts the original game files back
   ClassDropsOnly         monsters and dungeon rewards only drop gear made for your class
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
   DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
   CheatCommands          the chat commands below (on in both modes; set it to false to turn them off)
   AutoUpdate             ask / always / off - online update check when you press Play
-  SendReports            ask / always / never - problem reports to the developer (see Problems?; launcher.ini only)
+  SendReports            always (default after the one-time notice) / ask / never - problem reports to the developer (see Problems?; launcher.ini only)
   ClientDir              the game's x64 folder, if you moved the game
                          With TestKit=true the admin chat commands work too: /warp <map id>, /goto <map name>, /npc <npc id>
 
@@ -135,11 +137,15 @@ Cheats
 Some quests or places can get stuck in this offline version. Type these in the chat box:
   /godmode   on/off: you take no damage and every hit kills a monster
   /killall   kills every monster on the map (counts for quests, exp and drops)
-  /unstuck   takes you back to Henesys (revives you first if you are dead)
+  /unstuck   restarts the quest map you are in, anywhere else takes you back to Henesys (revives you first)
+             /unstuck --town always goes to Henesys
   /freebies  on/off: everything you buy is free, whatever the currency
   /give      gives an item by name: /give Red Potion 5 (a name that fits several items lists their ids)
   /item      gives an item by id: /item 20000001 --amount 5 (add --rarity 1-6 to pick the rarity)
   /find      searches ids by name: /find item potion (also map, npc, quest, skill, achievement)
+
+Also in the chat box, in both modes:
+  /time      shows the in-game time, day, season and year (the world clock only runs while you play)
 
 Uninstall: Start menu > "Uninstall MapleStory 2 Offline" (asks before deleting your saves).
 
@@ -237,6 +243,7 @@ def assemble(stage, version):
     copy(os.path.join(ROOT, "LICENSE"), put("LICENSES/MapleStory2-Offline-AGPL-3.0.txt"))
     copy(os.path.join(ROOT, "Maple2", "LICENSE"), put("LICENSES/Maple2-AGPL-3.0.txt"))
     copy(os.path.join(ROOT, "_dl", "Agarcium", "LICENSE"), put("LICENSES/Agarcium-MIT.txt"))
+    copy(os.path.join(ROOT, "_dl", "Agarcium", "third_party", "minhook", "LICENSE.txt"), put("LICENSES/MinHook-BSD-2-Clause.txt"))
     copy(os.path.join(ROOT, "dotnet", "LICENSE.txt"), put("LICENSES/dotnet-MIT.txt"))
     copy(os.path.join(ROOT, "dotnet", "ThirdPartyNotices.txt"), put("LICENSES/dotnet-ThirdPartyNotices.txt"))
 
@@ -264,7 +271,8 @@ def assemble(stage, version):
     # Only the tracked web data (shop banner). profiles/, guildmark/, blueprint/... are written at runtime by the
     # build PC's own game (character portraits) and must never ship.
     copy_tree(os.path.join(maple, "Maple2.Server.Web", "Data", "system"), put("Maple2/Maple2.Server.Web/Data/system"))
-    for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-market.json", "offline-testkit.json"):
+    for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-market.json", "offline-spawns.json",
+                 "offline-testkit.json", "offline-triggers.json", "summon-npcs.json", "defensive-effects.json"):
         copy(os.path.join(maple, name), put(f"Maple2/{name}"))
 
     # Portable .env: no machine paths (the launcher passes the folders), no MySQL credentials.
@@ -390,7 +398,8 @@ def main():
     print("copying", alias)
     shutil.copyfile(setup, alias)
 
-    assets = [setup, alias, full_zip]
+    # Published (maintainer 2026-10-22): the Setup under its README name and, with --base, the update zip; the versioned Setup and the full zip stay local.
+    assets = [alias]
     if args.base:
         with open(os.path.join(args.base, "files.json"), encoding="utf-8") as f:
             base_files = json.load(f)
@@ -421,6 +430,15 @@ def main():
         release = os.path.join(out, "release.json")
         write_release(release, args.version, args.notes, assets)
         sign_update.sign_manifest(release, args.sign_key)
+
+        # Exactly the files to upload, nothing else (a fresh folder of hard links to this run's outputs).
+        upload = os.path.join(out, f"upload-{args.version}")
+        if os.path.isdir(upload):
+            shutil.rmtree(upload)
+        os.makedirs(upload)
+        for path in assets + [release, release + ".sig"]:
+            os.link(path, os.path.join(upload, os.path.basename(path)))
+        print("upload (publish exactly these):", ", ".join(sorted(os.listdir(upload))))
 
     for name in sorted(os.listdir(out)):
         path = os.path.join(out, name)

@@ -658,6 +658,56 @@ class TestPrepareContent(unittest.TestCase):
         import stat
         os.chmod(path, stat.S_IREAD)
 
+    def _earlier_pack(self, prefix=None):
+        """An earlier pack (1.2.0's on a 1.2.1 update): another tail and header on the Global archive, the Global header
+        backed up."""
+        import random
+        rng = random.Random(3)
+        self._write(self.archive, (prefix or self.global_data) + rng.randbytes(900))
+        self._write(self.m2h, rng.randbytes(350))
+        self._write(self.orig_m2h_path, self.orig_m2h)
+
+    def test_earlier_pack_is_replaced(self):
+        self._earlier_pack()
+        self.assertEqual(self._status(), ms2offline.ContentPack.Status.EarlierPack)
+        self.assertTrue(ms2offline.ContentPack.apply(self.client, self.pack_dir))
+        self.assertEqual(self._read(self.archive), self.global_data + self.tail)
+        self.assertEqual(self._read(self.m2h), self.new_m2h)
+        self.assertEqual(self._read(self.orig_m2h_path), self.orig_m2h)
+        self.assertEqual(self._status(), ms2offline.ContentPack.Status.Applied)
+
+    def test_earlier_pack_restore_returns_global_files(self):
+        self._earlier_pack()
+        self.assertTrue(ms2offline.ContentPack.restore(self.client, self.pack_dir))
+        self.assertEqual(self._read(self.archive), self.global_data)
+        self.assertEqual(self._read(self.m2h), self.orig_m2h)
+        self.assertFalse(os.path.exists(self.orig_m2h_path))
+
+    def test_earlier_pack_without_backup_or_global_prefix_is_foreign(self):
+        self._earlier_pack()
+        os.remove(self.orig_m2h_path)
+        self.assertEqual(self._status(), ms2offline.ContentPack.Status.Foreign)
+        changed = bytearray(self.global_data)
+        changed[10] ^= 0xFF  # a Steam update or another build under the earlier pack
+        self._earlier_pack(bytes(changed))
+        self.assertEqual(self._status(), ms2offline.ContentPack.Status.Foreign)
+        with self.assertRaises(RuntimeError):
+            ms2offline.ContentPack.apply(self.client, self.pack_dir)
+
+    def test_earlier_pack_unified_on_replaced_by_this_pack(self):
+        self._earlier_pack()
+        self._write_pack_build('{"contentPack": "1.2.0-test"}')
+        self.assertEqual(self._prepare(True), (self.pack_data_dir, "1.2.0-test", None, None))
+        self.assertEqual(self._read(self.archive), self.global_data + self.tail)
+        self.assertEqual(self._read(self.m2h), self.new_m2h)
+
+    def test_earlier_pack_unified_off_restores_global(self):
+        self._earlier_pack()
+        self.assertEqual(self._prepare(False), (self.global_data_dir, None, None, None))
+        self.assertEqual(self._read(self.archive), self.global_data)
+        self.assertEqual(self._read(self.m2h), self.orig_m2h)
+        self.assertFalse(os.path.exists(self.orig_m2h_path))
+
     def test_no_pack_folder_global_data_no_error(self):
         import shutil
         shutil.rmtree(self.pack_dir)

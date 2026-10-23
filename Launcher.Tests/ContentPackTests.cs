@@ -139,6 +139,51 @@ public class ContentPackTests {
         Assert.Throws<InvalidOperationException>(() => ContentPack.Restore(client, packDir));
     }
 
+    // An earlier pack (1.2.0's on a 1.2.1 update): another tail and header on the Global archive, the Global header backed up.
+    private void EarlierPack(byte[] prefix) {
+        File.WriteAllBytes(Archive, prefix.Concat(Bytes(new Random(3), 900)).ToArray());
+        File.WriteAllBytes(M2h, Bytes(new Random(4), 350));
+        File.WriteAllBytes(OrigM2h, origM2h);
+    }
+
+    [Test]
+    public void EarlierPack_IsReplaced() {
+        EarlierPack(global);
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.EarlierPack));
+
+        Assert.That(ContentPack.Apply(client, packDir), Is.True);
+
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(global.Concat(tail).ToArray()));
+        Assert.That(File.ReadAllBytes(M2h), Is.EqualTo(newM2h));
+        Assert.That(File.ReadAllBytes(OrigM2h), Is.EqualTo(origM2h));
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.Applied));
+    }
+
+    [Test]
+    public void EarlierPack_Restore_ReturnsGlobalFiles() {
+        EarlierPack(global);
+
+        Assert.That(ContentPack.Restore(client, packDir), Is.True);
+
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(global));
+        Assert.That(File.ReadAllBytes(M2h), Is.EqualTo(origM2h));
+        Assert.That(File.Exists(OrigM2h), Is.False);
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.NotApplied));
+    }
+
+    [Test]
+    public void EarlierPack_WithoutBackupOrGlobalPrefix_IsForeign() {
+        EarlierPack(global);
+        File.Delete(OrigM2h);
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.Foreign));
+
+        byte[] changed = (byte[])global.Clone();
+        changed[10] ^= 0xFF; // a Steam update or another build under the earlier pack
+        EarlierPack(changed);
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.Foreign));
+        Assert.Throws<InvalidOperationException>(() => ContentPack.Apply(client, packDir));
+    }
+
     [Test]
     public void PackJson_IsStrict() {
         Assert.Throws<InvalidDataException>(() => ContentPack.Parse("{\"version\": \"1.2.0\"}"u8.ToArray()));

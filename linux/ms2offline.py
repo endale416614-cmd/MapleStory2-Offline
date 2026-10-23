@@ -46,6 +46,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import time
 import urllib.error
@@ -85,6 +86,7 @@ REPORT_QUEUE_LIMIT = 20
 REPORT_MAX_AGE_DAYS = 30
 REPORT_CUT = "\n... (report cut: too long)"
 REPORT_SENDING = threading.Lock()  # the start-up thread, the end of a session and Report a problem share one queue
+REPORT_NOTICE_VERSION = 1
 WHAT_IS_SENT = (
     "A report contains:\n"
     "• What went wrong: the error and warning lines of the game servers' logs (the maps, monsters, items and quests "
@@ -98,10 +100,31 @@ WHAT_IS_SENT = (
     "• What the game client itself writes (its log and its messages)\n"
     "• Your save file and your game files\n\n"
     "Reports go only to the MapleStory 2 Offline developer and are used only to find and fix bugs.")
+REPORT_NOTICE_TEXT = (
+    "Problem reports are now sent automatically.\n\n"
+    "From this version, when a session ends with a problem (a crash, a stuck loading screen, server errors) or the "
+    "launcher itself fails, its report goes to the developer without asking.\n\n"
+    "Every report helps the game's development: it shows exactly what broke and where, so fixes reach every player "
+    "sooner. Keeping reports on is the easiest way to contribute to MapleStory 2 Offline. Want to do more? Share bugs "
+    "and ideas on Discord (https://discord.gg/bEEc9QsRx), or contribute on GitHub (https://github.com/endale416614-cmd/MapleStory2-Offline).\n\n"
+    "Details: https://github.com/endale416614-cmd/MapleStory2-Offline#problem-reports\n\n" +
+    WHAT_IS_SENT + "\n\n"
+    "You can change this any time with the \"Send problem reports to the developer automatically\" checkbox, or "
+    "SendReports=always, ask or never in launcher.ini.\n\n"
+    "Keep sending problem reports automatically?"
+)
 
 
 def now():
     return datetime.datetime.now()
+
+
+def wrap_text(text, width=100):
+    """Lines longer than `width` broken between words, for dialogs that do not wrap (zenity --no-wrap); bullets keep
+    their indent and links stay whole."""
+    return "\n".join(line if len(line) <= width else textwrap.fill(
+        line, width, subsequent_indent="  " if line.startswith("• ") else "", break_long_words=False, break_on_hyphens=False)
+        for line in text.split("\n"))
 
 
 def stamp():
@@ -242,7 +265,15 @@ class Settings:
         # Only the player's own launcher.ini: a shipped defaults.ini must never turn sending on.
         own = {}
         self._read(own, os.path.join(home, "launcher.ini"))
-        self.send_reports = Settings.parse_send_reports(own.get("SendReports"))
+        own = {key.lower(): value for key, value in own.items()}  # any case, as on Windows and in save_user_value
+        written = own.get("sendreports")
+        report_notice = 0
+        try:
+            report_notice = int(own.get("reportnotice") or 0)
+        except ValueError:
+            pass
+        self.send_reports = Settings.default_send_reports(written, report_notice)
+        self.report_notice_pending = Settings.needs_report_notice(written, report_notice)
         self.backups_to_keep = self._int("BackupsToKeep", 10)
         auto = values.get("AutoUpdate", "off").strip().lower()
         self.auto_update = "ask" if auto in ("ask", "true", "yes", "on") else "always" if auto in ("always", "auto", "silent") else "off"
@@ -309,6 +340,19 @@ class Settings:
             return value
         except OSError:
             return "unknown"
+
+    @staticmethod
+    def default_send_reports(written, report_notice):
+        """SendReports from the player's own launcher.ini: a written choice wins; without one, reports go automatically
+        once the one-time notice has been shown (ReportNotice), and are asked until then."""
+        if (written or "").strip():
+            return Settings.parse_send_reports(written)
+        return "always" if report_notice >= REPORT_NOTICE_VERSION else "ask"
+
+    @staticmethod
+    def needs_report_notice(written, report_notice):
+        """The notice is due when the player never chose and has not seen this version of it."""
+        return not (written or "").strip() and report_notice < REPORT_NOTICE_VERSION
 
     @staticmethod
     def parse_send_reports(value):
@@ -394,6 +438,10 @@ class UI:
             subprocess.run(["kdialog", "--title", TITLE, "--msgbox", text], check=False)
         elif shutil.which("zenity"):
             subprocess.run(["zenity", "--info", "--title", TITLE, "--no-wrap", "--no-markup", "--text", text], check=False)
+
+    def can_ask(self):
+        """Whether ask() reaches the player (a dialog tool on the desktop, or a terminal) instead of returning its default."""
+        return self.tty or self.gui and bool(shutil.which("kdialog") or shutil.which("zenity"))
 
     def ask(self, text, default=False):
         """Yes/No. A dialog when there is a desktop, the terminal otherwise, the default when neither can ask. The dialog's
@@ -566,6 +614,7 @@ class ContentPack:
     class Status:
         NotApplied = "NotApplied"
         Applied = "Applied"
+        EarlierPack = "EarlierPack"
         Foreign = "Foreign"
 
     class ArchiveState:
@@ -664,20 +713,29 @@ class ContentPack:
                 return cls.ArchiveState(archive, cls.Status.Foreign, f"{archive.path} has the Global size but not the Global sha256 (unknown client build)")
             return cls.ArchiveState(archive, cls.Status.NotApplied, "") if m2h_hash == archive.orig_m2h_sha256 else \
                 cls.ArchiveState(archive, cls.Status.Foreign, f"{archive.m2h_path} is not the Global header")
-        elif size == archive.global_size + archive.tail_size:
-            if cls._hash(path, archive.global_size, archive.tail_size) != archive.tail_sha256:
-                return cls.ArchiveState(archive, cls.Status.Foreign, f"{archive.path} has the applied size but its tail does not match the pack")
-
+        applied_size = size == archive.global_size + archive.tail_size
+        if applied_size and cls._hash(path, archive.global_size, archive.tail_size) == archive.tail_sha256:
             # The original header is allowed: an apply or restore interrupted between the tail and the header step.
             return cls.ArchiveState(archive, cls.Status.Applied, "") if m2h_hash in (archive.m2h_sha256, archive.orig_m2h_sha256) else \
                 cls.ArchiveState(archive, cls.Status.Foreign, f"{archive.m2h_path} is neither the Global nor the pack header")
-        else:
-            # Format numbers without N0 format specifier
-            size_str = f"{size:,}"
-            global_size_str = f"{archive.global_size:,}"
-            applied_size_str = f"{archive.global_size + archive.tail_size:,}"
-            return cls.ArchiveState(archive, cls.Status.Foreign,
-                                  f"{archive.path} has an unexpected size ({size_str} bytes; expected {global_size_str} or {applied_size_str})")
+        if size > archive.global_size and cls._has_earlier_pack(client_root, archive):
+            return cls.ArchiveState(archive, cls.Status.EarlierPack, "")
+        if applied_size:
+            return cls.ArchiveState(archive, cls.Status.Foreign, f"{archive.path} has the applied size but its tail does not match the pack")
+        # Format numbers without N0 format specifier
+        size_str = f"{size:,}"
+        global_size_str = f"{archive.global_size:,}"
+        applied_size_str = f"{archive.global_size + archive.tail_size:,}"
+        return cls.ArchiveState(archive, cls.Status.Foreign,
+                                f"{archive.path} has an unexpected size ({size_str} bytes; expected {global_size_str} or {applied_size_str})")
+
+    @classmethod
+    def _has_earlier_pack(cls, client_root, archive):
+        """An earlier pack (an update from it): the Global header was backed up when it was applied, and the archive still
+        starts with the Global bytes, so its tail can go."""
+        orig = os.path.join(client_root, archive.orig_m2h_path)
+        return os.path.exists(orig) and cls._hash(orig) == archive.orig_m2h_sha256 and \
+            cls._hash(os.path.join(client_root, archive.path), 0, archive.global_size) == archive.global_sha256
 
     @classmethod
     def apply(cls, client_root, pack_dir):
@@ -708,10 +766,18 @@ class ContentPack:
                 for state in states:
                     archive = state.archive
                     target = os.path.join(client_root, archive.path)
+                    header = os.path.join(client_root, archive.m2h_path)
+                    orig = os.path.join(client_root, archive.orig_m2h_path)
+
+                    if state.status == cls.Status.EarlierPack:
+                        # Back to the Global archive first, header then size: each step leaves a state _state knows.
+                        cls._step(pack_dir, journal, archive.path, "earlier")
+                        cls._copy_over(orig, header)
+                        cls._truncate(target, archive.global_size)
 
                     # Per archive, as ContentPack.Apply: one that already has its tail (applied, or the header step was
                     # interrupted) never gets a second one.
-                    if state.status == cls.Status.NotApplied:
+                    if state.status in (cls.Status.NotApplied, cls.Status.EarlierPack):
                         cls._step(pack_dir, journal, archive.path, "tail")
 
                         try:
@@ -726,9 +792,6 @@ class ContentPack:
                             # Truncate back to global size on failure
                             cls._truncate(target, archive.global_size)
                             raise
-
-                    header = os.path.join(client_root, archive.m2h_path)
-                    orig = os.path.join(client_root, archive.orig_m2h_path)
 
                     # Replace header if needed
                     if cls._hash(header) != archive.m2h_sha256:
@@ -768,7 +831,7 @@ class ContentPack:
 
             try:
                 for state in states:
-                    if state.status != cls.Status.Applied:
+                    if state.status not in (cls.Status.Applied, cls.Status.EarlierPack):
                         continue
 
                     archive = state.archive
@@ -1022,8 +1085,8 @@ class ContentPack:
         if foreign:
             raise RuntimeError(f"The game files do not match content pack {self.version}: {'; '.join(s.reason for s in foreign)}. Verify the game files in Steam and try again.")
 
-        # If all archives are NotApplied, return None
-        if all(s.status == self.Status.NotApplied for s in states):
+        # If no archive has this pack (an earlier pack counts as none), return None
+        if all(s.status in (self.Status.NotApplied, self.Status.EarlierPack) for s in states):
             return None
 
         # If all archives are Applied, return the pack version
@@ -1053,6 +1116,16 @@ def _lock(data_dir, applied_pack, warning):
     return data_dir, applied_pack, warning, ContentPack.data_lock_error(applied_pack, data_pack)
 
 
+def set_mod_file(mods_dir, mod, relative, enabled):
+    """A client mod file that follows a setting: served while on, kept as '<name>.off' while off (D-4)."""
+    on = os.path.join(mods_dir, mod, relative)
+    off = on + ".off"
+    if enabled and os.path.exists(off) and not os.path.exists(on):
+        os.rename(off, on)
+    elif not enabled and os.path.exists(on):
+        os.replace(on, off)
+
+
 def prepare_content(unified, client_root, pack_dir, global_data_dir):
     """Port of ContentPackFlow.Prepare (Windows): (data_dir, applied_version, warning, error) for the servers' data folder.
     Linux has no administrator retry: an apply or restore that cannot write the game folder is reported instead."""
@@ -1062,9 +1135,10 @@ def prepare_content(unified, client_root, pack_dir, global_data_dir):
             return _lock(global_data_dir, None, None)
         pack = ContentPack.load(pack_dir)
         warning = ContentPack.recover_interrupted(client_root, pack_dir)
-        # Unified off and no archive at the applied size: nothing to remove, so Play skips hashing the Global archives.
+        # Unified off and no archive longer than the Global one (no pack, this or an earlier one): nothing to remove, so
+        # Play skips hashing the Global archives.
         if not unified and all(not os.path.exists(os.path.join(client_root, a.path))
-                               or os.path.getsize(os.path.join(client_root, a.path)) != a.global_size + a.tail_size
+                               or os.path.getsize(os.path.join(client_root, a.path)) <= a.global_size
                                for a in pack.archives):
             return _lock(global_data_dir, None, warning)
         states = pack.state(client_root)
@@ -1083,7 +1157,7 @@ def prepare_content(unified, client_root, pack_dir, global_data_dir):
                     warning = "The unified content could not be written to the game folder. The game starts without it."
             except RuntimeError as ex:
                 warning = str(ex)
-        elif not unified and any(s.status == ContentPack.Status.Applied for s in states):
+        elif not unified and any(s.status in (ContentPack.Status.Applied, ContentPack.Status.EarlierPack) for s in states):
             changed = True
             try:
                 if not ContentPack.restore(client_root, pack_dir):
@@ -1954,6 +2028,24 @@ class Launcher:
         self.report = SessionReport(self.settings, self.proton_name()) if self.settings.debug_reports else None
         self.lock = None
 
+    def show_report_notice(self):
+        """The one-time notice (1.2.1): reports now go automatically. Waits while nobody can answer (no dialog tool on the
+        desktop, no terminal), where UI.ask would return its default unseen; the window (QtUI) always asks."""
+        s, ui = self.settings, self.ui
+        if not s.report_notice_pending or ProblemReport.url() is None or isinstance(ui, UI) and not ui.can_ask():
+            return
+        try:
+            keep = ui.ask(wrap_text(REPORT_NOTICE_TEXT), default=True)
+        except EOFError:  # the terminal closed: no answer, so the notice comes again
+            return
+        s.send_reports = "always" if keep else "ask"
+        s.report_notice_pending = False  # answered: this run keeps the answer even when it cannot be saved
+        try:
+            s.save_user_value("SendReports", s.send_reports)
+            s.save_user_value("ReportNotice", str(REPORT_NOTICE_VERSION))
+        except (OSError, ValueError) as ex:  # ValueError: a launcher.ini that is not UTF-8
+            ui.error(f"launcher.ini could not be written: {ex}")
+
     # -- single instance ------------------------------------------------------------------------------------------
     def take_lock(self):
         self.lock = open(os.path.join(self.home, "launcher.lock"), "w")
@@ -1968,6 +2060,7 @@ class Launcher:
         error = None
         try:
             self.take_lock()
+            self.show_report_notice()
             threading.Thread(target=self.start_up_reports, daemon=True).start()  # reports agreed to earlier
             if not servers_only and Client.running_pids():
                 raise RuntimeError("MapleStory 2 is already running. Close it first.")
@@ -2030,6 +2123,7 @@ class Launcher:
                 self.set_mod("offline-dungeons", adapted if s.unlimited_dungeon_clears is None else s.unlimited_dungeon_clears)
                 self.set_mod("offline-pets", adapted if s.pet_taming is None else s.pet_taming)
                 self.set_mod("offline-shop", True)  # full Meret Market in both modes
+                set_mod_file(s.mods_dir, "offline-shop", os.path.join("Data", "Xml", "table", "feature.xml"), applied is None)  # the pack's feature.xml has the shop's features too (D-4)
                 self.prepare_prefix()
                 game = self.launch_game()
                 if report:

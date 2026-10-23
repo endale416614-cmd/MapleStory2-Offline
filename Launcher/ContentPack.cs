@@ -25,7 +25,7 @@ internal sealed class ContentPack {
         public string OrigM2hPath => System.IO.Path.ChangeExtension(Path, ".orig.m2h");
     }
 
-    public enum Status { NotApplied, Applied, Foreign }
+    public enum Status { NotApplied, Applied, EarlierPack, Foreign }
 
     public sealed record ArchiveState(Archive Archive, Status Status, string Reason);
 
@@ -108,16 +108,27 @@ internal sealed class ContentPack {
                 ? new ArchiveState(archive, Status.NotApplied, "")
                 : new ArchiveState(archive, Status.Foreign, $"{archive.M2hPath} is not the Global header");
         }
-        if (size == archive.GlobalSize + archive.TailSize) {
-            if (Hash(path, archive.GlobalSize, archive.TailSize) != archive.TailSha256) {
-                return new ArchiveState(archive, Status.Foreign, $"{archive.Path} has the applied size but its tail does not match the pack");
-            }
+        bool appliedSize = size == archive.GlobalSize + archive.TailSize;
+        if (appliedSize && Hash(path, archive.GlobalSize, archive.TailSize) == archive.TailSha256) {
             // The original header is allowed: an apply or restore interrupted between the tail and the header step.
             return m2hHash == archive.M2hSha256 || m2hHash == archive.OrigM2hSha256
                 ? new ArchiveState(archive, Status.Applied, "")
                 : new ArchiveState(archive, Status.Foreign, $"{archive.M2hPath} is neither the Global nor the pack header");
         }
-        return new ArchiveState(archive, Status.Foreign, $"{archive.Path} has an unexpected size ({size:N0} bytes; expected {archive.GlobalSize:N0} or {archive.GlobalSize + archive.TailSize:N0})");
+        if (size > archive.GlobalSize && HasEarlierPack(clientRoot, archive)) {
+            return new ArchiveState(archive, Status.EarlierPack, "");
+        }
+        return appliedSize
+            ? new ArchiveState(archive, Status.Foreign, $"{archive.Path} has the applied size but its tail does not match the pack")
+            : new ArchiveState(archive, Status.Foreign, $"{archive.Path} has an unexpected size ({size:N0} bytes; expected {archive.GlobalSize:N0} or {archive.GlobalSize + archive.TailSize:N0})");
+    }
+
+    // An earlier pack (an update from it): the Global header was backed up when it was applied, and the archive still
+    // starts with the Global bytes, so its tail can go.
+    private static bool HasEarlierPack(string clientRoot, Archive archive) {
+        string orig = Path.Combine(clientRoot, archive.OrigM2hPath);
+        return File.Exists(orig) && Hash(orig) == archive.OrigM2hSha256
+               && Hash(Path.Combine(clientRoot, archive.Path), 0, archive.GlobalSize) == archive.GlobalSha256;
     }
 
     /// <summary>
@@ -143,7 +154,14 @@ internal sealed class ContentPack {
             foreach (ArchiveState state in states) {
                 Archive archive = state.Archive;
                 string target = Path.Combine(clientRoot, archive.Path);
-                if (state.Status == Status.NotApplied) {
+                string header = Path.Combine(clientRoot, archive.M2hPath), orig = Path.Combine(clientRoot, archive.OrigM2hPath);
+                if (state.Status == Status.EarlierPack) {
+                    // Back to the Global archive first, header then size: each step leaves a state State knows.
+                    Step(packDir, journal, archive.Path, "earlier");
+                    CopyOver(orig, header);
+                    Truncate(target, archive.GlobalSize);
+                }
+                if (state.Status is Status.NotApplied or Status.EarlierPack) {
                     Step(packDir, journal, archive.Path, "tail");
                     try {
                         using (FileStream append = new(target, FileMode.Append, FileAccess.Write, FileShare.None))
@@ -158,7 +176,6 @@ internal sealed class ContentPack {
                         throw;
                     }
                 }
-                string header = Path.Combine(clientRoot, archive.M2hPath), orig = Path.Combine(clientRoot, archive.OrigM2hPath);
                 if (Hash(header) != archive.M2hSha256) {
                     Step(packDir, journal, archive.Path, "m2h");
                     if (!File.Exists(orig) || Hash(orig) != archive.OrigM2hSha256) {
@@ -186,7 +203,7 @@ internal sealed class ContentPack {
         Refuse(states, "removed");
         var journal = new Journal { Version = pack.Version, State = "restoring", Utc = DateTime.UtcNow.ToString("O") };
         try {
-            foreach (ArchiveState state in states.Where(state => state.Status == Status.Applied)) {
+            foreach (ArchiveState state in states.Where(state => state.Status is Status.Applied or Status.EarlierPack)) {
                 Archive archive = state.Archive;
                 string target = Path.Combine(clientRoot, archive.Path);
                 string header = Path.Combine(clientRoot, archive.M2hPath), orig = Path.Combine(clientRoot, archive.OrigM2hPath);
@@ -375,8 +392,8 @@ internal sealed class ContentPack {
             throw new InvalidOperationException($"The game files do not match content pack {Version}: {string.Join("; ", foreign.Select(s => s.Reason))}. Verify the game files in Steam and try again.");
         }
 
-        // If all archives are NotApplied, return null
-        if (states.All(s => s.Status == Status.NotApplied)) {
+        // If no archive has this pack (an earlier pack counts as none), return null
+        if (states.All(s => s.Status is Status.NotApplied or Status.EarlierPack)) {
             return null;
         }
 

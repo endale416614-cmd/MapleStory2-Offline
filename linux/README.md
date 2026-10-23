@@ -11,8 +11,9 @@ starts the game, saves your progress when you close it and shuts everything down
   work as on Windows.
 
 The game never connects to the internet (all servers listen on 127.0.0.1 and the client patch blocks every other
-address). Only the update check and `ms2offline update` talk to GitHub. The one other download is the .NET runtime,
-which is fetched from dot.net (Microsoft's install script) on first install.
+address). Only the update check and `ms2offline update` talk to GitHub, and problem reports go to the project's report
+service (see Problem reports below). The one other download is the .NET runtime, which is fetched from dot.net
+(Microsoft's install script) on first install.
 
 ## Install
 
@@ -60,13 +61,14 @@ ms2offline diagnostics   zip logs and reports for a bug report (--include-save a
 ms2offline unpatch       put the game's own NxCharacter64.dll back
 ```
 
-Problem reports (from 1.2.0, opt-in): after a session with a problem the launcher asks whether it may send a report to
-the developer, and writes the exact text to `reports/to-send.txt` first. Tick **Send problem reports to the developer
-automatically** in the window to skip the question (it shows what a report contains before it turns on), or use
-**Report a problem...** / `ms2offline report-problem`. A report holds the servers' error and warning lines, the
-launcher's steps, versions and folders, and a random install number; never your user name, computer name, character,
-account or save names, chat, the game client's own text, your save or your game files. Without internet it waits for
-the next start. `SendReports=ask`, `always` or `never` in `launcher.ini` changes the choice.
+Problem reports: from 1.2.1 the launcher sends a report to the developer automatically after a session with a problem,
+after a one-time notice at the next `play` where you can answer no; then it asks each time and writes the exact text to
+`reports/to-send.txt` first. Every report helps the game's development. The **Send problem reports to the developer
+automatically** checkbox in the window changes this too (it shows what a report contains before it turns on), and
+**Report a problem...** / `ms2offline report-problem` sends your own words. A report holds the servers' error and
+warning lines, the launcher's steps, versions and folders, and a random install number; never your user name, computer
+name, character, account or save names, chat, the game client's own text, your save or your game files. Without
+internet it waits for the next start. `SendReports=always`, `ask` or `never` in `launcher.ini` changes the choice.
 
 Settings: `launcher.ini` in the program folder (see `launcher.ini.example` here). The gameplay options are the same
 keys as on Windows. Linux-only keys: `Proton` (which Proton build; default GE-Proton10-28 when installed, else the

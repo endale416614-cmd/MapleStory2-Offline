@@ -4,11 +4,11 @@ A single-player, fully offline edition of MapleStory 2 for Windows. It runs a lo
 [Maple2](https://github.com/MS2Community/Maple2) server emulator next to the official game client, so the game can be
 played again after the official servers closed in 2020. The game never connects to the internet; only the launcher
 checks GitHub for a newer version when you press Play (and skips that when you are offline), and sends a problem
-report to the developer only when you agree (see "Found a bug?").
+report to the developer after a session with a problem, unless you chose otherwise (see "Problem reports").
 
 ## Download
 
-### [⬇ Download MapleStory 2 Offline 1.2.0 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
+### [⬇ Download MapleStory 2 Offline 1.2.1 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
 
 1. Run the downloaded file and click **Install**. No administrator rights are needed.
 2. Start the game from the **MapleStory 2 Offline** icon on your desktop.
@@ -22,8 +22,8 @@ Updates install themselves: when you press Play and a newer version exists, the 
 is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
 Start menu → **MapleStory 2 Offline - Install Update**. All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
 
-**Still on 1.1.8 or older?** Install 1.2.0 once with the Setup above; it keeps your save. Launchers before 1.1.9 cannot take
-an automatic update (the update signing key was replaced); from 1.1.9 on, updates install themselves.
+**Still on 1.1.9 or older?** Install 1.2.1 once with the Setup above; it keeps your save. The automatic update to 1.2.1
+needs 1.2.0, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
 
 ### Found a bug?
 
@@ -31,13 +31,17 @@ Report it on **[Discord](https://discord.gg/bEEc9QsRx)** (or open an [issue](htt
 Run Start menu → **MapleStory 2 Offline - Export Diagnostics** first and attach the file it saves on your desktop;
 it works even when the game does not start.
 
-**Problem reports (from 1.2.0):** after a session with a problem the launcher asks whether it may send a report to the
-developer; tick **Send problem reports to the developer automatically** in the "Choose how to play" window to skip the
-question. Every question first shows what a report contains: error messages and server log lines, versions, launcher
-settings, basic PC details and a random install number. Never your Windows user name, PC name, character or account
-names, chat, save or game files. **Report a problem...** (in that window; a new install also has it in the Start menu)
-sends your own words with it. Without internet a report waits and goes out at the next start; `SendReports=ask`,
-`always` or `never` in `launcher.ini` changes the choice. The diagnostics file is never uploaded.
+### Problem reports
+
+From 1.2.1 the launcher sends a report to the developer automatically after a session with a problem; the first start
+shows a one-time notice where you can choose **Ask me each time** instead. Every report helps the game's development: it
+shows what broke and where, and keeping reports on is the easiest way to contribute. Untick **Send problem reports to
+the developer automatically** in the "Choose how to play" window to be asked again. A report contains error messages and
+server log lines, versions, launcher settings, basic PC details and a random install number. Never your Windows user
+name, PC name, character or account names, chat, save or game files. **Report a problem...** (in that window; a new
+install also has it in the Start menu) sends your own words with it. Without internet a report waits and goes out at the
+next start; `SendReports=always`, `ask` or `never` in `launcher.ini` changes the choice. The diagnostics file is never
+uploaded.
 
 > The green **Code → Download ZIP** button gives you the source code only, which cannot be played. Use the download link above.
 
@@ -70,7 +74,7 @@ Own your game. Own your character. Keep your progress. The full plan is in [VISI
   - **Legacy Mode**: the original online-era rules and balance: original exp and drop rates, dungeon clear limits and party
     requirements. Nothing is changed for solo play, so content built for a party stays closed.
   - **Offline Adapted Mode**: built for playing alone: faster exp and more loot, unlimited dungeon clear rewards, Epic dungeon
-    gear, easier pet taming, party-size dungeons open to you (except Cathy Mart, which needs a full group), bosses scaled for one player, and a Black Market with items for sale.
+    gear, easier pet taming, party-size dungeons open to you (except Cathy Mart, which needs a full group), bosses scaled for one player, and a Black Market that sells gear near your level, upgrade materials, gems and potions.
   - Both modes keep Meret pouches, the full Meret Market, mail that never expires and the chat commands. Your characters work in
     either mode. To switch, close the game and start it again.
   - Advanced: the choice is stored as `GameMode=Legacy|Adapted` in `launcher.ini`, and a single option there (for example

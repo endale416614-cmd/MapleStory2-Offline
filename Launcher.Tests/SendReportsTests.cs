@@ -24,4 +24,26 @@ public class SendReportsTests {
     public void AfterTheCheckbox_UntickingNeverLosesAnOptOut(string current, bool ticked, string expected) {
         Assert.That(Settings.SendReportsAfterCheckbox(current, ticked), Is.EqualTo(expected));
     }
+
+    [TestCase(null, 0, "ask")]
+    [TestCase(null, 1, "always")]
+    [TestCase("", 1, "always")]
+    [TestCase("  ", 0, "ask")]
+    [TestCase("never", 1, "never")]
+    [TestCase("never", 0, "never")]
+    [TestCase("ask", 1, "ask")]
+    [TestCase("always", 0, "always")]
+    public void DefaultSendReports(string? written, int reportNotice, string expected) {
+        Assert.That(Settings.DefaultSendReports(written, reportNotice), Is.EqualTo(expected));
+    }
+
+    [TestCase(null, 0, true)]
+    [TestCase("", 0, true)]
+    [TestCase(null, 1, false)]
+    [TestCase("never", 0, false)]
+    [TestCase("ask", 0, false)]
+    [TestCase("always", 0, false)]
+    public void NeedsReportNotice(string? written, int reportNotice, bool expected) {
+        Assert.That(Settings.NeedsReportNotice(written, reportNotice), Is.EqualTo(expected));
+    }
 }

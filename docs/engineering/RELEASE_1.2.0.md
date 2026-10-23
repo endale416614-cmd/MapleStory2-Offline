@@ -1,4 +1,4 @@
-# Release 1.2.0: playability (draft, not released)
+# Release 1.2.0: playability (published 2026-10-22, GitHub release v1.2.0)
 
 Replanned 2026-10-21 (maintainer: "it will focus on playability like reverse fair fight, debug log instead of adding
 content and new content now gradually get add instead of all at once"): 1.2.0 brings Reverse Fair Fight, problem

@@ -19,9 +19,10 @@ internal static class ContentPackFlow {
             ContentPack pack = ContentPack.Load(packDir);
             // Recover any interrupted applies before proceeding
             warning = ContentPack.RecoverInterrupted(clientRoot, packDir);
-            // Unified off and no archive at the applied size: nothing to remove, so Play skips hashing the Global archives (several GB).
+            // Unified off and no archive longer than the Global one (no pack, this or an earlier one): nothing to remove, so
+            // Play skips hashing the Global archives (several GB).
             if (!unifiedContent && pack.Archives.All(a => !File.Exists(Path.Combine(clientRoot, a.Path))
-                    || new FileInfo(Path.Combine(clientRoot, a.Path)).Length != a.GlobalSize + a.TailSize)) {
+                    || new FileInfo(Path.Combine(clientRoot, a.Path)).Length <= a.GlobalSize)) {
                 return Lock(globalDataDir, null, warning);
             }
             List<ContentPack.ArchiveState> states = pack.State(clientRoot).ToList();
@@ -43,7 +44,7 @@ internal static class ContentPackFlow {
                 } catch (InvalidOperationException ex) {
                     warning = ex.Message;
                 }
-            } else if (!unifiedContent && states.Any(s => s.Status == ContentPack.Status.Applied)) {
+            } else if (!unifiedContent && states.Any(s => s.Status is ContentPack.Status.Applied or ContentPack.Status.EarlierPack)) {
                 changed = true;
                 try {
                     if (!ContentPack.Restore(clientRoot, packDir) && !elevated(clientRoot, packDir, "--restore-content-pack")) {

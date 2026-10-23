@@ -30,9 +30,11 @@ AutoUpdate=ask
 # After every session a plain-text report goes to the "reports" folder in the program folder.
 DebugReports=true
 
-# Problem reports to the developer after a session with a problem: ask (default), always (the checkbox in the window)
-# or never. Each question shows what a report contains; your names, chat and save are never sent.
-#SendReports=ask
+# Problem reports to the developer after a session with a problem: always (default after the one-time notice; the
+# checkbox in the window), ask or never. The notice and each question show what a report contains; your names, chat
+# and save are never sent.
+#SendReports=always
+# ReportNotice=1 is written by the launcher once the notice was shown.
 
 # Unified content (Korean and Japanese records and art) on the Global client: true (default) or false (pure Global game; Play removes it again).
 #UnifiedContent=true

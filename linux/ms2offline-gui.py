@@ -54,11 +54,33 @@ class QtUI(QtCore.QObject):
         return bool(self._answer)
 
     def _ask_on_main_thread(self, text, default):
-        answer = QtWidgets.QMessageBox.question(self.window, TITLE, text,
-                                                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
-                                                QtWidgets.QMessageBox.StandardButton.Yes if default else QtWidgets.QMessageBox.StandardButton.No)
-        self._answer = answer == QtWidgets.QMessageBox.StandardButton.Yes
+        if text.count("\n") > 20:   # the report notice: a box that scrolls, so it fits a small screen (Steam Deck)
+            self._answer = self._ask_scrolling(text, default)
+        else:
+            answer = QtWidgets.QMessageBox.question(self.window, TITLE, text,
+                                                    QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                                                    QtWidgets.QMessageBox.StandardButton.Yes if default else QtWidgets.QMessageBox.StandardButton.No)
+            self._answer = answer == QtWidgets.QMessageBox.StandardButton.Yes
         self._answered.set()
+
+    def _ask_scrolling(self, text, default):
+        """Yes/No under a scrolling text; Escape and closing the box answer No."""
+        dialog = QtWidgets.QDialog(self.window)
+        dialog.setWindowTitle(TITLE)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        view = QtWidgets.QPlainTextEdit(text)
+        view.setReadOnly(True)
+        layout.addWidget(view)
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Yes | QtWidgets.QDialogButtonBox.StandardButton.No)
+        buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Yes if default else QtWidgets.QDialogButtonBox.StandardButton.No).setDefault(True)
+        yes = []
+        buttons.accepted.connect(lambda: yes.append(True))
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        dialog.resize(680, 460)
+        dialog.exec()
+        return bool(yes)
 
 
 class Window(QtWidgets.QMainWindow):
@@ -124,8 +146,9 @@ class Window(QtWidgets.QMainWindow):
         self.client_button.clicked.connect(self.choose_client)
         self.folder_button.clicked.connect(lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(home)))
 
-        # Problem reports, only when this build has the report service: opt-in, the box starts unticked, and ticking it
-        # (by click or by an accessibility tool: toggled, not clicked) first shows what a report contains.
+        # Problem reports, only when this build has the report service: the box is ticked while they go automatically (the
+        # default once the one-time notice was answered), and ticking it (by click or by an accessibility tool: toggled,
+        # not clicked) first shows what a report contains.
         self._confirming = False
         if ms2offline.ProblemReport.url() is not None:
             reports = QtWidgets.QHBoxLayout()
@@ -271,6 +294,11 @@ class Window(QtWidgets.QMainWindow):
             return
         self.launcher = ms2offline.Launcher(self.home)   # fresh settings, fresh session id
         self.launcher.ui = QtUI(self)
+        self.launcher.show_report_notice()   # here, before the worker: the box then shows the answer
+        if hasattr(self, "report_box"):
+            self._confirming = True
+            self.report_box.setChecked(self.launcher.settings.send_reports == "always")
+            self._confirming = False
         self.run("play", lambda: self.launcher.play())
 
     def stop(self):

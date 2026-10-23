@@ -1,7 +1,9 @@
 # Diagnostic reports (1.2.0)
 
-Maintainer 2026-10-21: players can send problem reports to the maintainer automatically, opt-in. The player-facing
-text (the promise this design keeps) is the "Problem reports" page; its claims are marked [P] below.
+Maintainer 2026-10-21: players can send problem reports to the maintainer automatically, opt-in. Maintainer
+2026-10-23 (1.2.1, DL-38 and DL-39): automatic by default after a one-time notice ("keep it automatically check but
+pop up message instead"; a launch gate that refuses to start without consent was shelved). The player-facing text (the
+promise this design keeps) is the "Problem reports" page; its claims are marked [P] below.
 
 ## 1. What is sent
 One JSON document per report, gzip-compressed, schema 1:
@@ -51,11 +53,17 @@ the Linux launcher ports it):
   contains is ReportDialogs.WhatIsSent, shown before every consent.
 
 ## 3. Consent
-- launcher.ini `SendReports=ask` (default), `always` or `never`, read only from the player's launcher.ini (a shipped
-  defaults.ini cannot turn sending on). Nothing is asked or sent while the build has no service address.
-- "Choose how to play" has the unticked checkbox "Send problem reports to the developer automatically"; ticking it
-  (also by accessibility tools) first shows what a report contains, with Turn on or Cancel (the default). Unticking
-  goes back to asking; "never" stays until the player ticks the box.
+- launcher.ini `SendReports=always`, `ask` or `never`, read only from the player's launcher.ini (a shipped defaults.ini
+  cannot turn sending on). Nothing is asked or sent while the build has no service address.
+- 1.2.1: without a written SendReports line, `ReportNotice` decides: below 1 the launcher behaves as `ask` and shows the
+  one-time notice at the next start, before anything can go out (Windows: a dialog before the queued reports are sent;
+  Linux: at `play`, a dialog or the terminal, and it waits while neither can ask). The notice says reports now go
+  automatically, why they help, how to contribute, what a report contains and where the details are; "Keep it on"
+  (the default) writes `SendReports=always`, "Ask me each time" writes `ask`; both write `ReportNotice=1`. Closing it
+  any other way counts as asking. A written choice is never changed and gets no notice.
+- "Choose how to play" has the checkbox "Send problem reports to the developer automatically", ticked when the setting
+  is `always`; ticking it (also by accessibility tools) first shows what a report contains, with Turn on or Cancel (the
+  default). Unticking goes back to asking; "never" stays until the player ticks the box.
 - `ask`: when a session ends with a problem, after the game has closed, a dialog asks "Send a problem report to the
   developer?" with the same list, "See exactly what would be sent" (the upload text in Notepad), Send, Don't send (the
   default) and "Do this every time (no more questions)" (writes `always` or `never`; `never` also takes back queued
@@ -104,3 +112,5 @@ A Worker with a D1 database (R2 would need a payment method even on the free tie
 - DR-04: Linux launcher: the same text rules, payload, queue, sender, consent prompt and report command.
 - DR-05: the Worker service and fetch_reports.py, with deploy steps for the maintainer.
 - DR-06: release defaults (SendReports=ask, ServiceUrl), README and the player page.
+- DL-38, DL-39 (1.2.1): automatic by default after the one-time notice (section 3), both launchers; README, SECURITY.md,
+  the release README.txt and launcher.ini.example say so.

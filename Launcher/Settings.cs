@@ -86,10 +86,14 @@ internal sealed class Settings {
     /// <summary>Writes a plain-text report of every session to the desktop for bug reports (on unless DebugReports=false).</summary>
     public bool DebugReports { get; private init; } = true;
     /// <summary>
-    /// Problem reports to the developer after a session with a problem: "ask" (default), "always" (the checkbox in
-    /// "Choose how to play") or "never". Nothing is sent without one of these choices (docs/engineering/DIAGNOSTIC_REPORTS.md).
+    /// Problem reports to the developer after a session with a problem: "always" by default once the one-time notice was
+    /// shown ("ask" until then; DefaultSendReports), or the written choices "ask" and "never" (the checkbox in "Choose how
+    /// to play" writes "always" or "ask"). See docs/engineering/DIAGNOSTIC_REPORTS.md.
     /// </summary>
     public string SendReports { get; set; } = "ask";
+    public const int ReportNoticeVersion = 1;
+    /// <summary>The one-time notice (ReportDialogs.ShowReportNotice) is due at this start.</summary>
+    public bool ReportNoticePending { get; private init; }
 
     /// <summary>Folder of MapleStory2.exe (the client's x64 folder); found automatically when not set.</summary>
     public string ClientDir { get; set; } = "";
@@ -111,6 +115,8 @@ internal sealed class Settings {
 
         string versionFile = Path.Combine(root, "VERSION");
         var defaults = new Settings();
+        string? writtenReports = own.GetValueOrDefault("SendReports");
+        int reportNotice = int.TryParse(own.GetValueOrDefault("ReportNotice"), out int seen) ? seen : 0;
         return new Settings {
             Root = root,
             DataRoot = dataRoot,
@@ -143,7 +149,8 @@ internal sealed class Settings {
             },
             DebugReports = Flag(values, "DebugReports") ?? true,
             // Only the player's own launcher.ini: a shipped defaults.ini must never turn sending on.
-            SendReports = ParseSendReports(own.GetValueOrDefault("SendReports")),
+            SendReports = DefaultSendReports(writtenReports, reportNotice),
+            ReportNoticePending = NeedsReportNotice(writtenReports, reportNotice),
             BackupsToKeep = int.TryParse(values.GetValueOrDefault("BackupsToKeep"), out int keep) ? keep : defaults.BackupsToKeep,
             UnifiedContent = Flag(values, "UnifiedContent") ?? true,
             // A hand-edited name the chooser would refuse (e.g. "..\x") means the main save, never a folder outside SaveData.
@@ -157,6 +164,17 @@ internal sealed class Settings {
         "never" or "false" or "no" or "off" => "never",
         _ => "ask",
     };
+
+    /// <summary>
+    /// SendReports from the player's own launcher.ini: a written choice wins; without one, reports go automatically once the
+    /// one-time notice has been shown (ReportNotice), and are asked until then.
+    /// </summary>
+    public static string DefaultSendReports(string? written, int reportNotice) =>
+        !string.IsNullOrWhiteSpace(written) ? ParseSendReports(written) : reportNotice >= ReportNoticeVersion ? "always" : "ask";
+
+    /// <summary>The notice is due when the player never chose and has not seen this version of it.</summary>
+    public static bool NeedsReportNotice(string? written, int reportNotice) =>
+        string.IsNullOrWhiteSpace(written) && reportNotice < ReportNoticeVersion;
 
     /// <summary>SendReports after the "send automatically" checkbox: ticked is always, unticking always goes back to asking, never stays.</summary>
     public static string SendReportsAfterCheckbox(string current, bool ticked) => ticked ? "always" : current == "always" ? "ask" : current;

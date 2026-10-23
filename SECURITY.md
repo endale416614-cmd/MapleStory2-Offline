@@ -19,16 +19,17 @@ file does not match the listed size and sha256. Releases without `release.json` 
 full zip are not yet checked automatically; compare them with `release.json` by hand (for example `certutil -hashfile
 <file> SHA256`).
 
-From 1.2.0 the launcher can send problem reports, only after the player agrees (a question each time, or the
-"send automatically" checkbox) or uses Report a problem. A report is the session report text with the Windows user name,
-PC name, character and account names and the game client's own log lines removed; it goes over HTTPS to the project's
-report service (`tools/report-service`), which stores it for 90 days and lets nobody read it without the maintainer's
-token. The diagnostics zip and the save are never uploaded.
+From 1.2.0 the launcher can send problem reports. From 1.2.1 they go automatically by default, but only after a
+one-time notice that says what is sent and offers "Ask me each time"; a written `ask` (a question after each session
+with a problem) or `never` is always kept, and Report a problem sends one when the player asks. A report is the session
+report text with the Windows user name, PC name, character and account names and the game client's own log lines
+removed; it goes over HTTPS to the project's report service (`tools/report-service`), which stores it for 90 days and
+lets nobody read it without the maintainer's token. The diagnostics zip and the save are never uploaded.
 
 A way to reach the game servers from another computer, to make the client connect elsewhere, to make the launcher
 install an update that was not signed with the project's key or that writes outside the program folder, to make it send
-a report without the player's consent or with the names above, or to read reports from the service without the token
-counts as a security problem.
+a report on its own before the one-time notice was shown or after the player chose ask or never, or with the names
+above, or to read reports from the service without the token counts as a security problem.
 
 ## Reporting a vulnerability
 
