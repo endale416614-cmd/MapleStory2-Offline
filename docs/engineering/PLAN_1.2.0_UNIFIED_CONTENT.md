@@ -79,7 +79,7 @@ because the Global shop table already gained entries for KMS-only items (U-06 si
 
 ## 3. Phases and tasks
 
-Dependency order. Tier codes as in RELEASE_PLAN_1.2.0.md (T1 script or small model, T2 standard, T3 strong model or
+Dependency order. Tier codes as in RELEASE_PLAN_1.2.0.md (T1 scripted, T2 standard, T3 complex or
 maintainer, T4 independent review).
 
 ### Phase A: content set frozen (data only, no launcher change)
@@ -93,7 +93,7 @@ maintainer, T4 independent review).
 | U-10 | Translation review of the 3,615 item names; NPC names (152) and the Epic Quest text translated | U-09 | reviewed file, placeholders intact, glossary file started | T2 + review |
 | U-11 | JMS-only records through the same converter path | U-06 | each record playable or listed | T1 |
 | U-08 | Visual check of the repacked art on the test instance (the pending TEST-U08 list) | - | every listed item shows icon and model, or is on the unsupported list | maintainer play |
-| U-16 (new) | Content registry: `CONTENT_REGISTRY.md` with one row per added quest, NPC, map and dungeon: source build, server tables present, test status (directive 6.2, 6.3) | U-12 | registry exists; every "playable" row has a recorded test | T1 |
+| U-16 (new) | Content registry: `CONTENT_REGISTRY.md` with one row per added quest, NPC, map and dungeon: source build, server tables present, test status | U-12 | registry exists; every "playable" row has a recorded test | T1 |
 
 Exit: `tools/build_content_pack.py` (P-01) can build the full pack from named inputs; the registry says what is
 playable; Global tables unchanged by checksum.

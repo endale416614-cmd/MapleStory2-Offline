@@ -1,8 +1,7 @@
 # Release 1.2.1: Black Market, boss summons, world clock
 
-Planned 2026-10-22 (maintainer: "start planning development of 1.2.1 aiming to progress toward the directive again";
-the Black Market requests of the same day; "Add boss, monster and NPC behavioral restoration"). Published 2026-10-23
-after the maintainer's play check.
+Planned 2026-10-22 (the Black Market requests of the same day, and boss, monster and NPC behaviour restoration).
+Published 2026-10-23 after the maintainer's play check.
 
 ## Candidate
 - Fourth candidate 2026-10-23, released as 1.2.1: the second candidate plus DL-51 (the third candidate: an

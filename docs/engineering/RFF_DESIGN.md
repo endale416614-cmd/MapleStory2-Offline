@@ -1,6 +1,6 @@
 # Reverse Fair Fight (RFF): damage-floor design note
 
-Status: design only, no code (directive rule: evidence before code).
+Status: design only, no code (evidence before code).
 Implementation task: R12-30 in `RELEASE_PLAN_1.2.0.md` Deliverable 6. Written 2026-10-18 against the 1.1.9 tree and the
 shipped `SaveData/maple-data.db` (ingested 2026-10-17). Every `file:line` below is relative to `Maple2/`.
 
@@ -47,7 +47,7 @@ client packet and a separate `ApplyDamage` call.
 
 `Buff.ApplyDotDamage` (`Model/Field/Buff.cs:217-251`) builds a `DotDamageRecord` (`Model/Skill/DotDamageRecord.cs:21-54`) which calls
 `DamageCalculator.CalculateDamage` directly (`DotDamageRecord.cs:36`) and subtracts HP itself (`Buff.cs:230`). It never enters
-`Actor.ApplyDamage`. So a hook placed at `Actor.cs:148` cannot reach DoT ticks, which is what the directive asks for. A hook inside
+`Actor.ApplyDamage`. So a hook placed at `Actor.cs:148` cannot reach DoT ticks, which the floor has to cover. A hook inside
 `CalculateDamage` would reach them, which is why the hook must not go there. 1,537 additional effects carry `Dot.Damage`
 (example effect 10200112 level 1: poison, rate 0.04).
 
@@ -237,13 +237,13 @@ evidence the validation scenarios need.
    Enforcing invincibility is a separate fix (listed as a follow-up, not part of R12-30).
 4. `NpcHp` / `NpcDamage` trigger conditions are stubs: HP-driven phases do not fire today, so scenario 7 can only verify that the floor
    does not change the order of AI-driven phases (`MinimumHpNode`), not trigger-driven ones.
-5. The `playerCountFactor` table is absent from the ingest; the directive's "intended party size" therefore comes from `MaxUserCount`
+5. The `playerCountFactor` table is absent from the ingest; the "intended party size" therefore comes from `MaxUserCount`
    and `GroupType`, which is a proxy.
 6. Whether region-skill ticks (`FieldSkill.cs:216`) use the same `Rate` scale as attack points is assumed, not measured.
 7. The 6-man chaos raids (23007003, 23008003, 23024003-23026003, 23041003, 23043003) have `GearScore` limits 4,500-53,900 at the door;
    whether an "under-equipped" player can enter at all depends on that check, which this note did not trace.
 
-## 5. Validation scenarios (directive 4.4)
+## 5. Validation scenarios
 
 All in Adapted with `logFlooredHits: true`; "Legacy equal" means the logged calculated amounts match a Legacy run of the same hits.
 

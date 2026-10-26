@@ -5,8 +5,8 @@ Nothing in this document is implemented unless the "Verified current state" colu
 `file:line`; claims marked (inferred) were not confirmed by running code. Companion files: [PROJECT_STATUS.md](PROJECT_STATUS.md),
 [BACKLOG.md](BACKLOG.md) (unified-edition tasks U-xx), [UNIFICATION.md](UNIFICATION.md), [../ADAPTATIONS.md](../ADAPTATIONS.md).
 
-Task ids in this plan are `R12-nn`. Executor tiers follow the routing policy: T1 = scripts or a small model, T2 = standard
-implementation model, T3 = strong model or maintainer, T4 = independent review by a different model than the author.
+Task ids in this plan are `R12-nn`. Effort tiers: T1 = scripted or mechanical, T2 = standard
+implementation, T3 = complex work or maintainer, T4 = independent review.
 
 ---
 
@@ -65,7 +65,6 @@ Cross-cutting facts found on the way:
 | `MapleStory2-Offline` | `main` `610f6e8` | `origin/main` `610f6e8` | 0 / 0 | Untracked: `docs/engineering/{BACKLOG,PROJECT_STATUS,UNIFICATION}.md`, `tools/ClientDiff/{ClientDiff.csproj,Program.cs}`, `tools/KmsSplit/{KmsSplit.csproj,Program.cs}`, `tools/M2dPack/{M2dPack.csproj,Program.cs}`. `bin/`, `obj/` ignored. |
 | `Maple2` (submodule) | detached `8000f16` | `origin/offline` `8000f16` | 0 / 0 (53 ahead of upstream `master`) | clean |
 | `_dl/Agarcium` (submodule) | detached `f0974e5` | `origin/offline` `f0974e5` | 0 / 0 | clean |
-| Internal docs repo (orchestration policies, outside this project) | `main` | local only | n/a | `COST_LOG.md` modified |
 
 Installed player build on this PC = 1.1.8 = release asset (SHA-256 match recorded in `PROJECT_STATUS.md`). Test instance and
 staging folders exist outside the repository and hold no unique source.
@@ -272,7 +271,7 @@ Format: id, objective; files; depends on; acceptance; tests; complexity/risk; ti
 - **R12-18** Raid data extract: from the sweep (R12-04) list every dungeon with `GroupType`, `MinUserCount`, `MaxUserCount`,
   `PlayerCountFactorId`, `MaxRevivalCount`; from `--probe-all` list xblocks whose triggers use `count_users`/`user_count` with n > 1.
   Depends: R12-02. Accept: `docs/engineering/RAIDS.md` table. Low / low. T1.
-- **R12-30** Reverse Fair Fight damage floor (directive 4, design in `docs/engineering/RFF_DESIGN.md`): new `Maple2.Server.Game/Util/OfflineFairFight.cs` (`OfflineProfile.Flag("OFFLINE_FAIR_FIGHT", true)`, `offline-rff.json`), one call after `Actor.cs:148`; off under Legacy, with more than one player in the field, for DoT, const, percent-of-HP damage and invincible targets. Depends: R12-07; pending review of the note. Accept: the note's 7 scenarios (3-6 as unit tests on `Floor`, 1, 2, 7 as recorded play with the floored-hit log). High / medium. T3 + maintainer play.
+- **R12-30** Reverse Fair Fight damage floor (design in `docs/engineering/RFF_DESIGN.md`): new `Maple2.Server.Game/Util/OfflineFairFight.cs` (`OfflineProfile.Flag("OFFLINE_FAIR_FIGHT", true)`, `offline-rff.json`), one call after `Actor.cs:148`; off under Legacy, with more than one player in the field, for DoT, const, percent-of-HP damage and invincible targets. Depends: R12-07; pending review of the note. Accept: the note's 7 scenarios (3-6 as unit tests on `Floor`, 1, 2, 7 as recorded play with the floored-hit log). High / medium. T3 + maintainer play.
 - **R12-19** Voice experiment (manual, no code): on a copy of the NA client, set `voiceIndex` in `Config\GameOption.xml` to 1 and
   to 0 with JMS `MS2Sound_Voice*_jp.fsb` and KMS `*_Kor_def.fsb` banks copied into `Data\Sound`; record which NPC lines play, which
   are silent, and any crash. Depends: none. Accept: a written result for each index value and bank set. T0 maintainer.
@@ -329,7 +328,7 @@ behaviour was not exercised (e.g. a raid pilot with no recorded solo clear) is r
 | 11 | U-02 overlay archive crash recurs | medium | medium (unified track) | exit `0xC000000D` logged | record the test outcome; keep unified track out of 1.2.0 | |
 | 12 | Untracked tools lost before commit | medium | medium | `git status` | R12-01 first | |
 | 13 | Linux launcher installs tampered asset | low | high | no signature check | R12-13 sha256 pin | advise manual install |
-| 14 | Weekly subscription windows exhausted by Fable-tier work | medium | medium | routing policy | T1/T2 for all plumbing; T3 only for R12-17 | pause pilots |
+| 14 | Schedule overrun on complex work | medium | medium | plan size | T1/T2 for all plumbing; T3 only for R12-17 | pause pilots |
 
 ---
 

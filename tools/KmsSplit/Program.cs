@@ -298,7 +298,7 @@ sealed class Na : IDisposable {
 }
 
 // ---------- NA defaults: attribute/element statistics learned from NA files ----------
-// shortcut: statistics are per element-name path (sibling elements of one name are merged) and learned from a
+// TODO: statistics are per element-name path (sibling elements of one name are merged) and learned from a
 // 2500-file random sample per kind; fine for filling omitted defaults, not for exact per-record values.
 sealed class Skeleton {
     sealed class Node { public int Files, Instances; public Dictionary<string, Dictionary<string, int>> Attr = new(); }

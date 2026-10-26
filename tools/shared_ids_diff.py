@@ -124,7 +124,7 @@ class Schema:
     """What one edition's files look like, learned from a sample: modal value, known attributes, known elements."""
 
     def __init__(self, files, locales, sample=3000):
-        # shortcut: a sample of the files, not all; raise `sample` if a default looks wrong
+        # TODO: a sample of the files, not all; raise `sample` if a default looks wrong
         step = max(1, len(files) // sample)
         c = collections.defaultdict(collections.Counter)
         self.els = set()
