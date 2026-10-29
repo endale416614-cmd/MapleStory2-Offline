@@ -1,0 +1,360 @@
+id	twin	old name	new name	batch	reason
+11020042	11020040	Red Riding Hood's Cookie (F) | Woodcutter's Cookie (F)	Red Riding Hood's Cookie (F)	1	same KMS name as Global item 11020040
+11050024	11050022	Spicy Rice Cake Skewers | Gas Mask	Gas Mask	1	same KMS name as Global item 11050022
+11050034	11050004	Pacifier	Passionate Rose	1	same KMS name as Global item 11050004
+11050047	11050039	Masquerade Mask	Exotic Red Opera Mask	1	same KMS name as Global item 11050039
+11050071	11050049	Black Under Chin Mask | Black Face Mask	Black Under Chin Mask	1	same KMS name as Global item 11050049
+11120644	11120111	Thick-Rimmed Glasses (M) | Hipster Glasses (M)	Hipster Glasses (M)	1	same KMS name as Global item 11120111
+11120645	11120112	Thick-Rimmed Glasses (F) | Hipster Glasses (F)	Hipster Glasses (F)	1	same KMS name as Global item 11120112
+11150022	11150016	NVG	Round Glasses	1	same KMS name as Global item 11150016
+11150043	11120049	Neat Hard-Rimmed Glasses	Cat Paw Eye Patch (M)	1	same KMS name as pack item 11120049; the old name is Global's name for another item
+11150054	11120054	VR Device	Cat Paw Eye Patch (F)	1	same KMS name as pack item 11120054; the old name is Global's name for another item
+11150059	11150039	AR Scouter	Claudine's Resistance Mask (M)	1	same KMS name as Global item 11150039
+11220109	11250092	Milky Way Starlight Earrings (M) | Milky Way Shine Earrings (M)	Milky Way Shine Earrings (M)	1	same KMS name as Global item 11250092
+11220110	11250093	Milky Way Starlight Earrings (F) | Milky Way Shine Earrings (F)	Milky Way Shine Earrings (F)	1	same KMS name as Global item 11250093
+11220516	11250100	Funky Cowbow Star Earrings (M) | Funky Cowboy Star Earrings (M)	Funky Cowboy Star Earrings (M)	1	same KMS name as Global item 11250100
+11220517	11250101	Funky Cowbow Star Earrings (F) | Funky Cowboy Star Earrings (F)	Funky Cowboy Star Earrings (F)	1	same KMS name as Global item 11250101
+11220518	11220107	Doctor Heart Pill Earring (M) | Doctor Heart Pill Earrings (M)	Doctor Heart Pill Earrings (M)	1	same KMS name as Global item 11220107
+11220519	11220108	Doctor Heart Pill Earring (F) | Doctor Heart Pill Earrings (F)	Doctor Heart Pill Earrings (F)	1	same KMS name as Global item 11220108
+11220676	11220043	Metallic Heart Bunny Earrings (M) | Heart Metallic Earrings (M)	Metallic Heart Bunny Earrings (M)	1	same KMS name as Global item 11220043
+11220677	11220044	Metallic Heart Bunny Earrings (F) | Heart Metallic Earrings (F)	Metallic Heart Bunny Earrings (F)	1	same KMS name as Global item 11220044
+11220682	11250092	Milky Way Starlight Earrings (M) | Milky Way Shine Earrings (M)	Milky Way Shine Earrings (M)	1	same KMS name as Global item 11250092
+11220683	11250093	Milky Way Starlight Earrings (F) | Milky Way Shine Earrings (F)	Milky Way Shine Earrings (F)	1	same KMS name as Global item 11250093
+11220703	11220043	Metallic Heart Bunny Earrings (M) | Heart Metallic Earrings (M)	Metallic Heart Bunny Earrings (M)	1	same KMS name as Global item 11220043
+11220704	11220044	Metallic Heart Bunny Earrings (F) | Heart Metallic Earrings (F)	Metallic Heart Bunny Earrings (F)	1	same KMS name as Global item 11220044
+11250049	11250035	Floria Fairy Ear Cuffs (M)	Chic Startz Earrings (M)	1	same KMS name as Global item 11250035
+11250050	11250036	Floria Fairy Ear Cuffs (F)	Fantastic Ophelia Earrings (F)	1	same KMS name as Global item 11250036
+11250096	11250039	Technokitty Earrings (M)	Merry Holiday Earrings (M)	1	same KMS name as Global item 11250039
+11250097	-	Technokitty Earrings (F)	Merry Holiday Earrings (F)	1	look-name: the old name is Global's string for this id and the Taiwan client has no English name for it; the Global name of its look preset 11250040, with its own gender mark
+11300379	-	White Tiger Ears	Lobster Buddy (M)	1	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+11300380	-	Tiger Ears	Lobster Buddy (F)	1	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+11300390	11300149	Dragon Scale Helmet	Flight Helmet	1	same KMS name as Global item 11300149
+11300393	-	Angelic Tella Circlet	Furry Kitty Ears (M)	1	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+11300394	-	Padlock Cuero Hunting Cap	Furry Kitty Ears (F)	1	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+11300395	11300387	Buckle Strap Hat	Sepia Headwings	1	same KMS name as Global item 11300387
+11300489	11300384	Warrior's Flexible Headgear	Angel's Feathers	1	same KMS name as Global item 11300384
+11300509	11300381	Rancorous Primis Hat	Fox Ears	1	same KMS name as Global item 11300381
+11300510	11300435	Rancorous Secundus Hat	Cute White Fox Ears	1	same KMS name as Global item 11300435
+11300511	11300324	Rancorous Tertium Hat	Black Kitty Ears	1	same KMS name as Global item 11300324
+11300512	11300325	Rancorous Quartus Hat	White Kitty Ears	1	same KMS name as Global item 11300325
+11300616	11300564	Battleworn Dark Headgear | Puffy Ribbon Hat	Puffy Ribbon Hat	1	same KMS name as Global item 11300564
+11301148	11301147	Dark Tutor Hat	Musketeer Hat	1	same KMS name as Global item 11301147
+11301415	11301385	Jeweled Clam Earrings	Tropical Straw Hat (M)	1	same KMS name as Global item 11301385
+11301482	11301386	Soft Jellyfish Hat	Tropical Straw Hat (F)	1	same KMS name as Global item 11301386
+11301483	11301373	Rough Viking Hat	Magic Academy Freshman Hat (M)	1	same KMS name as Global item 11301373
+11301490	11301374	Dark Fantasy Hat	Magic Academy Freshman Hat (F)	1	same KMS name as Global item 11301374
+11304805	11304770	Flying Train	Slumbering Bunny Hat	1	same KMS name as Global item 11304770
+11320464	11300740	Fluffy Floral Winter Hat (F) | Fluffy Floral Winter Cap (F)	Fluffy Floral Winter Cap (F)	1	same KMS name as Global item 11300740
+11320523	11304785	Funky Cowbow Hat (M) | Funky Cowboy Hat (M)	Funky Cowboy Hat (M)	1	same KMS name as Global item 11304785
+11320533	11300953	Superstar Pink Bean Horn | Superstar Pink Bean's Horns	Superstar Pink Bean's Horns	1	same KMS name as Global item 11300953
+11320553	11304774	Milky Way Starlight Fox Ears (M) | Milky Way Shine Fox Ears (M)	Milky Way Shine Fox Ears (M)	1	same KMS name as Global item 11304774
+11320554	11304775	Milky Way Starlight Fox Ears (F) | Milky Way Shine Fox Ears (F)	Milky Way Shine Fox Ears (F)	1	same KMS name as Global item 11304775
+11320559	11300953	Bean's Horns | Superstar Pink Bean's Horns	Superstar Pink Bean's Horns	1	same KMS name as Global item 11300953
+11320565	11320309	Cozy Hand-Knit Hat (M) | Cozy Knit Hat (M)	Cozy Hand-Knit Hat (M)	1	same KMS name as Global item 11320309
+11320566	11320310	Cozy Hand-Knit Hat (F) | Cozy Knit Hat (F)	Cozy Hand-Knit Hat (F)	1	same KMS name as Global item 11320310
+11320633	11320040	Red Riding Hood (F) | Woodcutter's Wolf Ears (F)	Red Riding Hood (F)	1	same KMS name as Global item 11320040
+11320664	11300658	Bloody Wing Hairpin Set (M) | Bloody Wing Hair Band (M)	Bloody Wing Hairpin Set (M)	1	same KMS name as Global item 11300658
+11320683	11320044	Heart Bunny Headband (F) | Heart Bunny Hairband (F)	Heart Bunny Headband (F)	1	same KMS name as Global item 11320044
+11320692	11304774	Milky Way Starlight Fox Ears (M) | Milky Way Shine Fox Ears (M)	Milky Way Shine Fox Ears (M)	1	same KMS name as Global item 11304774
+11320693	11304775	Milky Way Starlight Fox Ears (F) | Milky Way Shine Fox Ears (F)	Milky Way Shine Fox Ears (F)	1	same KMS name as Global item 11304775
+11320706	11304769	Swirl Pop Hairpin Set | Swirl Pop Hairpin	Swirl Pop Hairpin Set	1	same KMS name as Global item 11304769
+11320730	11320044	Heart Bunny Headband (F) | Heart Bunny Hairband (F)	Heart Bunny Headband (F)	1	same KMS name as Global item 11320044
+11320736	11320040	Red Riding Hood (F) | Woodcutter's Wolf Ears (F)	Red Riding Hood (F)	1	same KMS name as Global item 11320040
+11390948	11390941	Celestial Sage Hairpin Ornament (M) | Celestial Immortal Hairpin (M)	Celestial Sage Hairpin Ornament (M)	1	same KMS name as Global item 11390941
+11390949	11390942	Celestial Maiden Flower Ornament (F) | Celestial Fairy Flower Ornament (F)	Celestial Maiden Flower Ornament (F)	1	same KMS name as Global item 11390942
+11400135	11400096	Sleeveless Crew Neck Tee (M)	Rainbow Hoodie (M)	1	same KMS name as Global item 11400096
+11400136	11400097	Sleeveless Crew Neck Tee (F)	Rainbow Hoodie (F)	1	same KMS name as Global item 11400097
+11500141	11500111	Cotton Short Pants (M)	Salvaged Stitched Jeans (M)	1	same KMS name as Global item 11500111
+11500142	11500112	Cotton Short Pants (F)	Slim Fit Jeans (F)	1	same KMS name as Global item 11500112
+11500149	11500111	Leather Short Pants (M)	Salvaged Stitched Jeans (M)	1	same KMS name as Global item 11500111
+11500150	11500112	Leather Short Pants (F)	Slim Fit Jeans (F)	1	same KMS name as Global item 11500112
+11500242	11500240	Black Pants (M)	Black Skinny Pants (M)	1	same KMS name as Global item 11500240
+11500243	11500241	Black Pants (F)	Black Skinny Pants (F)	1	same KMS name as Global item 11500241
+11500262	11500240	[Temp] Lv. 50+ Armor Set A Bottoms	Black Skinny Pants (M)	1	same KMS name as Global item 11500240
+11500265	11500241	Cheer Pants (M)	Black Skinny Pants (F)	1	same KMS name as Global item 11500241
+11600235	11600165	Aerospace Gloves (M)	Rubber Gloves (M)	1	same KMS name as Global item 11600165
+11600236	11600166	Aerospace Gloves (F)	Rubber Gloves (F)	1	same KMS name as Global item 11600166
+11600237	11600163	Wrist Protectors (M)	Yellow Kitty Paws (M)	1	same KMS name as Global item 11600163
+11600238	11600164	Wrist Protectors (F)	Yellow Kitty Paws (F)	1	same KMS name as Global item 11600164
+11600349	11600281	Dragon Scale Gloves	Flight Gloves (M)	1	same KMS name as Global item 11600281
+11600350	11600282	Angelic Tella Guards	Flight Gloves (F)	1	same KMS name as Global item 11600282
+11620059	-	Street Rapper Earrings (M)	Street Rapper Gloves (M)	-	global-fix: Global's own name for this item names another slot; the tool's reviewed fix list
+11620060	-	Street Rapper Earrings (F)	Street Rapper Gloves (F)	-	global-fix: Global's own name for this item names another slot; the tool's reviewed fix list
+11620163	11620091	Pumpkin Hollow Webbed Gloves (M) | Pumpkin Hallow Ring (M)	Pumpkin Hollow Webbed Gloves (M)	1	same KMS name as Global item 11620091
+11620164	11620092	Pumpkin Hollow Webbed Gloves (F) | Pumpkin Hallow Ring (F)	Pumpkin Hollow Webbed Gloves (F)	1	same KMS name as Global item 11620092
+11620169	11610005	Milky Way Starlight Gloves (M) | Milky Way Shine Gloves (M)	Milky Way Shine Gloves (M)	1	same KMS name as Global item 11610005
+11620170	11610006	Milky Way Starlight Gloves (F) | Milky Way Shine Gloves (F)	Milky Way Shine Gloves (F)	1	same KMS name as Global item 11610006
+11620313	11620309	Hand-knitted Warm Gloves (M) | Cozy Knitted Gloves (M)	Hand-knitted Warm Gloves (M)	1	same KMS name as Global item 11620309
+11620314	11620310	Hand-knitted Warm Gloves (F) | Cozy Knitted Gloves (F)	Hand-knitted Warm Gloves (F)	1	same KMS name as Global item 11620310
+11620451	11620059	Street Rapper Earrings (M) | Street Rapper Gloves (M)	Street Rapper Gloves (M)	1	same KMS name as Global item 11620059
+11620452	11620060	Street Rapper Earrings (F) | Street Rapper Gloves (F)	Street Rapper Gloves (F)	1	same KMS name as Global item 11620060
+11620506	11600114	Thick Knitted Gloves (M) | Knitted Mittens (M)	Knitted Mittens (M)	1	same KMS name as Global item 11600114
+11620507	11600115	Thick Knitted Gloves (F) | Knitted Mittens (F)	Knitted Mittens (F)	1	same KMS name as Global item 11600115
+11620548	11600114	Thick Knitted Gloves (M) | Knitted Mittens (M)	Knitted Mittens (M)	1	same KMS name as Global item 11600114
+11620549	11600115	Thick Knitted Gloves (F) | Knitted Mittens (F)	Knitted Mittens (F)	1	same KMS name as Global item 11600115
+11620676	11620059	Street Rapper Earrings (M) | Street Rapper Gloves (M)	Street Rapper Gloves (M)	1	same KMS name as Global item 11620059
+11620677	11620060	Street Rapper Earrings (F) | Street Rapper Gloves (F)	Street Rapper Gloves (F)	1	same KMS name as Global item 11620060
+11620678	11620043	Heart Bunny Rings (M) | Heart Bunny Point Ring (M)	Heart Bunny Rings (M)	1	same KMS name as Global item 11620043
+11620679	11620044	Heart Bunny Rings (F) | Heart Bunny Point Ring (F)	Heart Bunny Rings (F)	1	same KMS name as Global item 11620044
+11620688	11610005	Milky Way Starlight Gloves (M) | Milky Way Shine Gloves (M)	Milky Way Shine Gloves (M)	1	same KMS name as Global item 11610005
+11620689	11610006	Milky Way Starlight Gloves (F) | Milky Way Shine Gloves (F)	Milky Way Shine Gloves (F)	1	same KMS name as Global item 11610006
+11620718	11620059	Street Rapper Earrings (M) | Street Rapper Gloves (M)	Street Rapper Gloves (M)	1	same KMS name as Global item 11620059
+11620719	11620060	Street Rapper Earrings (F) | Street Rapper Gloves (F)	Street Rapper Gloves (F)	1	same KMS name as Global item 11620060
+11620720	11620043	Heart Bunny Rings (M) | Heart Bunny Point Ring (M)	Heart Bunny Rings (M)	1	same KMS name as Global item 11620043
+11620721	11620044	Heart Bunny Rings (F) | Heart Bunny Point Ring (F)	Heart Bunny Rings (F)	1	same KMS name as Global item 11620044
+11700221	11700219	Striped Socks & Sneakers (M)	Camo Socks & Sneakers (M)	1	same KMS name as Global item 11700219
+11700222	11700220	Striped Socks & Sneakers (F)	Camo Socks & Sneakers (F)	1	same KMS name as Global item 11700220
+11700237	11700227	Spotted Socks & Hiking Boots (M)	Star Socks & Sneakers (M)	1	same KMS name as Global item 11700227
+11700238	11700228	Spotted Socks & Hiking Boots (F)	Star Socks & Sneakers (F)	1	same KMS name as Global item 11700228
+11700241	11700227	Modern Checkered Socks & Shoes (M)	Star Socks & Sneakers (M)	1	same KMS name as Global item 11700227
+11700242	11700228	Modern Checkered Socks & Shoes (F)	Star Socks & Sneakers (F)	1	same KMS name as Global item 11700228
+11700381	11700318	Dragon Scale Boots	Flight Boots (M)	1	same KMS name as Global item 11700318
+11700382	11700319	Angelic Tella Boots	Flight Boots (F)	1	same KMS name as Global item 11700319
+11720150	11700835	Plump Bunny Sneakers (Mf) | Plump Bunny Sneakers (M)	Plump Bunny Sneakers (M)	1	same KMS name as Global item 11700835
+11720180	11720091	Pumpkin Hollow Ghost Shoes (M) | Pumpkin Hallow Ghost Shoes (M)	Pumpkin Hollow Ghost Shoes (M)	1	same KMS name as Global item 11720091
+11720181	11720092	Pumpkin Hollow Ghost Shoes (F) | Pumpkin Hallow Ghost Shoes (F)	Pumpkin Hollow Ghost Shoes (F)	1	same KMS name as Global item 11720092
+11720182	11710009	Milky Way Starlight Boots (M) | Milky Way Shine Boots (M)	Milky Way Shine Boots (M)	1	same KMS name as Global item 11710009
+11720183	11710010	Milky Way Starlight Boots (F) | Milky Way Shine Boots (F)	Milky Way Shine Boots (F)	1	same KMS name as Global item 11710010
+11720313	11720309	Cozy Fleece Boots (M) | Cozy Wool Boots (M)	Cozy Fleece Boots (M)	1	same KMS name as Global item 11720309
+11720314	11720310	Cozy Fleece Boots (F) | Cozy Wool Boots (F)	Cozy Fleece Boots (F)	1	same KMS name as Global item 11720310
+11720343	11700596	Magnus's Swimming Sandal (M) | Magnus's Swimming Sandals (M)	Magnus's Swimming Sandals (M)	1	same KMS name as Global item 11700596
+11720690	11710009	Milky Way Starlight Boots (M) | Milky Way Shine Boots (M)	Milky Way Shine Boots (M)	1	same KMS name as Global item 11710009
+11720691	11710010	Milky Way Starlight Boots (F) | Milky Way Shine Boots (F)	Milky Way Shine Boots (F)	1	same KMS name as Global item 11710010
+11820113	11820063	Blue Sea Friendly Seagull (M) | Blue Sea Seagull Friend (M)	Blue Sea Friendly Seagull (M)	1	same KMS name as Global item 11820063
+11820114	11820064	Blue Sea Friendly Seagull (F) | Blue Sea Seagull Friend (F)	Blue Sea Friendly Seagull (F)	1	same KMS name as Global item 11820064
+11820123	11820091	Pumpkin Hollow Kitty Candle (M) | Pumpkin Hallow Kitty Candle (M)	Pumpkin Hollow Kitty Candle (M)	1	same KMS name as Global item 11820091
+11820137	11850146	Milky Way Starlight Wings (M) | Milky Way Shine Wings (M)	Milky Way Shine Wings (M)	1	same KMS name as Global item 11850146
+11820451	11820059	Street Rapper Spray Can (M) | Street Rapper Spray (M)	Street Rapper Spray Can (M)	1	same KMS name as Global item 11820059
+11820452	11820060	Street Rapper Spray Can (F) | Street Rapper Spray (F)	Street Rapper Spray Can (F)	1	same KMS name as Global item 11820060
+11820453	11820063	Blue Sea Friendly Seagull (M) | Blue Sea Seagull Friend (M)	Blue Sea Friendly Seagull (M)	1	same KMS name as Global item 11820063
+11820454	11820064	Blue Sea Friendly Seagull (F) | Blue Sea Seagull Friend (F)	Blue Sea Friendly Seagull (F)	1	same KMS name as Global item 11820064
+11820521	11850104	Floating Pink Bean Balloon | Floaty Pink Bean Balloon	Floaty Pink Bean Balloon	1	same KMS name as Global item 11850104
+11820648	11820067	Sandy Stroll Basket (M) | Crunchy Sand Basket (M)	Sandy Sand Basket (M)	1	same KMS name as Global item 11820067
+11820649	11820068	Sandy Stroll Basket (F) | Crunchy Sand Basket (F)	Sandy Sand Basket (F)	1	same KMS name as Global item 11820068
+11820666	11820059	Street Rapper Spray Can (M) | Street Rapper Spray (M)	Street Rapper Spray Can (M)	1	same KMS name as Global item 11820059
+11820667	11820060	Street Rapper Spray Can (F) | Street Rapper Spray (F)	Street Rapper Spray Can (F)	1	same KMS name as Global item 11820060
+11820674	11850146	Milky Way Starlight Wings (M) | Milky Way Shine Wings (M)	Milky Way Shine Wings (M)	1	same KMS name as Global item 11850146
+11820690	11820059	Street Rapper Spray Can (M) | Street Rapper Spray (M)	Street Rapper Spray Can (M)	1	same KMS name as Global item 11820059
+11820691	11820060	Street Rapper Spray Can (F) | Street Rapper Spray (F)	Street Rapper Spray Can (F)	1	same KMS name as Global item 11820060
+11850016	11850007	Desert Rucksack	Raccoon Tail	1	same KMS name as Global item 11850007
+11850035	11850019	White Tiger Tail	Skull Coffin	1	same KMS name as Global item 11850019
+11850036	11850017	Tiger Tail	Squirrel Tail	1	same KMS name as Global item 11850017
+11850044	-	Ifrit Fairy Wings	Yellow Kitty Tail (M)	1	look-name: the old name is Global's string for this id and the Taiwan client has no English name for it; the Global name of its look preset 11850013, with its own gender mark
+11850045	-	Platina Fairy Wings	Yellow Kitty Tail (F)	1	look-name: the old name is Global's string for this id and the Taiwan client has no English name for it; the Global name of its look preset 11850013, with its own gender mark
+11850112	11850071	[Temp] Lv. 50+ Armor Set A Cape	Merry Saintly Fairy Wings (M)	1	same KMS name as Global item 11850071
+12200276	12200224	Ranger's Dependable Suit	Flight Suit (M)	1	same KMS name as Global item 12200224
+12200474	12200333	Eternal Skeleton Mail	Merry Santa Coat (M)	1	same KMS name as Global item 12200333
+12200475	12200334	Eternal Bloody Dusk Mail	Merry Santa Dress (F)	1	same KMS name as Global item 12200334
+12200476	12200423	Eternal Nimble Beat Overalls	Bunbun Occult Bunny Suit	1	same KMS name as Global item 12200423
+12200477	12200421	Eternal Phantom Overalls	White Rabbit Suit	1	same KMS name as Global item 12200421
+12200478	12200422	Eternal Watchman Coat	Bunbun Spotted Bunny Suit	1	same KMS name as Global item 12200422
+12200479	12200407	Eternal Voidborn Coat	Loose Sweater (M)	1	same KMS name as Global item 12200407
+12200480	12200408	Battleworn Eternal Coat	Loose Sweater (F)	1	same KMS name as Global item 12200408
+12200481	12200355	Spellbound Eternal Suit	Yellow Chick Suit	1	same KMS name as Global item 12200355
+12200687	12200495	Cheery Holiday Homewear (M)	Celestial Fairy Dress (F)	1	same KMS name as Global item 12200495
+12220174	12220091	Pumpkin Hollow Suit (M) | Pumpkin Hallow Suit (M)	Pumpkin Hollow Suit (M)	1	same KMS name as Global item 12220091
+12220175	12220092	Pumpkin Hollow Dress (F) | Pumpkin Hallow Dress (F)	Pumpkin Hollow Dress (F)	1	same KMS name as Global item 12220092
+12220176	12200519	Milky Way Starlight Suit (M) | Milky Way Shine Suit (M)	Milky Way Shine Suit (M)	1	same KMS name as Global item 12200519
+12220177	12200520	Milky Way Starlight Dress (F) | Milky Way Shine Dress (F)	Milky Way Shine Dress (F)	1	same KMS name as Global item 12200520
+12220325	12220309	Cozy Hand-Knit Knitwear (M) | Cozy Hand-knit Look (M)	Cozy Hand-Knit Knitwear (M)	1	same KMS name as Global item 12220309
+12220326	12220310	Cozy Hand-Knit Knitwear (F) | Cozy Hand-knit Look (F)	Cozy Hand-Knit Knitwear (F)	1	same KMS name as Global item 12220310
+12220451	12220059	Street Rapper Outfit (M) | Street Rapper Suit (M)	Street Rapper Outfit (M)	1	same KMS name as Global item 12220059
+12220452	12220060	Street Rapper Outfit (F) | Street Rapper Suit (F)	Street Rapper Outfit (F)	1	same KMS name as Global item 12220060
+12220485	12200493	Ornate Angel Dress (F) | Oriental Angel Dress (F)	Ornate Angel Dress (F)	1	same KMS name as Global item 12200493
+12220676	12220059	Street Rapper Outfit (M) | Street Rapper Suit (M)	Street Rapper Outfit (M)	1	same KMS name as Global item 12220059
+12220677	12220060	Street Rapper Outfit (F) | Street Rapper Suit (F)	Street Rapper Outfit (F)	1	same KMS name as Global item 12220060
+12220686	12200519	Milky Way Starlight Suit (M) | Milky Way Shine Suit (M)	Milky Way Shine Suit (M)	1	same KMS name as Global item 12200519
+12220687	12200520	Milky Way Starlight Dress (F) | Milky Way Shine Dress (F)	Milky Way Shine Dress (F)	1	same KMS name as Global item 12200520
+12220716	12220059	Street Rapper Outfit (M) | Street Rapper Suit (M)	Street Rapper Outfit (M)	1	same KMS name as Global item 12220059
+12220717	12220060	Street Rapper Outfit (F) | Street Rapper Suit (F)	Street Rapper Outfit (F)	1	same KMS name as Global item 12220060
+13100146	13100131	Buckle Strap Dagger	Pumpkin Stick (Dagger)	1	same KMS name as Global item 13100131
+13100157	13100145	Bright Emerald Dagger	Holy Seraphim Dagger	1	same KMS name as Global item 13100145
+13100201	13100200	Dragon Dagger	Devil's Cross Dagger	1	same KMS name as Global item 13100200
+13100202	13100200	Steampunk Dagger	Devil's Cross Dagger	1	same KMS name as Global item 13100200
+13100292	13100291	Dark Tutor Dagger	Dark Neon Dagger	1	same KMS name as Global item 13100291
+13100301	13100288	Lodestar Dagger	Stone Butterfly Dagger	1	same KMS name as Global item 13100288
+13100302	13100288	Ocean Light Dagger	Stone Butterfly Dagger	1	same KMS name as Global item 13100288
+13100305	-	Red Draconic Dagger | Ocean Light Dagger	Ocean Light Dagger	2	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+13100306	13100286	Elpi Dagger	Maple Alliance Luminary Dagger	1	same KMS name as Global item 13100286
+13100323	13100317	Dark Fantasy Dagger	Unidentified Stabbing Dagger	1	same KMS name as Global item 13100317
+13120181	13100181	Ifrit Vale Sword (Longsword) | Ifrit Dirk (Dagger)	Ifrit Dirk (Dagger)	1	same KMS name as Global item 13100181
+13200138	13200127	Papulatus's Arming Sword	Halloween Candelabra (Longsword)	1	same KMS name as Global item 13200127
+13200141	13200140	Dragon Scale Longsword	Holy Seraphim Longsword	1	same KMS name as Global item 13200140
+13200196	13200195	Dragon Longsword	Bloody Knight Sword (Longsword)	1	same KMS name as Global item 13200195
+13200197	13200195	Steampunk Longsword	Bloody Knight Sword (Longsword)	1	same KMS name as Global item 13200195
+13200287	13200286	Dark Tutor Longsword	Dark Neon Longsword	1	same KMS name as Global item 13200286
+13200296	13200283	Lodestar Longsword	Stone Butterfly Longsword	1	same KMS name as Global item 13200283
+13200300	13200283	Red Draconic Longsword	Stone Butterfly Longsword	1	same KMS name as Global item 13200283
+13200301	13200281	Elpi Longsword	Maple Alliance Luminary Longsword	1	same KMS name as Global item 13200281
+13200318	13200312	Dark Fantasy Longsword	Unidentified Slashing Longsword	1	same KMS name as Global item 13200312
+13220177	13200177	Ifrit Vale Longsword | Ifrit Vale Sword (Longsword)	Ifrit Vale Sword (Longsword)	1	same KMS name as Global item 13200177
+13300141	13300125	Angelic Tella Scepter	Pumpkin Stick (Scepter)	1	same KMS name as Global item 13300125
+13300152	13300140	Bright Emerald Scepter	Holy Seraphim Scepter	1	same KMS name as Global item 13300140
+13300195	13300194	Dragon Scepter	Devil's Cross Scepter	1	same KMS name as Global item 13300194
+13300196	13300194	Steampunk Scepter	Devil's Cross Scepter	1	same KMS name as Global item 13300194
+13300286	13300285	Dark Tutor Scepter	Dark Neon Scepter	1	same KMS name as Global item 13300285
+13300295	13300282	Lodestar Scepter	Stone Butterfly Scepter	1	same KMS name as Global item 13300282
+13300299	13300282	Red Draconic Scepter	Stone Butterfly Scepter	1	same KMS name as Global item 13300282
+13300300	13300280	Elpi Scepter	Maple Alliance Luminary Scepter	1	same KMS name as Global item 13300280
+13300317	13300312	Dark Fantasy Scepter	Unidentified Blessing Scepter	1	same KMS name as Global item 13300312
+13400139	13400125	Buckle Strap Throwing Star	Halloween Bat (Thrown Weapon)	1	same KMS name as Global item 13400125
+13400150	13400138	Bright Emerald Throwing Star	Holy Seraphim Star	1	same KMS name as Global item 13400138
+13400193	13400192	Piratical Scepter	Devil Wing Star (Thrown Weapon)	1	same KMS name as Global item 13400192
+13400194	13400192	Dragon Throwing Star	Devil Wing Star (Thrown Weapon)	1	same KMS name as Global item 13400192
+13400285	13400284	Dark Tutor Thrown Weapon	Dark Neon Thrown Weapon	1	same KMS name as Global item 13400284
+13400294	13400281	Lodestar Thrown Weapon	Stone Butterfly Thrown Weapon	1	same KMS name as Global item 13400281
+13400295	-	Ocean Light Thrown Weapon | Ocean Light Throwing Star	Ocean Light Throwing Star	2	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+13400298	13400281	Red Draconic Thrown Weapon	Stone Butterfly Thrown Weapon	1	same KMS name as Global item 13400281
+13400299	13400279	Elpi Thrown Weapon	Maple Alliance Luminary Thrown Weapon	1	same KMS name as Global item 13400279
+13400316	13400311	Dark Fantasy Thrown Weapon	Unidentified Flying Weapon	1	same KMS name as Global item 13400311
+13420174	13400174	Ifrit Crystal Throwing Stars | Ifrit Crystal Star (Thrown Weapon)	Ifrit Crystal Star (Thrown Weapon)	1	same KMS name as Global item 13400174
+13420219	13400219	Pink Bean Throwing Leaves | Pink Bean Leaf (Thrown Weapon)	Pink Bean Leaf (Thrown Weapon)	1	same KMS name as Global item 13400219
+14000121	14000107	Angelic Tella Heresy	Pumpkin Cat (Codex)	1	same KMS name as Global item 14000107
+14000129	14000120	Bright Emerald Codex	Holy Seraphim Scripture	1	same KMS name as Global item 14000120
+14000160	14000159	Dragon Codex	Devil's Blood Hourglass (Codex)	1	same KMS name as Global item 14000159
+14000161	14000159	Steampunk Codex	Devil's Blood Hourglass (Codex)	1	same KMS name as Global item 14000159
+14000227	14000216	Holy Panic Codex	Lumiknights Honour Codex	1	same KMS name as Global item 14000216
+14000248	14000247	Dark Tutor Codex	Dark Neon Codex	1	same KMS name as Global item 14000247
+14000257	14000244	Lodestar Codex	Stone Butterfly Codex	1	same KMS name as Global item 14000244
+14000261	14000244	Red Draconic Spellbook	Stone Butterfly Codex	1	same KMS name as Global item 14000244
+14000262	14000242	Elpi Spellbook	Maple Alliance Luminary Codex	1	same KMS name as Global item 14000242
+14000279	14000274	Dark Fantasy Codex	Unidentified Magic Codex	1	same KMS name as Global item 14000274
+14100129	14100115	Dragon Scale Shield	Blood Shadow Coffin (Shield)	1	same KMS name as Global item 14100115
+14100138	14100128	Bright Emerald Shield	Holy Seraphim Shield	1	same KMS name as Global item 14100128
+14100169	14100168	Dragon Shield	Bloody Knight Shield	1	same KMS name as Global item 14100168
+14100170	14100168	Steampunk Shield	Bloody Knight Shield	1	same KMS name as Global item 14100168
+14100236	14100225	Barbaric Panic Shield	Lumiknights Honour Shield	1	same KMS name as Global item 14100225
+14100257	14100256	Dark Tutor Shield	Dark Neon Shield	1	same KMS name as Global item 14100256
+14100266	14100253	Lodestar Shield	Stone Butterfly Shield	1	same KMS name as Global item 14100253
+14100270	14100253	Red Draconic Shield	Stone Butterfly Shield	1	same KMS name as Global item 14100253
+14100271	14100251	Elpi Shield	Maple Alliance Luminary Shield	1	same KMS name as Global item 14100251
+14100288	14100282	Dark Fantasy Shield	Unidentified Blocking Shield	1	same KMS name as Global item 14100282
+15000143	15000132	Papulatus's Greatsword	Magical Pumpkin Broom (Greatsword)	1	same KMS name as Global item 15000132
+15000146	15000145	Dragon Scale Greatsword	Holy Seraphim Greatsword	1	same KMS name as Global item 15000145
+15000200	15000199	Dragon Greatsword	Bloody Cross Labrys (Greatsword)	1	same KMS name as Global item 15000199
+15000201	15000199	Steampunk Greatsword	Bloody Cross Labrys (Greatsword)	1	same KMS name as Global item 15000199
+15000291	15000290	Dark Tutor Greatsword	Dark Neon Greatsword	1	same KMS name as Global item 15000290
+15000300	15000287	Lodestar Greatsword	Stone Butterfly Greatsword	1	same KMS name as Global item 15000287
+15000304	15000287	Red Draconic Greatsword	Stone Butterfly Greatsword	1	same KMS name as Global item 15000287
+15000305	15000285	Elpi Greatsword	Maple Alliance Luminary Greatsword	1	same KMS name as Global item 15000285
+15000322	15000317	Dark Fantasy Greatsword	Unidentified Chopping Greatsword	1	same KMS name as Global item 15000317
+15020181	15000181	Ifrit Ferocious Greatsword | Ifrit Ferocious Sword (Greatsword)	Ifrit Ferocious Sword (Greatsword)	1	same KMS name as Global item 15000181
+15100139	15100125	Padlock Cuero Bow	Pumpkin Bow	1	same KMS name as Global item 15100125
+15100149	15100138	Bright Emerald Bow	Holy Seraphim Bow	1	same KMS name as Global item 15100138
+15100192	15100191	Dragon Bow	Devil Wing Bow	1	same KMS name as Global item 15100191
+15100193	15100191	Steampunk Bow	Devil Wing Bow	1	same KMS name as Global item 15100191
+15100283	15100282	Dark Tutor Bow	Dark Neon Bow	1	same KMS name as Global item 15100282
+15100292	15100279	Lodestar Bow	Stone Butterfly Bow	1	same KMS name as Global item 15100279
+15100296	15100279	Red Draconic Bow	Stone Butterfly Bow	1	same KMS name as Global item 15100279
+15100297	15100277	Elpi Bow	Maple Alliance Luminary Bow	1	same KMS name as Global item 15100277
+15100314	15100308	Dark Fantasy Bow	Unidentified Twanging Bow	1	same KMS name as Global item 15100308
+15200145	15200130	Angelic Tella Staff	Magical Pumpkin Broom (Staff)	1	same KMS name as Global item 15200130
+15200156	15200144	Bright Emerald Staff	Holy Seraphim Staff	1	same KMS name as Global item 15200144
+15200199	15200198	Dragon Staff	Bloody Bead Staff (Staff)	1	same KMS name as Global item 15200198
+15200200	15200198	Steampunk Staff	Bloody Bead Staff (Staff)	1	same KMS name as Global item 15200198
+15200290	15200289	Dark Tutor Staff	Dark Neon Staff	1	same KMS name as Global item 15200289
+15200299	15200286	Lodestar Staff	Stone Butterfly Staff	1	same KMS name as Global item 15200286
+15200303	15200286	Red Draconic Staff	Stone Butterfly Staff	1	same KMS name as Global item 15200286
+15200304	15200284	Elpi Staff	Maple Alliance Luminary Staff	1	same KMS name as Global item 15200284
+15200321	15200316	Dark Fantasy Staff	Unidentified Casting Staff	1	same KMS name as Global item 15200316
+15300139	15300124	Padlock Cuero Cannon	Starry Halloween Cannon	1	same KMS name as Global item 15300124
+15300150	15300138	Bright Emerald Cannon	Holy Seraphim Cannon	1	same KMS name as Global item 15300138
+15300195	15300194	Dragon Cannon	Devil Wing Harpoon (Cannon)	1	same KMS name as Global item 15300194
+15300196	15300194	Steampunk Cannon	Devil Wing Harpoon (Cannon)	1	same KMS name as Global item 15300194
+15300286	15300285	Dark Tutor Cannon	Dark Neon Cannon	1	same KMS name as Global item 15300285
+15300295	15300282	Lodestar Cannon	Stone Butterfly Cannon	1	same KMS name as Global item 15300282
+15300299	15300282	Red Draconic Cannon	Stone Butterfly Cannon	1	same KMS name as Global item 15300282
+15300300	15300280	Elpi Cannon	Maple Alliance Luminary Cannon	1	same KMS name as Global item 15300280
+15300317	15300312	Dark Fantasy Cannon	Unidentified Blasting Cannon	1	same KMS name as Global item 15300312
+15400110	15400102	Dragon Blade	Holy Seraphim Blade	1	same KMS name as Global item 15400102
+15400171	15400170	Dark Tutor Blade	Stone Butterfly Blade	1	same KMS name as Global item 15400170
+15400180	15400168	Lodestar Blade	Maple Alliance Luminary Blade	1	same KMS name as Global item 15400168
+15400257	15400256	Dark Steel Blade	Devil's Cross Sword (Blade)	1	same KMS name as Global item 15400256
+15400262	15400256	Snow Queen Blade	Devil's Cross Sword (Blade)	1	same KMS name as Global item 15400256
+15400285	15400283	Red Draconic Blade	Dark Neon Blade	1	same KMS name as Global item 15400283
+15400286	15400271	Elpi Blade	Cherry Blossom Blade (Blade)	1	same KMS name as Global item 15400271
+15500208	15500207	Dark Tutor Knuckles | Stone Butterfly Knuckles	Stone Butterfly Knuckles	1	same KMS name as Global item 15500207
+15500217	15500205	Lodestar Knuckles	Maple Alliance Luminary Knuckles	1	same KMS name as Global item 15500205
+15500525	15500523	Red Draconic Knuckles	Dark Neon Knuckles	1	same KMS name as Global item 15500523
+15500526	15500512	Elpi Knuckles | Cherry Blossom Knuckles	Cherry Blossom Knuckles	1	same KMS name as Global item 15500512
+15600197	15600196	Dark Tutor Orb | Stone Butterfly Orb	Stone Butterfly Orb	1	same KMS name as Global item 15600196
+15600201	15600194	Jungle Orb | Maple Alliance Luminary Orb	Maple Alliance Luminary Orb	1	same KMS name as Global item 15600194
+15600526	15600524	Red Draconic Orb	Dark Neon Orb	1	same KMS name as Global item 15600524
+15600527	15600512	Elpi Orb | Cherry Blossom Orb	Cherry Blossom Orb	1	same KMS name as Global item 15600512
+20000284	20000265	Earthworm Bait | Skinny Worm Lure	Skinny Worm Lure	3	same KMS name as Global item 20000265
+20000285	20000276	Magnet Bait | Magnetic Lure	Magnetic Lure	3	same KMS name as Global item 20000276
+20000325	20000307	Beginner's Golden Bait (1 Hour) | Beginner's Golden Lure (1 Hour)	Beginner's Golden Lure (1 Hour)	3	same KMS name as Global item 20000307
+20000964	20000949	Fancy Ice Cream | Rainbow Magnetic Lure	Rainbow Magnetic Lure	3	same KMS name as Global item 20000949
+20000969	-	'Letter Collector' Title	Beginner Cherry Blossom Box Key	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20000971	-	'Hot' Title	Intermediate Cherry Blossom Box Key	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20210017	20210015	Walk Together Buddy Emote	Warm Holiday Buddy Emote	3	same KMS name as Global item 20210015
+20210035	20210024	TV Buddy Emote	Unicorn Carousel Buddy Emote	3	same KMS name as Global item 20210024
+20300043	20300035	100-Rotors-Walkie-talkie Pack	Hairstyle Voucher	3	same KMS name as Global item 20300035
+20300291	-	Outfit Inventory Expansion (6 Slot)	Orange Mushroom Power Up (10) Capsule	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20300302	-	GM Day Souvenir Costume 1	Attack Power Enhancement Potion (5)	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20300303	-	GM Day Souvenir Costume 2	Adventurer Power-Up Potion Box	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20300647	20300546	Tier 3 Fantastic Gemstone Choice Box	Template Voucher	3	same KMS name as Global item 20300546
+20301281	-	Reverse Raid S++ Rank Reward Box	5th Anniversary Celebration Box	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20301388	-	Extreme Armor Selection Box	Retro Interior Selection Box	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+20302202	20302192	Maple Alliance Weapon Box | Christmas Tree Fireworks Package + Red Merets	Maple Alliance Weapon Box	3	same KMS name as Global item 20302192
+20303278	20300478	Weekly Dungeon Ticket | Bonus Dungeon Reward Voucher	Weekly Dungeon Ticket	4	same KMS name as Global item 20300478
+20801014	20800006	Duckling Super Chat Theme | Ducky Super Chat Theme	Ducky Super Chat Theme	3	same KMS name as Global item 20800006
+30000597	30000411	Halloween Emblem	Nexon Cash Coupon: USD 100	3	same KMS name as Global item 30000411
+30000857	30000411	2nd Anniversary Coin	Nexon Cash Coupon: USD 100	3	same KMS name as Global item 30000411
+30000858	-	2nd Anniversary Commemorative Mark	Summer Maple Coin	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+34000072	34000063	Arlano Classic Marimba	Deep Dark Cello	3	same KMS name as Global item 34000063
+40400055	40400023	Rocket Arm Launch	Pink Bean Car	3	same KMS name as Global item 40400023
+40400061	40400056	Empty Column	Rainbow Cloud	3	same KMS name as Global item 40400056
+40400078	40400044	Romantic Rainbow Melody	Surfboard	3	same KMS name as Global item 40400044
+40400092	40400089	Cute Lamb Balloon	Cherry Pink Plum Fan	3	same KMS name as Global item 40400089
+40400093	40400073	Cute Lamb Balloon | Flying Sunfish	Flying Sunfish	3	same KMS name as Global item 40400073
+40400108	40400030	Elegant Classical Music	Lunar Revolution	3	same KMS name as Global item 40400030
+40400115	40400099	Shining Unicorn | Twilicorn	Twilicorn	3	same KMS name as Global item 40400099
+40400132	40400109	Resonant Violin	Singing Frogs	3	same KMS name as Global item 40400109
+40400133	40400095	Flying Pink Sunfish | Full Moon Hot-Air Balloon	Flying Pink Sunfish	3	same KMS name as Global item 40400095
+40400134	40400072	Wondrous Aqua Manta | Potato Corn Dog	Wondrous Aqua Manta	3	same KMS name as Global item 40400072
+40400142	40400030	Lunar Revolution | Glowing Full Moon	Lunar Revolution	3	same KMS name as Global item 40400030
+50600162	50600118	Elephant Car	Blake Body Pillow	3	same KMS name as Global item 50600118
+50600196	50600167	Soft Step Reindeer	Dancing Lion	3	same KMS name as Global item 50600167
+50600211	50600205	Dual Mount	Classic Vintage Coupe	3	same KMS name as Global item 50600205
+50600213	50600201	Flying Bubble Bathtub	Mystical Rabbit	3	same KMS name as Global item 50600201
+50600234	50600218	Full Moon Balloon	Luxury Velvet Carriage	3	same KMS name as Global item 50600218
+50600249	50600241	Sullen Cat	Perion Mammoth	3	same KMS name as Global item 50600241
+50600271	50600253	Furry Pink Puppy	Snowflake Dog Sled	3	same KMS name as Global item 50600253
+50600274	50600240	Yellow Camper	Round Zorb	3	same KMS name as Global item 50600240
+50600275	50600256	Yellow Camper | Sweet Ice Cream Truck	Sweet Ice Cream Truck	3	same KMS name as Global item 50600256
+50600276	-	Fancy Treasure Chest	Chubby Cat	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+50600277	50600233	Fancy Treasure Chest | Milky Way Fox	Milky Way Fox	3	same KMS name as Global item 50600233
+50600282	50600280	Cushion Template	Alpaca in a Fur Hat	3	same KMS name as Global item 50600280
+50600333	50600328	Halloween Candy Basket	Zooming Tandem Bicycle	3	same KMS name as Global item 50600328
+50600334	50600330	Thunderstorm Tiger	Adorable Shopping Cart	3	same KMS name as Global item 50600330
+50600336	50600280	Alpaca in a Fur Hat | Sure to Be Happy	Alpaca in a Fur Hat	3	same KMS name as Global item 50600280
+50620016	50600246	Shiny Reindeer Carriage | Resplendent Reindeer Carriage	Resplendent Reindeer Carriage	3	same KMS name as Global item 50600246
+59200183	-	Dark Blossom Chest | (PC Cafe) Wanderer Martial Arts Package	(PC Cafe) Wanderer Martial Arts Package	3	server-name: the old name is Global's string for this id and the Taiwan client has no English name for it; its one other English server name
+59200286	-	Shining Summer Outfit Package (M)	Growth Dash Package	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+59200392	59200314	Butterly Dream Outfit Package | Dreaming Butterfly Outfit Package	Dreaming Butterfly Outfit Package	3	same KMS name as Global item 59200314
+63100503	63100500	Lapis Capsule | Lapis Master Snare	Lapis Master Snare	3	same KMS name as Global item 63100500
+70200050	70200012	Sparkling Chat Bubble (30 Days)	Cherry Blossom Chat Bubble	3	same KMS name as Global item 70200012
+70200093	70200089	Willow Chat Bubble	Cloudtop Fantasy Chat Bubble	3	same KMS name as Global item 70200089
+70200165	70200141	Merry-Go-Round Chat Bubble | Carousel Chat Bubble	Carousel Chat Bubble	3	same KMS name as Global item 70200141
+70210018	70200160	Autumn Camping Chat Bubble | Autumn Camping Trip Chat Bubble	Autumn Camping Trip Chat Bubble	3	same KMS name as Global item 70200160
+70210019	70200105	Happy Christmas Chat Bubble | Cheery Holiday Chat Bubble	Cheery Holiday Chat Bubble	3	same KMS name as Global item 70200105
+70220001	70200135	Easter Rabbit Eggs Chat Bubble | Bunny-n'-Egg Chat Bubble	Bunny-n'-Egg Chat Bubble	3	same KMS name as Global item 70200135
+70300078	70300001	Willow Name Tag	Cherry Blossom Name Tag	3	same KMS name as Global item 70300001
+70300082	70300072	Cloudtop Fantasy Name Tag | Golden Mushking Name Tag | Mushking Gold Name Tag	Cloudtop Fantasy Name Tag	3	same KMS name as Global item 70300072
+70300083	70300018	Cutie Pink Bean Name Tag | Silver Mushking Name Tag | Mushking Silver Name Tag	Cutie Pink Bean Name Tag	3	same KMS name as Global item 70300018
+70300084	70300024	Cloudy Night Name Tag | Bronze Mushking Name Tag | Mushking Bronze Name Tag	Cloudy Night Name Tag	3	same KMS name as Global item 70300024
+70300099	70300091	Dragon King Ship Name Tag	Sweet Popcorn Name Tag	3	same KMS name as Global item 70300091
+70300180	70300150	Merry-Go-Round Name Tag | Carousel Name Tag	Carousel Name Tag	3	same KMS name as Global item 70300150
+70400056	70400042	MS2 Day 2222 Damage Skin  | MapleStory 2 Day 2222 Damage Skin	MapleStory 2 Day 2222 Damage Skin 	3	same KMS name as Global item 70400042
+70500028	70500006	Carrot Carrot Cake Tombstone | Carrot Cake Tombstone	Carrot Cake Tombstone	3	same KMS name as Global item 70500006
+70500029	70500013	Pinata Tombstone | Piñata Tombstone	Piñata Tombstone	3	same KMS name as Global item 70500013
+70600016	70600013	Polar Bear Glacier Swim Tube	Seagull Raft Swim Tube	3	same KMS name as Global item 70600013
+70600024	70600005	Red Sponge Swim Tube	Panda Swim Tube	3	same KMS name as Global item 70600005
+70600025	70600002	Blue Sponge Swim Tube	Ducky Boat Swim Tube	3	same KMS name as Global item 70600002
+70600026	-	Blue Lake Monster Swim Tube	Prismatic Dragon Boat Swim Tube	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+70700005	70700002	Silver Fairy Fishing Badge	Spectral Kitty Fishing Badge	3	same KMS name as Global item 70700002
+70700012	70700006	Madria Fishing Badge	Fairy Fishing Badge	3	same KMS name as Global item 70700006
+70800013	70800008	Sparkling Christmas Buddy Badge | Sparkling Holiday Buddy Badge	Sparkling Holiday Buddy Badge	3	same KMS name as Global item 70800008
+70900004	-	Hoppity Rainbow Effect Badge	Rainbow Rabbit Effect Badge	3	taiwan-name: the old name is Global's string for this id; the Taiwan English client's name
+70900010	70900005	Golden Fallen Leaves Effect Badge | Golden Leaf Effect Badge	Golden Leaf Effect Badge	3	same KMS name as Global item 70900005

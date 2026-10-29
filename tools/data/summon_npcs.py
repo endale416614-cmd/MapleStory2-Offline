@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Summon lists of NPCs (NB-09): aiInfo/@summonNpcIDs of every npc XML, for the server's summon-npcs.json (a summon node's npcId N is the Nth id, 1-based). Input: a folder of npc XMLs (M2dPack extract <Xml.m2d> npc/ <dir>)."""
+"""Summon lists of NPCs (NB-09): aiInfo/@summonNpcIDs of every npc XML, for the server's summon-npcs.json (a summon node's npcId N is the Nth id, 1-based). Input: a folder of npc XMLs (M2dPack extract <Xml.m2d> npc/ <dir>).
+Also the function cubes' spawners and use buffs, which the ingest drops (HS-02, SV-01). Input: a folder of object XMLs (M2dPack extract <Xml.m2d> object/ <dir>)."""
 
 import os
 import xml.etree.ElementTree as ET
@@ -163,6 +164,27 @@ def collect_interact_skills(npc_dir):
     return result
 
 
+def collect_cubes(object_dir):
+    """For every <id>.xml in object_dir (the client's function cubes), the FunctionCube's spawner npcID when its ControlType is
+    SpawnNPC (HS-02: an assistant's cube spawns her) and its firstAdditionalEffect as [id, level] (SV-01: a souvenir's buff on use);
+    an id of 0 is none. A file that does not parse stops the run. Returns ({cube_id: npc_id}, {cube_id: [effect_id, level]})."""
+    spawns, buffs = {}, {}
+    for file in os.listdir(object_dir):
+        if not file.endswith('.xml'):
+            continue
+        cube = ET.parse(os.path.join(object_dir, file)).getroot().find('FunctionCube')
+        if cube is None:
+            continue
+        cube_id = int(os.path.splitext(file)[0])
+        spawner = cube.find('spawner')
+        if cube.get('ControlType') == 'SpawnNPC' and spawner is not None and int(spawner.get('npcID') or 0):
+            spawns[cube_id] = int(spawner.get('npcID'))
+        effect = cube.find('firstAdditionalEffect')
+        if effect is not None and int(effect.get('firstAdditionalEffectID') or 0):
+            buffs[cube_id] = [int(effect.get('firstAdditionalEffectID')), int(effect.get('firstAdditionalEffectLevel') or 1)]
+    return spawns, buffs
+
+
 def selftest():
     """Run self-test with temp folder."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -252,6 +274,21 @@ def selftest():
             print(f"Interact skills self-test failed. Expected {expected_interact}, got {interact_skills}")
             return False
 
+        # Function cubes: an assistant's spawner, a souvenir's buff; a pen's spawner names no NPC, an effect id 0 is none
+        object_dir = os.path.join(tmpdir, 'object')
+        os.makedirs(object_dir)
+        for cube_id, xml in (
+                (80000000, '<FunctionCube ControlType="SpawnNPC"><spawner npcID="11000512" npcCount="1" /><firstAdditionalEffect firstAdditionalEffectID="0" /></FunctionCube>'),
+                (50710002, '<FunctionCube ControlType="Switch"><spawner npcID="0" /><firstAdditionalEffect firstAdditionalEffectID="90000143" firstAdditionalEffectLevel="1" /></FunctionCube>'),
+                (50400159, '<FunctionCube ControlType="Breeding"><spawner npcID="50400159" /></FunctionCube>'),
+                (10000000, '<FunctionCube ControlType="Switch" />')):
+            with open(os.path.join(object_dir, f'{cube_id}.xml'), 'w') as f:
+                f.write(f'<ms2>{xml}</ms2>')
+        cube_spawns, cube_buffs = collect_cubes(object_dir)
+        if cube_spawns != {80000000: 11000512} or cube_buffs != {50710002: [90000143, 1]}:
+            print(f"Cube self-test failed. Got {cube_spawns}, {cube_buffs}")
+            return False
+
     print("selftest ok")
     return True
 
@@ -261,6 +298,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--npc-dir', required=True)
+    parser.add_argument('--object-dir', required=True)
     parser.add_argument('--out', required=True)
 
     args = parser.parse_args()
@@ -270,6 +308,7 @@ def main():
     skill_probs = collect_skill_probs(args.npc_dir)
     races = collect_races(args.npc_dir)
     interact_skills = collect_interact_skills(args.npc_dir)
+    cube_spawns, cube_buffs = collect_cubes(args.object_dir)
 
     # Write output
     # NPCs in id order; each list keeps the XML's order: a summon node's npcId N is the Nth entry.
@@ -277,13 +316,15 @@ def main():
             "StringIds": {str(npc_id): string_ids[npc_id] for npc_id in sorted(string_ids)},
             "SkillProbs": {str(npc_id): skill_probs[npc_id] for npc_id in sorted(skill_probs)},
             "Races": {str(npc_id): races[npc_id] for npc_id in sorted(races)},
-            "InteractSkills": {str(npc_id): interact_skills[npc_id] for npc_id in sorted(interact_skills)}}
+            "InteractSkills": {str(npc_id): interact_skills[npc_id] for npc_id in sorted(interact_skills)},
+            "CubeSpawns": {str(cube_id): cube_spawns[cube_id] for cube_id in sorted(cube_spawns)},
+            "CubeBuffs": {str(cube_id): cube_buffs[cube_id] for cube_id in sorted(cube_buffs)}}
 
     with open(args.out, 'w', encoding='utf-8', newline='\n') as f:
         json.dump(data, f, indent=1, ensure_ascii=False, separators=(',', ': '))
         f.write('\n')
 
-    print(f"{len(result)} NPCs with a summon list, {len(string_ids)} with a stringID, {len(skill_probs)} with skill probabilities, {len(races)} with race strings, {len(interact_skills)} usable (interact skills), {bad} files not parsed")
+    print(f"{len(result)} NPCs with a summon list, {len(string_ids)} with a stringID, {len(skill_probs)} with skill probabilities, {len(races)} with race strings, {len(interact_skills)} usable (interact skills), {bad} files not parsed; {len(cube_spawns)} function cubes spawn an NPC, {len(cube_buffs)} give a buff on use")
 
 
 if __name__ == '__main__':

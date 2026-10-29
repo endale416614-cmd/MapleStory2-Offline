@@ -23,7 +23,7 @@ public class LauncherIniTests {
         Assert.That(lines, Is.Not.Null);
         string[] active = lines!.Where(line => !line.TrimStart().StartsWith('#')).ToArray();
         Assert.That(active, Is.EqualTo(new[] { "MailNeverExpires=true", "CheatCommands=true", "AutoUpdate=ask" }),
-            "options that are the same in both modes and non-gameplay settings stay");
+            "options outside the 1.1.9 mode list and non-gameplay settings stay");
         Assert.That(lines, Has.Count.EqualTo(Ini118.Length), "lines are commented out, not deleted");
         Assert.That(lines, Has.Some.StartsWith("#GrindRates=true"));
     }
@@ -58,6 +58,27 @@ public class LauncherIniTests {
             Assert.That(once, Has.None.EqualTo("GrindRates=true"));
         } finally {
             File.Delete(path);
+        }
+    }
+
+    [Test]
+    public void FirstStart_WritesGameMode_SoLaterTrueLinesStay() {
+        string root = Path.Combine(Path.GetTempPath(), "ms2-launcherini-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try {
+            File.WriteAllLines(Path.Combine(root, Settings.DefaultsFile), ["GameMode=Adapted"]);
+            Settings first = Settings.Load(root);
+            Assert.That(first.GameModeSet, Is.False, "defaults.ini's GameMode is not the player's choice");
+            first.SaveUserValue("GameMode", first.GameMode); // what LauncherForm.ChooseGameMode does while GameModeSet is false
+            File.AppendAllLines(Path.Combine(root, Settings.UserFile), ["GrindRates=true"]);
+
+            Settings second = Settings.Load(root);
+
+            Assert.That(second.GameModeSet, Is.True);
+            Assert.That(second.GrindRates, Is.True, "a line the player adds after the first start stays on (BT-90)");
+            Assert.That(File.ReadAllLines(Path.Combine(root, Settings.UserFile)), Does.Contain("GrindRates=true"));
+        } finally {
+            Directory.Delete(root, true);
         }
     }
 }

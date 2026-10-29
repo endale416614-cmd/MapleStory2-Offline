@@ -19,10 +19,10 @@ GameMode=Adapted
 #PartyDungeons=true
 #FairFight=true
 #BlackMarket=true
-# Same in both modes (on unless set to false):
-#MailNeverExpires=true
 # Chat commands /godmode, /killall, /unstuck, /freebies, /give, /item, /find.
 #CheatCommands=true
+# Same in both modes (on unless set to false):
+#MailNeverExpires=true
 
 # Online update check when you press Play: ask, always (no question) or off (manual: ms2offline update).
 AutoUpdate=ask

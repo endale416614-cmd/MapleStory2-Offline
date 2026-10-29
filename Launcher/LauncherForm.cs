@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Microsoft.Data.Sqlite;
 
 namespace MapleStory2Offline;
 
@@ -484,7 +483,7 @@ internal sealed class LauncherForm : Form {
         Hide();
         DialogResult answer = MessageBox.Show(
             $"The game did not start after updating to version {last.Version}:\n{reason}\n\n" +
-            $"Go back to version {last.PreviousVersion}? Your save from before the update is restored too.",
+            $"Go back to version {last.PreviousVersion}?" + (last.SaveFile != null ? " Your save from before the update is restored too." : ""),
             Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (answer == DialogResult.Yes) {
             string result = updates.RollBackLastUpdate();
@@ -544,7 +543,11 @@ internal sealed class LauncherForm : Form {
         if (!settings.GameModeSet || chooser.Mode != settings.GameMode) {
             settings.GameMode = chooser.Mode;
             settings.GameModeSet = true;
-            settings.SaveUserValue("GameMode", settings.GameMode);
+            try {
+                settings.SaveUserValue("GameMode", settings.GameMode);
+            } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+                // the mode counts for this start; a read-only launcher.ini is also left alone by LauncherIni.Migrate
+            }
         }
         report?.Step("Game mode: " + settings.GameMode);
         if (chooser.Profile != settings.Profile) {
@@ -678,69 +681,5 @@ internal sealed class LauncherForm : Form {
         } catch (Exception) {
             return null; // being replaced right now: read again
         }
-    }
-}
-
-/// <summary>Validated SQLite backups of the save.</summary>
-internal static class SaveBackup {
-    /// <summary>Online backup + PRAGMA integrity_check of the copy. Returns null when good, else the problem (copy removed).</summary>
-    public static string? Create(string source, string target) {
-        try {
-            using (var from = new SqliteConnection($"Data Source={source};Mode=ReadOnly;Pooling=False"))
-            using (var to = new SqliteConnection($"Data Source={target};Pooling=False")) {
-                from.Open();
-                to.Open();
-                from.BackupDatabase(to);
-                using SqliteCommand single = to.CreateCommand();
-                single.CommandText = "PRAGMA journal_mode=DELETE"; // the copy is one self-contained file
-                single.ExecuteNonQuery();
-            }
-            string? problem = Check(target);
-            if (problem != null) {
-                File.Delete(target);
-            }
-            return problem;
-        } catch (Exception ex) {
-            try {
-                File.Delete(target);
-            } catch (Exception) {
-                // nothing to clean
-            }
-            return ex.Message;
-        } finally {
-            SqliteConnection.ClearAllPools();
-        }
-    }
-
-    /// <summary>
-    /// After the servers are stopped (killed, so SQLite could not tidy up), folds the write-ahead log back into the save
-    /// so game-server.db alone holds all progress. Returns null when done or not needed, else the problem.
-    /// </summary>
-    public static string? Checkpoint(string path) {
-        if (!File.Exists(path) || !File.Exists(path + "-wal")) {
-            return null;
-        }
-        try {
-            using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
-            connection.Open();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
-            using SqliteDataReader reader = command.ExecuteReader();
-            return reader.Read() && reader.GetInt32(0) != 0 ? "the save is busy" : null;
-        } catch (Exception ex) {
-            return ex.Message;
-        } finally {
-            SqliteConnection.ClearAllPools();
-        }
-    }
-
-    /// <summary>null when the database passes integrity_check, else the first problem.</summary>
-    public static string? Check(string path) {
-        using var connection = new SqliteConnection($"Data Source={path};Mode=ReadOnly;Pooling=False");
-        connection.Open();
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "PRAGMA integrity_check";
-        string result = command.ExecuteScalar() as string ?? "no result";
-        return result == "ok" ? null : result;
     }
 }

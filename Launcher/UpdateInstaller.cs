@@ -13,7 +13,8 @@ namespace MapleStory2Offline;
 ///    and this installation's servers are closed; enough free disk space; no file to replace is locked.
 /// 2. Stage: every file is extracted into updates\staging-&lt;version&gt; (paths must stay inside the program folder, links
 ///    are refused) and must match its files.json hash. A corrupted zip is rejected before anything changes.
-/// 3. Backup: the save is copied with SQLite online backup and checked (integrity_check) - no valid backup, no update.
+/// 3. Backup: the save of the profile played last is copied with SQLite online backup and checked (integrity_check) - no
+///    valid backup, no update. The journal names that save, and a rollback restores only it.
 /// 4. Apply: a journal (updates\journal.json) records every step; each replaced file is copied to the backup folder
 ///    first. Interrupted (crash, power loss): the next start restores the backups and reports it.
 /// 5. After a successful start of the new version the update is marked verified; if the new version cannot start the
@@ -45,6 +46,7 @@ internal sealed class UpdateInstaller {
         public bool Verified { get; set; }
         public string BackupDir { get; set; } = "";
         public string? SaveBackup { get; set; }
+        public string? SaveFile { get; set; }   // the save SaveBackup was copied from; null in journals from before 1.2.2
         public List<string> Replaced { get; set; } = [];   // relative paths overwritten (backup exists)
         public List<string> Added { get; set; } = [];      // relative paths that did not exist before
         public List<string> Deleted { get; set; } = [];    // relative paths removed (backup exists)
@@ -165,6 +167,7 @@ internal sealed class UpdateInstaller {
             State = "applying",
             BackupDir = backupDir,
             SaveBackup = saveBackup,
+            SaveFile = settings.SaveFile,
             Utc = DateTime.UtcNow.ToString("O"),
         };
         WriteJournal(journal);
@@ -255,13 +258,16 @@ internal sealed class UpdateInstaller {
         RestoreProgramFiles(journal);
         string saveNote = "";
         if (journal.SaveBackup != null && File.Exists(journal.SaveBackup)) {
-            if (SaveBackup.Check(journal.SaveBackup) is { } problem) {
+            if (journal.SaveFile == null) {
+                // A journal from before 1.2.2: the save picked since the update may be another profile's (BT-89).
+                saveNote = $" No save was changed: the launcher that installed this update did not note which save its copy is from. The copy is {journal.SaveBackup}.";
+            } else if (SaveBackup.Check(journal.SaveBackup) is { } problem) {
                 saveNote = $" The save backup is damaged ({problem}); your current save was kept.";
             } else {
                 foreach (string side in new[] { "-wal", "-shm" }) {
-                    File.Delete(settings.SaveFile + side);
+                    File.Delete(journal.SaveFile + side);
                 }
-                File.Copy(journal.SaveBackup, settings.SaveFile, true);
+                File.Copy(journal.SaveBackup, journal.SaveFile, true);
                 saveNote = " Your save from before the update was restored.";
             }
         }

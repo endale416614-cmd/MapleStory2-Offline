@@ -435,6 +435,25 @@ class SettingsTest(unittest.TestCase):
             settings = ms2offline.Settings(home)
             self.assertEqual((settings.send_reports, settings.report_notice_pending), ("always", False))
 
+    def test_game_mode_line_keeps_the_players_true_lines(self):
+        """BT-90: the first start writes the mode in effect to launcher.ini, so the 1.1.9 migration runs only once."""
+        with tempfile.TemporaryDirectory() as home:
+            ini = os.path.join(home, "launcher.ini")
+            with open(os.path.join(home, "defaults.ini"), "w", encoding="utf-8") as f:
+                f.write("GameMode=Legacy\n")
+            ms2offline.Settings(home)
+            self.assertFalse(os.path.exists(ini), "no launcher.ini is made: the installer copies the example")
+            with open(ini, "w", encoding="utf-8") as f:
+                f.write("GrindRates=true\n")  # a file from before the modes
+            self.assertIsNone(ms2offline.Settings(home).grind_rates, "the 1.1.9 migration still runs once")
+            with open(ini, "a", encoding="utf-8") as f:
+                f.write("GrindRates=true\n")
+            settings = ms2offline.Settings(home)
+            self.assertEqual((settings.game_mode, settings.grind_rates), ("Legacy", True))
+            with open(ini, encoding="utf-8") as f:
+                lines = f.read().splitlines()
+            self.assertEqual((lines.count("GameMode=Legacy"), lines.count("GrindRates=true")), (1, 1))
+
 
 if __name__ == "__main__":
     unittest.main()

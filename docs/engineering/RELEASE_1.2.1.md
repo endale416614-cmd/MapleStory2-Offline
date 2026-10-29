@@ -1,7 +1,7 @@
 # Release 1.2.1: Black Market, boss summons, world clock
 
-Planned 2026-10-22 (the Black Market requests of the same day, and boss, monster and NPC behaviour restoration).
-Published 2026-10-23 after the maintainer's play check.
+Planned 2026-10-22 (the Black Market requests of the same day, and boss, monster and NPC behaviour restoration). Published 2026-10-23
+after the maintainer's play check (section "Published").
 
 ## Candidate
 - Fourth candidate 2026-10-23, released as 1.2.1: the second candidate plus DL-51 (the third candidate: an
@@ -158,3 +158,12 @@ attack areas and the update from 1.2.0's pack included).
     MeratMarketNewBM and MeratMarketClosing back on, which the shop mod turned off because they hid tabs; research DL-U).
 20. Attack areas (DL-53): a boss with forward attacks (Gigantica or Zakum) hits you in front of it, not beside it; your
     own skills still hit monsters standing in front of you whichever way you face.
+
+## Published (2026-10-23)
+
+Release `v1.2.1` on `909fb7ed` (Maple2 `3db42717`, Agarcium `c796c33e`), marked Latest: `MapleStory2-Offline-Setup.exe`
+(1,132,227,293 bytes, sha256 `5c84666b890394400766b815befcb4c7cef9ea4d4975a99c3ac1f788db3bc88d`),
+`MapleStory2-Offline-Update-1.2.1.zip` (579,318,696 bytes; needs 1.2.0), `release.json` and `release.json.sig`: the same
+four names as v1.2.0. Before upload: the full test suites, the privacy scans of the three source trees and of the Setup
+and the update zip, sizes, hashes and both signatures. After upload: GitHub's sha256 digests equal the local files, and
+the `releases/latest/download` links serve them. Not done: a live update of a 1.2.0 install from the published release.

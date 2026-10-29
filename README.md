@@ -8,7 +8,7 @@ report to the developer after a session with a problem, unless you chose otherwi
 
 ## Download
 
-### [⬇ Download MapleStory 2 Offline 1.2.1 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
+### [⬇ Download MapleStory 2 Offline 1.2.2 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
 
 1. Run the downloaded file and click **Install**. No administrator rights are needed.
 2. Start the game from the **MapleStory 2 Offline** icon on your desktop.
@@ -22,8 +22,10 @@ Updates install themselves: when you press Play and a newer version exists, the 
 is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
 Start menu → **MapleStory 2 Offline - Install Update**. All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
 
-**Still on 1.1.9 or older?** Install 1.2.1 once with the Setup above; it keeps your save. The automatic update to 1.2.1
-needs 1.2.0, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
+**Still on 1.2.0 or older?** Install 1.2.2 once with the Setup above; it keeps your save. The automatic update to 1.2.2
+needs 1.2.1, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
+
+**New here?** The [player guide](docs/PLAYER_GUIDE.md) walks you through install, first start, modes, updates and saves.
 
 ### Found a bug?
 
@@ -67,19 +69,20 @@ Own your game. Own your character. Keep your progress. The full plan is in [VISI
 - Save data in a single local file (SQLite), backed up on every start.
 - Signed updates: the launcher only installs updates signed with the project's update key.
 - The client is locked to this PC: connections to anything except `127.0.0.1` are blocked.
-- Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items, sorted for browsing: every
-  capsule under Featured, separate Design Templates and Furniture tabs.
+- Earnable Meret (bought with Mesos) and a Meret Market listing the former cash and capsule items, sorted for browsing:
+  capsules under Featured and pet capsules under Pets, a New tab with what each release adds, separate Design Templates
+  and Furniture tabs.
 - Solo-friendly options: adjustable exp and drop rates, upgrade-material drops, dungeon reward options.
 - Two ways to play, picked in a "Choose how to play" window every time you start the game (your last choice is selected):
   - **Legacy Mode**: the original online-era rules and balance: original exp and drop rates, dungeon clear limits and party
     requirements. Nothing is changed for solo play, so content built for a party stays closed.
   - **Offline Adapted Mode**: built for playing alone: faster exp and more loot, unlimited dungeon clear rewards, Epic dungeon
     gear, easier pet taming, party-size dungeons open to you (except Cathy Mart, which needs a full group), bosses scaled for one player, and a Black Market that sells gear near your level, upgrade materials, gems and potions.
-  - Both modes keep Meret pouches, the full Meret Market, mail that never expires and the chat commands. Your characters work in
+  - Both modes keep Meret pouches, the full Meret Market and mail that never expires; the cheat commands are on in Offline Adapted Mode only. Your characters work in
     either mode. To switch, close the game and start it again.
   - Advanced: the choice is stored as `GameMode=Legacy|Adapted` in `launcher.ini`, and a single option there (for example
     `GrindRates=true`) still overrides the mode.
-- Cheat commands (`CheatCommands=true`, on in both modes), typed in the chat box:
+- Cheat commands (on in Offline Adapted Mode, off in Legacy Mode; a `CheatCommands=true` or `CheatCommands=false` line in `launcher.ini` wins over the mode), typed in the chat box:
   - `/give <item name> [count]` gives an item by its English name (`/give Red Potion 5`); a name that fits several items lists their ids.
   - `/item <id>` gives an item by id (`--amount`, `--rarity`, `--drop`); without `--rarity` the item gets its own default rarity.
   - `/find item <text>` searches item names and ids (also `map`, `npc`, `quest`, `skill`, `achievement`).

@@ -71,6 +71,9 @@ internal sealed class ServerHost : IDisposable {
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // The servers write UTF-8; without these .NET reads a windowless process's pipes with the ANSI code page (BT-133).
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
         };
         info.Environment["DOTNET_ROOT"] = settings.DotnetDir; // ASP.NET runtime lives in the local dotnet
         info.Environment["DOTNET_ENVIRONMENT"] = "Production";

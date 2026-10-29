@@ -9,12 +9,12 @@ internal sealed class Settings {
     public const string UserFile = "launcher.ini";
 
     /// <summary>Program folder (the exe, servers, game data). Replaced by updates.</summary>
-    public string Root { get; private init; } = "";
+    public string Root { get; init; } = "";
     /// <summary>
     /// Player data folder (save, logs, reports, launcher.ini, update backups). Installed copies use
     /// %LOCALAPPDATA%\MapleStory 2 Offline (named in install.json); portable/dev copies use the program folder.
     /// </summary>
-    public string DataRoot { get; private init; } = "";
+    public string DataRoot { get; init; } = "";
     public bool Installed { get; private init; }
     public string InstallId { get; private init; } = "";
     public string Version { get; set; } = "dev";
@@ -49,7 +49,10 @@ internal sealed class Settings {
     /// when no ini file names them: the server then uses the default of this mode; a line in launcher.ini overrides it.
     /// </summary>
     public string GameMode { get; set; } = "Adapted";
-    /// <summary>True when GameMode is written in defaults.ini or launcher.ini.</summary>
+    /// <summary>
+    /// True when the player's launcher.ini names GameMode; defaults.ini's line does not count. While it is false the chooser
+    /// writes the mode (LauncherForm.ChooseGameMode), and that line ends the 1.1.9 migration (LauncherIni).
+    /// </summary>
     public bool GameModeSet { get; set; }
     public bool Adapted => GameMode == "Adapted";
     /// <summary>In dungeons every item of every drop table drops (monsters, breakables, clear reward).</summary>
@@ -66,7 +69,7 @@ internal sealed class Settings {
     public bool? DungeonEpicGear { get; private init; }
     /// <summary>Mail stays in the mailbox until deleted instead of expiring after 30 days (on in both modes unless set).</summary>
     public bool? MailNeverExpires { get; private init; }
-    /// <summary>Chat commands /godmode, /killall, /unstuck, /freebies, /give, /item, /find (on in both modes unless CheatCommands=false).</summary>
+    /// <summary>Chat commands /godmode, /killall, /unstuck, /freebies, /give, /item, /find (Adapted default; off under Legacy).</summary>
     public bool? CheatCommands { get; private init; }
     /// <summary>Party-size dungeons open to a smaller group, even alone, except Cathy Mart (Adapted default).</summary>
     public bool? PartyDungeons { get; private init; }
@@ -102,8 +105,10 @@ internal sealed class Settings {
     public string Username { get; private init; } = "offline";
     public string Password { get; private init; } = "offline";
 
-    public static Settings Load() {
-        string root = Path.GetFullPath(AppContext.BaseDirectory);
+    public static Settings Load() => Load(Path.GetFullPath(AppContext.BaseDirectory));
+
+    /// <summary>The settings of the program folder <paramref name="root"/> (tests pass a temporary folder).</summary>
+    public static Settings Load(string root) {
         (string dataRoot, bool installed, string installId) = InstallInfo.Read(root);
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         ReadInto(values, Path.Combine(root, DefaultsFile));
@@ -128,7 +133,7 @@ internal sealed class Settings {
             Password = values.GetValueOrDefault("Password", defaults.Password),
             ServerConfiguration = values.GetValueOrDefault("ServerConfiguration", defaults.ServerConfiguration),
             GameMode = string.Equals(values.GetValueOrDefault("GameMode")?.Trim(), "Legacy", StringComparison.OrdinalIgnoreCase) ? "Legacy" : "Adapted",
-            GameModeSet = values.ContainsKey("GameMode"),
+            GameModeSet = own.ContainsKey("GameMode"),
             TestKit = Flag(values, "TestKit") ?? false,
             TriggerTrace = Flag(values, "TriggerTrace") ?? false,
             DungeonAllDrops = Flag(values, "DungeonAllDrops"),

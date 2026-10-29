@@ -71,6 +71,8 @@ sends a problem report to the developer after a session with a problem (SendRepo
 You need the MapleStory 2 game client (about 14 GB). If it is in your Steam library it is found
 automatically. Otherwise the launcher shows where to get it the first time you start.
 
+The player guide, PLAYER_GUIDE.txt in this folder, explains every step in more detail.
+
 Install and play
 ----------------
 Run "MapleStory2-Offline-Setup.exe" and click Install (no administrator rights needed).
@@ -113,7 +115,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
 (%LOCALAPPDATA%\MapleStory 2 Offline), for example:  GrindRates=false
   GameMode               Picked in the "Choose how to play" window at every start (no need to edit this).
                          Adapted = built for playing alone (the options below); Legacy = the original online-era rules.
-                         Both keep Meret pouches, the full Meret Market, mail that never expires and the chat commands.
+                         Both keep Meret pouches, the full Meret Market and mail that never expires; the cheats below are on in Adapted only.
                          An option below that you set yourself wins over the mode.
   GrindRates             faster exp, more drops, upgrade materials and Meret from monsters
   DungeonAllDrops        dungeons drop every item of their loot tables
@@ -126,7 +128,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   ClassDropsOnly         monsters and dungeon rewards only drop gear made for your class
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
   DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
-  CheatCommands          the chat commands below (on in both modes; set it to false to turn them off)
+  CheatCommands          the chat commands below (on in Adapted, off in Legacy)
   AutoUpdate             ask / always / off - online update check when you press Play
   SendReports            always (default after the one-time notice) / ask / never - problem reports to the developer (see Problems?; launcher.ini only)
   ClientDir              the game's x64 folder, if you moved the game
@@ -134,10 +136,10 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
 
 Cheats
 ------
-Some quests or places can get stuck in this offline version. Type these in the chat box:
+Some quests or places can get stuck in this offline version. In Adapted (or with CheatCommands=true), type these in the chat box:
   /godmode   on/off: you take no damage and every hit kills a monster
   /killall   kills every monster on the map (counts for quests, exp and drops)
-  /unstuck   restarts the quest map you are in, anywhere else takes you back to Henesys (revives you first)
+  /unstuck   restarts the quest map you are in, takes you back to the start of a field map, anywhere else to Henesys (revives you first)
              /unstuck --town always goes to Henesys
   /freebies  on/off: everything you buy is free, whatever the currency
   /give      gives an item by name: /give Red Potion 5 (a name that fits several items lists their ids)
@@ -238,6 +240,9 @@ def assemble(stage, version):
 
     # TROUBLESHOOTING.txt
     copy(os.path.join(ROOT, "TROUBLESHOOTING.txt"), put("TROUBLESHOOTING.txt"))
+
+    # PLAYER_GUIDE.txt: the player guide (docs/PLAYER_GUIDE.md), as .txt so a double-click opens it in Notepad
+    copy(os.path.join(ROOT, "docs", "PLAYER_GUIDE.md"), put("PLAYER_GUIDE.txt"))
 
     # Licenses of everything shipped.
     copy(os.path.join(ROOT, "LICENSE"), put("LICENSES/MapleStory2-Offline-AGPL-3.0.txt"))

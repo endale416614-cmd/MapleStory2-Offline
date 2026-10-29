@@ -21,6 +21,10 @@
         <Compile Include="..\Launcher\ProblemReport.cs" Link="Linked\ProblemReport.cs" />
         <Compile Include="..\Launcher\ClientMods.cs" Link="Linked\ClientMods.cs" />
         <Compile Include="..\Launcher\CrashEvent.cs" Link="Linked\CrashEvent.cs" />
+        <Compile Include="..\Launcher\UpdateInstaller.cs" Link="Linked\UpdateInstaller.cs" />
+        <Compile Include="..\Launcher\SaveBackup.cs" Link="Linked\SaveBackup.cs" />
+        <Compile Include="..\Launcher\EventLog.cs" Link="Linked\EventLog.cs" />
+        <Compile Include="..\Launcher\PortGuard.cs" Link="Linked\PortGuard.cs" />
     </ItemGroup>
 
     <ItemGroup>

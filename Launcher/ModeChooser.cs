@@ -14,7 +14,7 @@ internal sealed class ModeChooser : Form {
         "Built for playing alone: faster exp and more loot, unlimited dungeon clear rewards, Epic dungeon gear, easier pet taming, " +
         "party-size dungeons open to you (except Cathy Mart, which needs a full group), bosses scaled for one player, and a Black Market with items for sale.";
     public const string FooterText =
-        "Both modes keep Meret pouches, the full Meret Market, mail that never expires and the chat commands. " +
+        "Both modes keep Meret pouches, the full Meret Market and mail that never expires; the cheat commands work in Offline Adapted Mode only. " +
         "Your characters work in either mode. To switch, close the game and start it again.";
 
     private static readonly Color Back = Color.FromArgb(28, 30, 36);

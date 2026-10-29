@@ -266,6 +266,12 @@ class Settings:
         own = {}
         self._read(own, os.path.join(home, "launcher.ini"))
         own = {key.lower(): value for key, value in own.items()}  # any case, as on Windows and in save_user_value
+        if "gamemode" not in own and os.path.exists(os.path.join(home, "launcher.ini")):
+            # The mode in effect, as the Windows chooser writes it at the first start: the line ends the 1.1.9 migration.
+            try:
+                self.save_user_value("GameMode", self.game_mode)
+            except (OSError, ValueError):  # read-only, or not UTF-8: the migration then runs again at the next start
+                pass
         written = own.get("sendreports")
         report_notice = 0
         try:
