@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace MapleStory2Offline;
@@ -24,6 +26,22 @@ internal sealed class ServerHost : IDisposable {
     // Reads the listener table instead of connecting, so the servers do not log probe sessions.
     public static bool IsListening(int port) {
         return IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Any(endpoint => endpoint.Port == port);
+    }
+
+    /// <summary>The server is up: its port is in the listener table, or its own log says it is listening. On some PCs the
+    /// table misses a listening port (report 66dd7ef2: the login and web ports never showed although both servers had
+    /// logged that they listened).</summary>
+    public bool IsUp(string name, int port, string listeningLine) => IsListening(port) || LogContains(name, listeningLine);
+
+    /// <summary>One real connection to a port the listener table missed, for the session report. Only then: a connection to the login port logs a short session.</summary>
+    public static async Task<bool> CanConnectAsync(int port) {
+        using var client = new TcpClient(AddressFamily.InterNetwork);
+        try {
+            await client.ConnectAsync(IPAddress.Loopback, port).WaitAsync(TimeSpan.FromSeconds(1));
+            return true;
+        } catch (Exception ex) when (ex is SocketException or TimeoutException) {
+            return false;
+        }
     }
 
     public string LogPath(string name) => Path.Combine(settings.LogDir, $"{name.ToLowerInvariant()}.log");
@@ -58,6 +76,26 @@ internal sealed class ServerHost : IDisposable {
     /// <summary>The last 200 trigger state changes the game server writes (R12-21).</summary>
     public string TriggerRingFile => Path.Combine(settings.LogDir, "trigger-ring.log");
 
+    // The proxy variables, the overrides Target.cs reads, and .NET's HTTP/2 switch (no longer passed on): what decides how the servers connect.
+    private static readonly string[] NetworkVariables = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "GRPC_WORLD_PORT",
+        "GRPC_LOGIN_PORT", "LOGIN_PORT", "GAME_PORT", "GRPC_CHANNEL_PORT", "WEB_PORT", "INSTANCED_CONTENT", "DOTNET_RUNNING_IN_CONTAINER",
+        "DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT"];
+
+    /// <summary>The session report's Network line (BT-215): whether a proxy takes the servers' calls to 127.0.0.1, and which of
+    /// the network variables are set. Names only: a proxy value can hold a password.</summary>
+    public static string NetworkLine(Func<string, string?> environment, IWebProxy proxy) {
+        var world = new Uri("http://127.0.0.1:21001");
+        string proxied;
+        try {
+            // As SocketsHttpHandler decides; the Windows system proxy never says bypassed and gives no proxy instead.
+            proxied = !proxy.IsBypassed(world) && proxy.GetProxy(world) != null ? "YES" : "no";
+        } catch (Exception) {
+            proxied = "unknown"; // the report is written whatever the proxy settings do
+        }
+        string[] set = NetworkVariables.Where(name => !string.IsNullOrEmpty(environment(name))).ToArray();
+        return $"proxy for 127.0.0.1 {proxied}; variables set: {(set.Length == 0 ? "none" : string.Join(", ", set))}";
+    }
+
     public void Start(string name) {
         string projectDir = Path.Combine(settings.ServerDir, $"Maple2.Server.{name}");
         string exe = Path.Combine(projectDir, "bin", settings.ServerConfiguration, "net8.0", $"Maple2.Server.{name}.exe");
@@ -81,7 +119,8 @@ internal sealed class ServerHost : IDisposable {
         foreach (string variable in new[] { "BIND_IP", "LOGIN_IP", "GAME_IP", "GRPC_GAME_IP", "GRPC_WORLD_IP", "GRPC_LOGIN_IP", "WEB_IP" }) {
             info.Environment[variable] = "127.0.0.1";
         }
-        foreach (string variable in new[] { "ASPNETCORE_URLS", "DOTNET_URLS", "ASPNETCORE_HTTP_PORTS", "ASPNETCORE_HTTPS_PORTS" }) {
+        // .NET's HTTP/2 switch, set to false, would break every call between the servers: the World, Login and Game servers listen HTTP/2 only (BT-215).
+        foreach (string variable in new[] { "ASPNETCORE_URLS", "DOTNET_URLS", "ASPNETCORE_HTTP_PORTS", "ASPNETCORE_HTTPS_PORTS", "DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT" }) {
             info.Environment.Remove(variable);
         }
         info.Environment["OFFLINE_MODE"] = "true";
@@ -115,6 +154,7 @@ internal sealed class ServerHost : IDisposable {
             ("OFFLINE_PARTY_DUNGEONS", settings.PartyDungeons),
             ("OFFLINE_FAIR_FIGHT", settings.FairFight),
             ("OFFLINE_MARKET", settings.BlackMarket),
+            ("OFFLINE_CHARACTER_SLOTS", settings.CharacterSlots),
         }) {
             if (value is { } flag) {
                 info.Environment[variable] = flag ? "true" : "false";
@@ -161,7 +201,7 @@ internal sealed class ServerHost : IDisposable {
         while (!ready()) {
             foreach ((string name, Process process) in servers) {
                 if (process.HasExited) {
-                    throw new InvalidOperationException($"The {name} server stopped unexpectedly.\n\nLog: {LogPath(name)}");
+                    throw new InvalidOperationException($"The {name} server stopped unexpectedly (exit code {process.ExitCode} = 0x{process.ExitCode:X8}).\n\nLog: {LogPath(name)}");
                 }
             }
             if (stopwatch.Elapsed > timeout) {

@@ -3579,10 +3579,10 @@ id	name	fingerprint	verdict	decision	reason	references	referenced by	batch
 32000079	French Fries Fishing Rod	8|0|g2|lv1|jall|FishingRod:32000079|preset:19000075	unique	keep	unique	0	-	3
 32000080	Skewer Fishing Rod	8|0|g2|lv1|jall|FishingRod:32000080|preset:19000074	unique	keep	unique	0	-	3
 34000072	Arlano Classic Marimba	23|0|g2|lv1|jall|OpenInstrument:|preset:19100063	unique	keep	unique	2	server-table:individualItemDrop.xml server-table:shop_game.xml	3
-34000100	Arian Fretless Bass Guitar	23|0|g2|lv1|jall|OpenInstrument:|preset:19100094	unique	hold	instrument: no instrument id in the data (BA-08)	5	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
-34000101	Arlano Classic Marimba	23|0|g2|lv1|jall|OpenInstrument:|preset:19100095	unique	hold	instrument: no instrument id in the data (BA-08)	2	map-entity:02100001_bf npc:34000101	3
-34000102	Upright Open Honky Tonk Piano	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000102.png	unique	hold	instrument: no instrument id in the data (BA-08)	20	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
-34000103	Arlano Classic Flute	23|0|g2|lv1|jall|OpenInstrument:|preset:19100097	unique	hold	instrument: no instrument id in the data (BA-08)	14	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
+34000100	Arian Fretless Bass Guitar	23|0|g2|lv1|jall|OpenInstrument:|preset:19100094	unique	keep	unique	5	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
+34000101	Arlano Classic Marimba	23|0|g2|lv1|jall|OpenInstrument:|preset:19100095	unique	keep	unique	2	map-entity:02100001_bf npc:34000101	3
+34000102	Upright Open Honky Tonk Piano	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000102.png	unique	keep	unique	20	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
+34000103	Arlano Classic Flute	23|0|g2|lv1|jall|OpenInstrument:|preset:19100097	unique	keep	unique	14	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
 34000104	Tropical Summer Electric Piano	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000076.png	unique	keep	unique	16	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
 34000105	Tropical Summer Steel Drum	23|0|g2|lv1|jall|OpenInstrument:|preset:19100075	unique	keep	unique	16	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
 34000106	Deep Dark Oboe	23|0|g2|lv1|jall|OpenInstrument:|preset:19100064	unique	keep	kept, referenced (2 same items)	16	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
@@ -3590,8 +3590,8 @@ id	name	fingerprint	verdict	decision	reason	references	referenced by	batch
 34000108	Deep Dark Piano	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000066.png	unique	keep	kept, referenced (2 same items)	12	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
 34000109	Oriental Wood Piano	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000080.png	unique	keep	kept, referenced (2 same items)	8	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
 34000110	Oriental Wood Violin	23|0|g2|lv1|jall|OpenInstrument:|preset:19100077	unique	keep	kept, referenced (2 same items)	8	map-entity:02100001_bf map-entity:02100001_bf map-entity:02100001_bf	3
-34000111	French Horn	23|0|g2|lv1|jall|OpenInstrument:|preset:19100070	unique	hold	instrument: no instrument id in the data (BA-08)	1	server-table:shop_game.xml	3
-34000112	Pipe Organ	-	no-fingerprint	hold	instrument: no instrument id in the data (BA-08)	1	server-table:shop_game.xml	3
+34000111	French Horn	23|0|g2|lv1|jall|OpenInstrument:|preset:19100070	unique	keep	unique	1	server-table:shop_game.xml	3
+34000112	Pipe Organ	-	no-fingerprint	keep	no fingerprint	1	server-table:shop_game.xml	3
 34000113	Dark Jack-o'-Lantern Piano	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000094.png	unique	keep	unique	2	server-table:individualItemDrop.xml server-table:shop_game.xml	3
 34000114	Dark Jack-o'-Lantern Harp	23|0|g2|lv1|jall|OpenInstrument:|icon:icon/34000095.png	unique	keep	unique	2	server-table:individualItemDrop.xml server-table:shop_game.xml	3
 34000115	Dark Jack-o'-Lantern Clarinet	23|0|g2|lv1|jall|OpenInstrument:|preset:19100090	unique	keep	unique	2	server-table:individualItemDrop.xml server-table:shop_game.xml	3

@@ -194,13 +194,13 @@ internal sealed class ContentPack {
 
     /// <summary>
     /// Truncates every applied archive back to the Global size and puts the original header back, verifying the Global
-    /// sha256 afterwards. Refuses and changes nothing when any archive is Foreign. Returns false when Windows refused
+    /// sha256 afterwards. A Foreign archive (a Steam update, another build) is left as it is and the others are still
+    /// restored; then it throws <see cref="InvalidOperationException"/> naming it. Returns false when Windows refused
     /// write access.
     /// </summary>
     public static bool Restore(string clientRoot, string packDir) {
         ContentPack pack = Load(packDir);
         List<ArchiveState> states = pack.State(clientRoot).ToList();
-        Refuse(states, "removed");
         var journal = new Journal { Version = pack.Version, State = "restoring", Utc = DateTime.UtcNow.ToString("O") };
         try {
             foreach (ArchiveState state in states.Where(state => state.Status is Status.Applied or Status.EarlierPack)) {
@@ -225,9 +225,54 @@ internal sealed class ContentPack {
             }
             journal.State = "done";
             WriteJournal(packDir, journal);
+            // Steam's verify puts a Foreign archive back; the pack is out of all the others now.
+            if (states.Where(state => state.Status == Status.Foreign).ToList() is { Count: > 0 } foreign) {
+                throw new InvalidOperationException($"The content pack was removed from every archive except: {string.Join("; ", foreign.Select(state => state.Reason))}. " +
+                    "Verify the game files in Steam.");
+            }
             return true;
         } catch (UnauthorizedAccessException) {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Verify game files: puts the Global archive back wherever the pack does not fit (Foreign) but the archive still
+    /// starts with the Global bytes and a Global header is at hand; the file is cut to the Global size and the header put
+    /// back. Returns the reasons of the Foreign archives it left (Steam's verify can repair them), or null when Windows
+    /// refused write access.
+    /// </summary>
+    public static List<string>? Repair(string clientRoot, string packDir) {
+        ContentPack pack = Load(packDir);
+        var left = new List<string>();
+        var journal = new Journal { Version = pack.Version, State = "repairing", Utc = DateTime.UtcNow.ToString("O") };
+        try {
+            foreach (ArchiveState state in pack.State(clientRoot).Where(state => state.Status == Status.Foreign)) {
+                Archive archive = state.Archive;
+                string target = Path.Combine(clientRoot, archive.Path);
+                string header = Path.Combine(clientRoot, archive.M2hPath), orig = Path.Combine(clientRoot, archive.OrigM2hPath);
+                bool globalHeader = File.Exists(header) && Hash(header) == archive.OrigM2hSha256;
+                bool backup = File.Exists(orig) && Hash(orig) == archive.OrigM2hSha256;
+                if (!File.Exists(target) || new FileInfo(target).Length < archive.GlobalSize
+                    || Hash(target, 0, archive.GlobalSize) != archive.GlobalSha256 || !(globalHeader || backup)) {
+                    left.Add(state.Reason);
+                    continue;
+                }
+                if (!globalHeader) {
+                    Step(packDir, journal, archive.Path, "m2h");
+                    CopyOver(orig, header);
+                }
+                Step(packDir, journal, archive.Path, "truncate");
+                Truncate(target, archive.GlobalSize);
+                if (File.Exists(orig)) {
+                    File.Delete(orig);
+                }
+            }
+            journal.State = "done";
+            WriteJournal(packDir, journal);
+            return left;
+        } catch (UnauthorizedAccessException) {
+            return null;
         }
     }
 

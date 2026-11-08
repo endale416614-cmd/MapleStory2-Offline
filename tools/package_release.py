@@ -40,6 +40,7 @@ RETIRED = (
     "Maple2/Maple2.Server.Web/Data/profiles/20000000004/360534ce-ba45-4e6a-a74e-fca994304ea6.png",
 )
 ENV_DROP = {"MS2_DATA_FOLDER", "SQLITE_DIR", "SQLITE_DATA_DIR", "DB_IP", "DB_PORT", "DB_USER", "DB_PASSWORD"}
+LINUX_FILES = ("ms2offline.py", "ms2offline-gui.py", "launcher.ini.example", "install.sh", "ms2offline.desktop", "README.md")
 
 PLAYER_DEFAULTS = """# Default settings of this release (replaced by updates).
 # To change one, put the same line in launcher.ini - that file is yours and updates never touch it.
@@ -117,7 +118,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
                          Adapted = built for playing alone (the options below); Legacy = the original online-era rules.
                          Both keep Meret pouches, the full Meret Market and mail that never expires; the cheats below are on in Adapted only.
                          An option below that you set yourself wins over the mode.
-  GrindRates             faster exp, more drops, upgrade materials and Meret from monsters
+  GrindRates             faster exp, more drops, upgrade materials and Meret from monsters; field Elites back after 10 s
   DungeonAllDrops        dungeons drop every item of their loot tables
   UnlimitedDungeonClears dungeon clear rewards on every clear
   MailNeverExpires       mail stays until you delete it (otherwise it expires after 30 days; on in both modes)
@@ -128,6 +129,7 @@ defaults.ini lists the options. To change one, put the line in launcher.ini in y
   ClassDropsOnly         monsters and dungeon rewards only drop gear made for your class
   PetTaming              pet candy and snares from level 10, wild pets 3x as often, 10 candies capture a pet
   DungeonEpicGear        weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic)
+  CharacterSlots         all 15 character slots open without Character Cards (in Legacy each card opens one more, up to 15)
   CheatCommands          the chat commands below (on in Adapted, off in Legacy)
   AutoUpdate             ask / always / off - online update check when you press Play
   SendReports            always (default after the one-time notice) / ask / never - problem reports to the developer (see Problems?; launcher.ini only)
@@ -181,6 +183,19 @@ def copy_tree(src, dst, skip_ext=()):
                 continue
             path = os.path.join(folder, name)
             copy(path, os.path.join(dst, os.path.relpath(path, src)))
+
+
+def copy_linux(stage, version):
+    """The Linux launcher for the program folder (linux/), LF whatever this checkout holds: it runs the newer copy from there
+    (newer_copy in linux/ms2offline.py), so a package with an older number would never run its own launcher."""
+    os.makedirs(os.path.join(stage, "linux"), exist_ok=True)
+    for name in LINUX_FILES:
+        with open(os.path.join(ROOT, "linux", name), "rb") as f:
+            data = f.read().replace(b"\r\n", b"\n")
+        if name == "ms2offline.py" and f'\nLAUNCHER_VERSION = "{version}"'.encode() not in data:
+            raise SystemExit(f"LAUNCHER_VERSION in linux/ms2offline.py is not {version}: change it, then build again.")
+        with open(os.path.join(stage, "linux", name), "wb") as f:
+            f.write(data)
 
 
 def add_content_pack(stage, pack_dir):
@@ -243,6 +258,8 @@ def assemble(stage, version):
 
     # PLAYER_GUIDE.txt: the player guide (docs/PLAYER_GUIDE.md), as .txt so a double-click opens it in Notepad
     copy(os.path.join(ROOT, "docs", "PLAYER_GUIDE.md"), put("PLAYER_GUIDE.txt"))
+
+    copy_linux(stage, version)
 
     # Licenses of everything shipped.
     copy(os.path.join(ROOT, "LICENSE"), put("LICENSES/MapleStory2-Offline-AGPL-3.0.txt"))
@@ -345,8 +362,14 @@ def manifest(stage):
 
 
 def write_release(path, version, notes, assets):
-    """release.json: name, size and sha256 of each release file (read by Launcher/ReleaseManifest.cs). File names only."""
+    """release.json: name, size and sha256 of each release file (read by Launcher/ReleaseManifest.cs). File names only.
+    A Linux launcher from v1.2.0 on saves the Setup as MapleStory2-Offline-Setup-<ver>.exe and looks that name up, so the
+    published Setup is listed under it too (BT-170). That row names no upload. No name is listed twice: Windows refuses that."""
     files = [{"name": os.path.basename(a), "size": os.path.getsize(a), "sha256": sha256(a)} for a in assets]
+    rows = {row["name"]: row for row in files}
+    versioned = f"MapleStory2-Offline-Setup-{version}.exe"
+    if "MapleStory2-Offline-Setup.exe" in rows and versioned not in rows:
+        files.append({**rows["MapleStory2-Offline-Setup.exe"], "name": versioned})
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump({"version": version, "files": files, "notes": notes}, f, indent=1)
         f.write("\n")

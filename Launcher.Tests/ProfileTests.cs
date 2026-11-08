@@ -61,6 +61,22 @@ public class ProfileTests
         Assert.That(result, Does.Contain("That name is reserved"));
     }
 
+    [TestCase("ugc")]
+    [TestCase("UGC")]
+    public void ValidateProfile_TheUploadedFilesFolder_Returns_Message(string name)
+    {
+        Assert.That(Settings.ValidateProfile(name), Does.Contain("That name is reserved"));
+    }
+
+    [TestCase("backups", true)]
+    [TestCase("UGC", true)]
+    [TestCase("Second run", false)]
+    [TestCase(null, false)]
+    public void IsReservedFolder_NamesTheFoldersThatAreNoSave(string? name, bool expected)
+    {
+        Assert.That(Settings.IsReservedFolder(name), Is.EqualTo(expected));
+    }
+
     [Test]
     public void ValidateProfile_Backups_CaseInsensitive_Returns_Message()
     {

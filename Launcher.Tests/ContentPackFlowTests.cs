@@ -354,6 +354,47 @@ public class ContentPackFlowTests {
         Assert.That(modes, Is.Empty);
     }
 
+    // BT-03: a Steam update replaced Data/Xml.m2d while Data/Gfx.m2d still carried the pack.
+    [Test]
+    public void ForeignArchiveNextToApplied_RestoresTheOtherAndStartsGlobal() {
+        var random = new Random(5);
+        byte[] gfx = Bytes(random, 2048), gfxTail = Bytes(random, 700), gfxOrigM2h = Bytes(random, 200), gfxNewM2h = Bytes(random, 250);
+        string gfxArchive = Path.Combine(client, "Data", "Gfx.m2d"), gfxM2h = Path.Combine(client, "Data", "Gfx.m2h");
+        string gfxOrig = Path.Combine(client, "Data", "Gfx.orig.m2h");
+        File.WriteAllBytes(gfxArchive, gfx.Concat(gfxTail).ToArray());
+        File.WriteAllBytes(gfxM2h, gfxNewM2h);
+        File.WriteAllBytes(gfxOrig, gfxOrigM2h);
+        File.WriteAllBytes(Path.Combine(packDir, "Gfx.tail"), gfxTail);
+        File.WriteAllBytes(Path.Combine(packDir, "Gfx.m2h"), gfxNewM2h);
+        File.WriteAllText(Path.Combine(packDir, ContentPack.FileName), JsonSerializer.Serialize(new {
+            version = "1.2.0-test",
+            archives = new[] {
+                new {
+                    path = ArchivePath, globalSize = global.Length, globalSha256 = Sha(global), tailSize = tail.Length, tailSha256 = Sha(tail),
+                    m2hSha256 = Sha(newM2h), origM2hSha256 = Sha(origM2h),
+                },
+                new {
+                    path = "Data/Gfx.m2d", globalSize = gfx.Length, globalSha256 = Sha(gfx), tailSize = gfxTail.Length, tailSha256 = Sha(gfxTail),
+                    m2hSha256 = Sha(gfxNewM2h), origM2hSha256 = Sha(gfxOrigM2h),
+                },
+            },
+        }));
+        byte[] updated = Bytes(random, 5000); // Steam's new Xml.m2d
+        File.WriteAllBytes(Archive, updated);
+
+        var modes = new List<string>();
+        var result = ContentPackFlow.Prepare(true, client, packDir, globalDataDir, (a, b, mode) => { modes.Add(mode); return false; });
+        Assert.That(result.DataDir, Is.EqualTo(globalDataDir));
+        Assert.That(result.AppliedVersion, Is.Null);
+        Assert.That(result.Warning, Does.Contain("does not fit"));
+        Assert.That(result.Error, Is.Null);
+        Assert.That(File.ReadAllBytes(gfxArchive), Is.EqualTo(gfx));
+        Assert.That(File.ReadAllBytes(gfxM2h), Is.EqualTo(gfxOrigM2h));
+        Assert.That(File.Exists(gfxOrig), Is.False);
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(updated));
+        Assert.That(modes, Is.Empty);
+    }
+
     [Test]
     public void NoPackFolder_GlobalDataNamesPack_LockError() {
         Directory.Delete(packDir, true);

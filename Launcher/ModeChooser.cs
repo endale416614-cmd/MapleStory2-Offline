@@ -92,7 +92,7 @@ internal sealed class ModeChooser : Form {
             if (Directory.Exists(saveDataPath)) {
                 var subDirs = Directory.GetDirectories(saveDataPath)
                     .Select(Path.GetFileName)
-                    .Where(dir => !string.Equals(dir, "backups", StringComparison.OrdinalIgnoreCase))
+                    .Where(dir => !Settings.IsReservedFolder(dir))
                     .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
                     .ToList();
                 profiles.AddRange(subDirs);

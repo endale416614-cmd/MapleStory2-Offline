@@ -1,9 +1,14 @@
 id	verdict	home	reason
 11220083	copy	11290083	KMS Cupcake Puff Earrings (M) with its own look; Global's 11220083 has that name with another look
 11220084	copy	11290084	KMS Cupcake Puff Earrings (F) with its own look; Global's 11220084 has that name with another look
+11220359	copy	11290359	KMS Romantic Wedding Pearl Earrings (M) with its own look; Global's 11220359 has that name with another look (BT-121)
+11220360	copy	11290360	KMS Romantic Wedding Pearl Earrings (F) with its own look; Global's 11220360 has that name with another look (BT-121)
+11220389	copy	11290389	KMS Lively Alice Heart Earrings (M) with its own look; Global's 11220389 has that name with another look (BT-121)
+11220390	copy	11290390	KMS Lively Alice Heart Earrings (F) with its own look; Global's 11220390 has that name with another look (BT-121)
 11250113	twin	11250040	KMS re-issue of Global 11250040 Merry Holiday Earrings (F) (same KR name and look); Global's 11250113 is Absolute Earrings
 11250114	twin	11250077	KMS re-issue of Global 11250077 Celestial Angel Earrings (M) (same KR name and look); Global's 11250114 is Savagery Earrings
 11250115	twin	11250090	KMS re-issue of Global 11250090 Celestial Fairy Earrings (F) (same KR name and look); Global's 11250115 is Balrog's Earrings
+11300111	copy	11390111	KMS Fish Pastry Costume Hat with its own look; Global's 11300111 is Holy Monk Hat (SH-01b)
 11300490	twin	11300348	KMS re-issue of Global 11300348 Luminous Antenna (same KR name and look); Global's 11300490 is Mage's Flexible Headgear
 11300491	twin	11300382	KMS re-issue of Global 11300382 Raccoon Ears (same KR name and look); Global's 11300491 is Ranger's Flexible Headgear
 11300492	twin	11300383	KMS re-issue of Global 11300383 Squirrel Ears (same KR name and look); Global's 11300492 is Rogue's Flexible Headgear
@@ -28,7 +33,16 @@ id	verdict	home	reason
 11320294	twin	11300308	KMS re-issue of Global 11300308 Officer's Hat (same KR name and look); Global's 11320294 is Officer's Hat (F)
 11320295	twin	11300314	KMS re-issue of Global 11300314 Military Helmet (same KR name and look); Global's 11320295 is Military Helmet (M)
 11320296	twin	11300314	KMS re-issue of Global 11300314 Military Helmet (same KR name and look); Global's 11320296 is Military Helmet (F)
-11320348	keep		same item as Global's Calico Cat (F): the same model and icon; the KMS record names the M preset 11320347
+11320331	copy	11390331	KMS Watermelon Slice Hat (M) with its own look; Global's 11320331 has no name and the look of 11300060 (SH-01b)
+11320332	copy	11390336	KMS Watermelon Slice Hat (F) with its own look; Global's 11320332 has no name and the look of 11300060 (SH-01b)
+11320333	copy	11390337	KMS Whirlwind Rainbow Pinwheel (M) with its own look; Global's 11320333 has no name and the look of 11300060 (SH-01b)
+11320334	copy	11390338	KMS Whirlwind Rainbow Pinwheel (F) with its own look; Global's 11320334 has no name and the look of 11300060 (SH-01b)
+11320347	copy	11390347	KMS Calico Cat (M) with its own look; Global's 11320347 has that name with another look (BT-121)
+11320348	copy	11390348	KMS Calico Cat (F) with its own look; Global's 11320348 has that name with another look (BT-121)
+11320359	copy	11390359	KMS Romantic Wedding Fedora (M) with its own look; Global's 11320359 has that name with another look (BT-121)
+11320360	copy	11390360	KMS Romantic Wedding Tiara (F) with its own look; Global's 11320360 has that name with another look (BT-121)
+11320389	copy	11390389	KMS Lively Alice Teacup Hat (M) with its own look; Global's 11320389 has that name with another look (BT-121)
+11320390	copy	11390390	KMS Lively Alice Teacup Hat (F) with its own look; Global's 11320390 has that name with another look (BT-121)
 11420137	twin	11401199	KMS re-issue of Global 11401199 Apprentice Patissier Top (M) (same KR name and look); Global's 11420137 is Apprentice Patissier Top (M)
 11420138	twin	11401200	KMS re-issue of Global 11401200 Apprentice Patissier Top (F) (same KR name and look); Global's 11420138 is Apprentice Patissier Top (F)
 11520137	twin	11501086	KMS re-issue of Global 11501086 Apprentice Patissier Bottoms (M) (same KR name and look); Global's 11520137 is Apprentice Patissier Bottoms (M)
@@ -43,6 +57,10 @@ id	verdict	home	reason
 11620138	twin	11601332	KMS re-issue of Global 11601332 Apprentice Patissier Oven Mitts (F) (same KR name and look); Global's 11620138 is Apprentice Patissier Oven Mitts (F)
 11620213	twin	11600217	KMS re-issue of Global 11600217 Boxing Gloves (M) (same KR name and look); Global's 11620213 is Boxing Gloves (M)
 11620214	twin	11600218	KMS re-issue of Global 11600218 Boxing Gloves (F) (same KR name and look); Global's 11620214 is Boxing Gloves (F)
+11620359	copy	11690359	KMS Romantic Wedding Pearl Gloves (M) with its own look; Global's 11620359 has that name with another look (BT-121)
+11620360	copy	11690360	KMS Romantic Wedding Pearl Gloves (F) with its own look; Global's 11620360 has that name with another look (BT-121)
+11620389	copy	11690389	KMS Lively Alice Flower Ring (M) with its own look; Global's 11620389 has that name with another look (BT-121)
+11620390	copy	11690410	KMS Lively Alice Flower Ring (F) with its own look; Global's 11620390 has that name with another look (BT-121)
 11700663	twin	11700661	KMS re-issue of Global 11700661 Chic Startz Hiking Boots (M) (same KR name and look); Global's 11700663 is Emerald Shoes
 11700964	twin	11700939	KMS re-issue of Global 11700939 Bunbun Occult Bunny Shoes (same KR name and look); Global's 11700964 is (Intro) Velvet Boots
 11700965	twin	11700937	KMS re-issue of Global 11700937 White Rabbit Shoes (same KR name and look); Global's 11700965 is (Intro) Cubic Velvet Boots
@@ -53,6 +71,10 @@ id	verdict	home	reason
 11720138	twin	11701433	KMS re-issue of Global 11701433 Apprentice Patissier Shoes (F) (same KR name and look); Global's 11720138 is Apprentice Patissier Shoes (F)
 11720251	copy	11790251	KMS Energetic Star Enamel Boots (M) with its own look; Global's 11720251 has that name with another look
 11720252	copy	11790252	KMS Energetic Star Enamel Boots (F) with its own look; Global's 11720252 has that name with another look
+11720359	copy	11790359	KMS Romantic Wedding Pearl Shoes (M) with its own look; Global's 11720359 has that name with another look (BT-121)
+11720360	copy	11790360	KMS Romantic Wedding Pearl Shoes (F) with its own look; Global's 11720360 has that name with another look (BT-121)
+11720389	copy	11790389	KMS Lively Alice Loafers (M) with its own look; Global's 11720389 has that name with another look (BT-121)
+11720390	copy	11790390	KMS Lively Alice Shoes (F) with its own look; Global's 11720390 has that name with another look (BT-121)
 11790935	twin	11790933	KMS re-issue of Global 11790933 Celestial Sage's Shoes (Male) (same KR name and look); Global's 11790935 is Barbaric Refinement Shoes
 11790936	twin	11790934	KMS re-issue of Global 11790934 Celestial Fairy's Flower Shoes (Female) (same KR name and look); Global's 11790936 is Frenzied Refinement Shoes
 11820233	twin	11850060	KMS re-issue of Global 11850060 Cuddle Bear (same KR name and look); Global's 11820233 is Sleeping Bear (M)
@@ -61,6 +83,10 @@ id	verdict	home	reason
 11820242	twin	11800115	KMS re-issue of Global 11800115 Flamingo Balloon Cape (same KR name and look); Global's 11820242 is Flamingo Balloon Mantle (F)
 11820295	twin	11850015	KMS re-issue of Global 11850015 Military Rucksack (same KR name and look); Global's 11820295 is Military Rucksack (M)
 11820296	twin	11850015	KMS re-issue of Global 11850015 Military Rucksack (same KR name and look); Global's 11820296 is Military Rucksack (F)
+11820359	copy	11890359	KMS Romantic Wedding Party Balloon (M) with its own look; Global's 11820359 has that name with another look (BT-121)
+11820360	copy	11890360	KMS Romantic Wedding Party Balloon (F) with its own look; Global's 11820360 has that name with another look (BT-121)
+11820389	copy	11890389	KMS Lively Alice Teapot (M) with its own look; Global's 11820389 has that name with another look (BT-121)
+11820390	copy	11890390	KMS Lively Alice Teapot (F) with its own look; Global's 11820390 has that name with another look (BT-121)
 11850170	twin	11850072	KMS re-issue of Global 11850072 Merry Saintly Fairy Wings (F) (same KR name and look); Global's 11850170 is Absolute Cape
 11850171	twin	11850165	KMS re-issue of Global 11850165 Floating Moon Bunny (same KR name and look); Global's 11850171 is Savagery Cape
 11850172	twin	11850038	KMS re-issue of Global 11850038 Fluffy Fox Triple-Tail (same KR name and look); Global's 11850172 is MK 52 Omega Propeller
@@ -71,6 +97,10 @@ id	verdict	home	reason
 11900120	copy	11990124	KMS Georg Kai Necklace; Global's 11900120 is Humanitas Field Necklace
 12220083	copy	12290083	KMS Cupcake Puff Outfit (M) with its own look; Global's 12220083 has that name with another look
 12220084	copy	12290084	KMS Cupcake Puff Outfit (F) with its own look; Global's 12220084 has that name with another look
+12220359	copy	12290359	KMS Romantic Wedding Tuxedo (M) with its own look; Global's 12220359 has that name with another look (BT-121)
+12220360	copy	12290360	KMS Romantic Wedding Dress (F) with its own look; Global's 12220360 has that name with another look (BT-121)
+12220389	copy	12290389	KMS Lively Alice Suit (M) with its own look; Global's 12220389 has that name with another look (BT-121)
+12220390	copy	12290390	KMS Lively Alice Dress (F) with its own look; Global's 12220390 has that name with another look (BT-121)
 13100156	twin	13100155	KMS re-issue of Global 13100155 Triangular Ruler (Dagger) (same KR name and look); Global's 13100156 is Red Dragon's Dagger
 13100258	twin	13100227	KMS duplicate of 13100227 Cherry Blossom Dagger, which the pack ships in its place (the selection: same as pack item 13100227)
 13100300	twin	13100289	KMS re-issue of Global 13100289 Milky Way Dagger (same KR name and look); Global's 13100300 is Milky Way Dagger
@@ -154,6 +184,7 @@ id	verdict	home	reason
 20200097	keep		same item as Global's Maple Bliss Emote (the same Taiwan English name and function); the KMS look differs
 20200098	keep		same item as Global's Puppet Show Emote (the same Taiwan English name and function); the KMS look differs
 20200102	keep		same item as Global's Gloat Emote (the same Taiwan English name and function); the KMS look differs
+20200107	keep		same item as Global's Hot Soak Emote (the same Taiwan English name and function); the KMS look differs (SH-01b)
 20200109	keep		same item as Global's Study Frenzy Emote (the same Taiwan English name and function); the KMS look differs
 20200111	keep		same item as Global's Space Walk Emote (the same Taiwan English name and function); the KMS look differs
 20201002	keep		same item as Global's Sleep Emote (the same Taiwan English name and function); the KMS look differs
@@ -223,6 +254,7 @@ id	verdict	home	reason
 20300054	keep		same item as Global's Guild Summon Scroll (the same Taiwan English name and function); the KMS look differs
 20300693	keep		same item as Global's Face Change Voucher (the same Taiwan English name and function); the KMS look differs
 20301431	copy	20391431	KMS Halloween Weapon Box; Global's 20301431 is Mini-Game: Survival M
+20301435	copy	20391435	KMS Imperial Gold Weapon Box; Global's 20301435 is Day 3 Login Package (SH-01b)
 20301632	copy	20391632	KMS Stone Butterfly Weapon Box; Global's 20301632 is Ascendant B Weapon Box
 20301698	copy	20391698	KMS Halloween Weapon Box; Global's 20301698 is Day 6 Login Package
 20301700	copy	20391700	KMS Music Star Weapon Box; Global's 20301700 is Day 8 Login Package
@@ -236,6 +268,7 @@ id	verdict	home	reason
 20301984	keep		same item as Global's Tier 1 Fantastic Gemstone Box; Global's box still gives items, KMS's gives others (D-9)
 20301997	keep		same item as Global's Tier 3 Fantastic Gemstone Box; Global's box still gives items, KMS's gives others (D-9)
 20301999	keep		same item as Global's Tier 5 Fantastic Gemstone Box; Global's box still gives items, KMS's gives others (D-9)
+20302001	twin	20301997	KMS re-issue of Global 20301997 Tier 3 Fantastic Gemstone Box (same KR name, look and box 330002283); Global's 20302001 is Maple Fortune Cookie (SH-01b)
 20302038	copy	20392038	KMS Holy Seraphim Weapon Box; Global's 20302038 is Twinkle Star Weapon Box
 20302049	keep		same item as Global's Revive Voucher (the same Taiwan English name and function); the KMS look differs
 20302068	copy	20392068	KMS Vampiric Weapon Box; Global's 20302068 is Exceptional +8 Weapon Enchant Scroll Box
@@ -267,10 +300,16 @@ id	verdict	home	reason
 20303045	copy	20393045	KMS Guild Summon Scroll (3); Global's 20303045 is Special Beauty Voucher Selection Box
 20303048	copy	20393048	KMS Party Summon Scroll (10); Global's 20303048 is Legendary Gear Set Selection Box
 20303049	copy	20393049	KMS Instant Gathering Voucher (50); Global's 20303049 is Wayward Soul Accessory Box
+20303051	copy	20393051	KMS Guild Summon Scroll (3); Global's 20303051 is Legendary Weapon Bonus Value Re-roller Selection Box (SH-01b)
+20303052	copy	20393052	KMS Party Summon Scroll (10); Global's 20303052 is Tier 6 Gemstone Selection Box (SH-01b)
+20303053	copy	20393053	KMS Instant Gathering Voucher (50); Global's 20303053 is Lapenshard Box (SH-01b)
 20303055	copy	20393055	KMS Construction Package: Parcel Box; Global's 20303055 is Behemoth Gear Set Box
+20303056	twin	20303040	KMS re-issue of Global 20303040 Lv. 70 Lapenshard Selection Box (same KR name, look and box 320000377); Global's 20303056 is Behemoth Armor Box (SH-01b)
+20303097	twin	20303090	KMS re-issue of Global 20303090 Fire Prism Weapon Box (same KR name, look and box contents: 330002877 holds 330002746's 13 weapons); Global's 20303097 is Support Box (SH-01c)
 20303111	copy	20393111	KMS Black Emperor Gloves Box; Global's 20303111 is Petite Pet Selection Box
 20303133	copy	20393133	KMS Black Emperor Headgear Box; Global's 20303133 is The Joy of Composing: Blank Music Score Box
 20303153	copy	20393153	KMS Holiday Weapon Box; Global's 20303153 is Zakum Chic Furnishing Selection Package
+20303169	twin	20303095	KMS re-issue of Global 20303095 Colorful Crystal (10) Selection Box (same KR name, look and box 330002744); Global's 20303169 has no name and opens Lapenshards (SH-01b)
 20600002	keep		same item as Global's Neon Angel-Heart Ad Balloon (the same Taiwan English name and function); the KMS look differs
 20600005	keep		same item as Global's Sweet Lollipop Ad Balloon (the same Taiwan English name and function); the KMS look differs
 20600006	keep		same item as Global's Sweet Neon Lollipop Ad Balloon (the same Taiwan English name and function); the KMS look differs
@@ -289,7 +328,9 @@ id	verdict	home	reason
 20800037	keep		same item as Global's Glittering Super Chat Theme (the same Taiwan English name and function); the KMS look differs
 22001018	keep		same item as Global's Ducky Outfit Capsule; Global's box still gives items, KMS's gives others (D-9)
 22001021	keep		same item as Global's Ducky Outfit Capsule; Global's box still gives items, KMS's gives others (D-9)
+22001024	copy	22091024	KMS February 2021 Ducky Outfit Capsule; Global's 22001024 Ducky Outfit Capsule gives one item, Drowsy Duckling (SH-01b)
 22003001	copy	22093001	KMS Orange Mushroom Power Up Capsule, whose box Global's 22003001 opens empty
+30000917	keep		same item as Global's Polished Fusion Stone (the same Taiwan English name, look, tag PetEXP and parameter 15000); the KMS function has no name (SH-01b)
 30001267	keep		same item as Global's Gear Dye Voucher (the same Taiwan English name and function); the KMS look differs
 30001298	copy	30091298	KMS Chaos Onyx (400) Box Fragment; Global's 30001298 has no function
 30001330	copy	30091330	KMS Metacell (500) Box Fragment; Global's 30001330 is the letter item "M"
@@ -304,8 +345,11 @@ id	verdict	home	reason
 30001339	copy	30091339	KMS Prism Stone (8) Box Fragment; Global's 30001339 is the letter item "Y"
 30001476	keep		same item as Global's Polished Fusion Stone (a function variant, checked by hand); the KMS function differs
 30001478	keep		same item as Global's Fusion Stone Shard (a function variant, checked by hand); the KMS function differs
+30061169	twin	30061162	KMS re-issue of Global 30061162 Ascendant Weapon Attribute Lock Scroll (same KR name, look, tag LockItemOptionWeapon and 2-week life); Global's 30061169 is Toad's Toolkit (Temporary) (SH-01b)
+30061170	twin	30061163	KMS re-issue of Global 30061163 Ascendant Armor Attribute Lock Scroll (same KR name, look, tag LockItemOptionArmor and 2-week life); Global's 30061170 is (Event) Accessory Attribute Lock Scroll (SH-01b)
 31001999	copy	31091999	KMS Epic Accessory Bonus Value Re-roller; Global's 31001999 is Legendary Weapon Bonus Re-roller (Two-handed)
 31002000	drop		remake scroll whose itemremakescroll row 10000169 the pack lacks
+31002004	twin	31001542	KMS re-issue of Global 31001542 Epic 1-Socket Conversion Scroll (Lv. 70) (same KR name, look and socket scroll 10000031); Global's 31002004 is Epic Accessory Bonus Re-roller (Lv. 60) (SH-01b)
 34000043	keep		same item as Global's Cherry Blossom Classic Guitar (the same Taiwan English name and function); the KMS look differs
 34000045	keep		same item as Global's Blooming Lily Clarinet (the same Taiwan English name and function); the KMS look differs
 34000057	keep		same item as Global's Festive Violin (the same Taiwan English name and function); the KMS look differs
@@ -345,6 +389,7 @@ id	verdict	home	reason
 60000030	keep		same item as Global's Ari (the same Taiwan English name and function); the KMS look differs
 70200056	keep		same item as Global's Pink Bean Chat Bubble (the same Taiwan English name and function); the KMS look differs
 70200085	keep		same item as Global's Berry Cream Chat Bubble (the same Taiwan English name and function); the KMS look differs
+70200092	keep		same item as Global's Flower Viewing Chat Bubble (the same Taiwan English name and function); the KMS look differs (SH-01b)
 70200099	keep		same item as Global's Sweet Popcorn Chat Bubble (the same Taiwan English name and function); the KMS look differs
 70200108	keep		same item as Global's Sweet 3 Year Anniversary Chat Bubble (the same Taiwan English name and function); the KMS look differs
 70200120	keep		same item as Global's Joddy Squad Chat Bubble (the same Taiwan English name and function); the KMS look differs
@@ -359,6 +404,7 @@ id	verdict	home	reason
 70210006	keep		same item as Global's La Vie En Rose Chat Bubble (the same Taiwan English name and function); the KMS look differs
 70300024	keep		same item as Global's Cloudy Night Name Tag (the same Taiwan English name and function); the KMS look differs
 70300067	keep		same item as Global's Berry Cream Name Tag (the same Taiwan English name and function); the KMS look differs
+70300077	keep		same item as Global's Flower Viewing Name Tag (the same Taiwan English name and function); the KMS look differs (SH-01b)
 70300091	keep		same item as Global's Sweet Popcorn Name Tag (the same Taiwan English name and function); the KMS look differs
 70300102	keep		same item as Global's Fall Story Name Tag (the same Taiwan English name and function); the KMS look differs
 70300104	keep		same item as Global's Sweet 3 Year Anniversary Name Tag (the same Taiwan English name and function); the KMS look differs
@@ -374,6 +420,7 @@ id	verdict	home	reason
 70400017	keep		same item as Global's Moonlit Night Damage Skin (the same Taiwan English name and function); the KMS look differs
 70400031	keep		same item as Global's item 70400031 (the same function; the Taiwan client has no English name); the KMS look differs
 70401005	keep		same item as Global's Lucky Clover Damage Skin (the same Taiwan English name and function); the KMS look differs
+70401007	keep		same item as Global's Sweet Candy Damage Skin (the same Taiwan English name and function); the KMS look differs (SH-01b)
 70401009	keep		same item as Global's Will-o'-Wisp Damage Skin (the same Taiwan English name and function); the KMS look differs
 70401011	keep		same item as Global's Cutie Pink Bean Damage Skin (the same Taiwan English name and function); the KMS look differs
 70401012	keep		same item as Global's Marshmallow Damage Skin (the same Taiwan English name and function); the KMS look differs

@@ -1,0 +1,57 @@
+kind	id	field	text	source
+quest	10002003	name	Lapenshards for Beginners	translated
+quest	10002003	desc	Word reached the Secret Knights Order that seasoned beginners cannot use Lapenshards, so the Order has made sure you can use one.	translated
+quest	10002003	manual		kms
+quest	10002003	complete	Meet $npc:11003127$ in $map:02000188$	translated
+quest	10002003	count		kms
+quest	10003449	name	A Sudden Summons	translated
+quest	10003449	desc	A sudden summons from $npcName:11003883$.\nCould she have found a new clue?\n\nGo to $map:02000487$ and meet $npcName:11003883$.	translated
+quest	10003449	manual	Meet $npcName:11003883$ in $map:02000487$	translated
+quest	10003449	complete	Meet $npcName:11003883$ in $map:02000487$	translated
+quest	10003449	count	0	kms
+quest	10003450	name	A Suspicious Clue	translated
+quest	10003450	desc	The Frontier Foundation has found suspicious movement.\nResearch suggests that the dark matter turning up all over Maple World may be connected to the Space-Time Rift.\n\nGo to $map:52000196$ in $map:02000487$ and check the research results.	translated
+quest	10003450	manual	Meet $npcName:11004032$ in $map:52000196$	translated
+quest	10003450	complete	Meet $npcName:11004032$ in $map:52000196$	translated
+quest	10003450	count	0	kms
+quest	10003451	name	Investigating the Dark Matter	translated
+quest	10003451	desc	According to $npcName:11004032$'s investigation, the power of the Blue Lapenta can be sensed in the dark matter.\nWhat could be going on?\n\nGo to $npcName:11004817$ in $map:52000196$ in $map:02000487$ and get the research data.	translated
+quest	10003451	manual	Check the dark matter findings in $map:52000196$	translated
+quest	10003451	complete	Check the dark matter findings in $map:52000196$	translated
+quest	10003451	count	0	kms
+quest	10003452	name	The Findings	translated
+quest	10003452	desc	The dark matter research data from $map:52000196$.\nHow could it be connected to the Space-Time Rift?\n\nCheck the research results in $map:52000196$ in $map:02000487$.	translated
+quest	10003452	manual	Check the research data in $map:52000196$|Meet $npcName:11003883$ in $map:02000487$|Meet $npcName:11003883$ in $map:02000487$	translated
+quest	10003452	complete	Meet $npcName:11003883$ in $map:02000487$	translated
+quest	10003452	count	0|0|0	kms
+quest	10003453	name	A Clue to the Rift	translated
+quest	10003453	desc	According to $npcName:11004032$'s findings, the stronger illusion monsters now appearing are likely connected to the dark matter as well.\nThere is also a theory that someone may be causing it on purpose.\n\nTell $npcName:11004790$ and $npcName:11001577$ in $map:52000201$ about it.	translated
+quest	10003453	manual	Meet $npcName:11004790$ in $map:52000201$	translated
+quest	10003453	complete	Meet $npcName:11004790$ in $map:52000201$	translated
+quest	10003453	count	0	kms
+quest	10003454	name	The Power of the Blue Lapenta	translated
+quest	10003454	desc	The two have heard $npcName:11004032$'s findings.\nThere is no telling who is behind this, but hearing that the power of the Blue Lapenta can be sensed reminded $npcName:11004790$ of an old story about that power.\nNothing is certain yet, but might the Frontier Foundation have looked into it?\n\nGo to $npcName:11003883$ in $map:02000487$ and find out whether there is any clue to where the power of the Blue Lapenta remains.	translated
+quest	10003454	manual	Meet $npcName:11003883$ in $map:02000487$	translated
+quest	10003454	complete	Meet $npcName:11003883$ in $map:02000487$	translated
+quest	10003454	count	0	kms
+quest	70000025	name	Reach Level 70	nightly
+quest	70000025	desc		nightly
+quest	70000025	manual		nightly
+quest	70000025	complete		nightly
+quest	70000025	count		nightly
+quest	90000815	name	News from the Forge	translated
+quest	90000815	desc	$npc:11000003$ in $map:02000001$ told you that $npc:11003416$ has found a material for making stronger equipment.\nGo to $npcName:11003416$ at $map:02000203$ and hear the story.	translated
+quest	90000815	manual		kms
+quest	90000815	complete	Meet $npcName:11003416$ at $map:02000203$	translated
+quest	90000815	count		kms
+quest	90000816	name	A New Power of Transcendence	translated
+quest	90000816	desc	$npcName:11003416$ at $map:02000203$ told you that a material for making a new Transcendence Crystal can be found in $dungeonTitle:29005001$.\nGo to $npc:11000327$ in $map:02000001$ to pick up the $item:30001025$ that $npcName:11003416$ left there, and ask more about $dungeonTitle:29005001$ and $item:20001881$.	translated
+quest	90000816	manual		kms
+quest	90000816	complete	Talk to $npcName:11000327$ in $map:02000001$	translated
+quest	90000816	count		kms
+chapter	5025	name	Beginner Support	translated
+chapter	5025	isTutorial	OK	kms
+chapter	5035	name	The Power That Shakes the Rift	translated
+chapter	5035	isTutorial	OK	kms
+chapter	9086	name	A Stronger Power of Transcendence	translated
+chapter	9086	isTutorial		kms

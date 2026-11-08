@@ -18,9 +18,9 @@ internal static class ReportDialogs {
         "• What went wrong: error messages, and the last lines of the game servers' logs and map scripts (the maps, monsters, items and quests of your session)\n" +
         "• When you played: the session's date and times, and the launcher's steps\n" +
         "• Your MapleStory 2 Offline and content pack versions, your launcher settings, install folders and save size\n" +
-        "• Your Windows version and basic PC details: processor, graphics card and driver, memory, screen size, free disk space\n" +
-        "• If the game crashed: which part of it crashed (program and module names, versions, error code and address from Windows' event log)\n" +
-        "• Your last character's level, job and map (not its name)\n" +
+        "• Your Windows version and basic PC details: processor, graphics card and driver, memory, screen size, free disk space, whether a proxy handles this PC's own connections, and the names (never the values) of the proxy and server environment variables that are set\n" +
+        "• If the game crashed: which part of it crashed (program and module names, versions, error code and address from Windows' event log and the offline patch's log)\n" +
+        "• Your last character's level, job, map and started epic quests (not its name)\n" +
         "• Which online addresses the game tried to reach (they are blocked offline)\n" +
         "• A random install number, so reports from the same PC can be grouped\n\n" +
         "Never sent:\n" +

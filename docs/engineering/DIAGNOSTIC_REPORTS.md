@@ -21,6 +21,9 @@ One JSON document per report, gzip-compressed, schema 1:
 
 The report text already holds the versions, game mode, content pack, OS and hardware, so they are not separate
 fields; the digest tool reads them from the text and groups reports by their known-problem id or first exception.
+On Linux the OS and hardware are the System line (from 1.2.3): the os-release name, Steam Deck or not, session type,
+which display variables are set (never their values, as DISPLAY can hold a host name), screen size, memory, each GPU's
+driver and PCI id, and the umu version (never its path).
 
 Never sent [P]: the diagnostics zip, the save database, game files. launcher.ini lines appear as the session report
 already prints them (Username and Password hidden).
@@ -68,6 +71,9 @@ the Linux launcher ports it):
   developer?" with the same list, "See exactly what would be sent" (the upload text in Notepad), Send, Don't send (the
   default) and "Do this every time (no more questions)" (writes `always` or `never`; `never` also takes back queued
   automatic reports, and so does every start while it is `never`).
+- `always` also sends a session with no launcher problem when the game ran and a server logged an ERR or FTL line the
+  upload keeps (ProblemReport.OffersReport, both launchers; DR-09, BT-165). A line only the client wrote is dropped from
+  the upload, so it alone sends nothing. Such a session shows no message, and `ask` does not ask about it.
 - A launcher crash: with `ask` the crash message is followed by a Yes/No question with the same list (no preview); the
   report is queued and goes out at the next start. With `always` it is queued at once.
 - Report a problem ("Choose how to play" link, the launcher's `--report-problem`, a Start-menu shortcut made by Setup):

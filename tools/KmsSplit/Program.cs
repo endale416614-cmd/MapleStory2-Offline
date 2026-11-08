@@ -3,15 +3,22 @@
 //   KmsSplit --verify <kmsXml.m2d> <naXml.m2d> <reportDir> --sample 500      compare converted vs NA
 //   KmsSplit --selftest                                                     comparer self-check
 //   KmsSplit --fix-skin <dir>                                               converted item files under <dir>/item: skin="1" where skinType is set, ride/skill/pet id from param1, the NA OpenItemBox parameter (in place)
-//   KmsSplit --fix-items <dir>                                              converted item files under <dir>/item: KMS-2024 type, instrument id, rank, icon and cap attributes as Global writes them (in place)
+//   KmsSplit --fix-items <dir> [<Image.m2h> <naXml.m2d>]                    converted item files under <dir>/item: KMS-2024 type, instrument id, coin shop, rank, icon and cap attributes as Global writes them (in place);
+//                                                                           with the pack's Image header and NA's Xml: a cosmetic whose icon file the header lacks takes its preset's where the header has it, and NA's records so changed are written into <dir> (IC-01)
 //   KmsSplit --add-records <dir> <kmsXml.m2d> <naXml.m2d> [<itemsDir>]      the KMS rides, glide skills and petproperty rows that the mounts and pets under <itemsDir>/item (default <dir>) name and NA lacks, written into <dir>; exit 1 if one has no KMS record; and each KMS mount's own summon or glide skill copy, the item in <dir> pointed at it (IM-03)
 //                                                                           and the anikeytext.xml blocks of the NPC models under <itemsDir>/npc that NA lacks, and those KMS pets' string/en/petname.xml rows; exit 1 if a model has no KMS keys (IM-04)
+//                                                                           and, for the emotes under <itemsDir>/item whose skill NA's Emotes window lacks, their keys and names, the KMS emotion entries, couple rows and character animation keys NA lacks; exit 1 if one has no KMS key, skill record or name (EM-01)
+//                                                                           and the KMS instrument rows and categories that the instruments under <itemsDir>/item name and NA lacks, added to NA's table/instrumentinfo.xml and instrumentcategoryinfo.xml in <dir>; exit 1 if one has no KMS row (IN-02)
+//                                                                           with equipItemId the itemPreset of an instrument naming the row where <dir>/item holds that preset's item record, as Global writes it (IN-03)
 //                                                                           and the KMS effect XMLs that the records under <dir> name and NA lacks, written under <dir>/effect (IT-08)
+//                                                                           and each KMS equipment item under <dir>/item whose slots name other models takes the slots and customize of KMS's itemmodel entry of its itemPreset (IT-07)
 //   KmsSplit --add-records <dir> <kmsXml.m2d> <naXml.m2d> <itemsDir> <Server.m2d> <kms-homes.tsv>
 //                                                                           also the KMS homes (IB-02): KMS's drop rows (Server.m2d's KMS2 Backup table) under a home id for each box the KMS items under
 //                                                                           <itemsDir>/item reach whose pack rows are not KMS's, in <dir>.server/table/Server/individualItemDrop_Final.xml; the item functions
 //                                                                           and <dir>/table/gacha_info.xml rows pointed at the homes; the prizes and keys that are other Global items as kms-homes.tsv says
-//                                                                           (twin, copy under its home id, or the row dropped); exit 1 if a reached Global id needs a reviewed row or a home is taken
+//                                                                           (twin, copy under its home id, or the row dropped); exit 1 if a reached Global id needs a reviewed row or a home is taken;
+//                                                                           and the shops the KMS coins under <itemsDir>/item name (SH-01b): their rows and info as Server.m2d has them for KMS (KR
+//                                                                           and unlocalized, the KR mark removed), the ids mapped as in the boxes, in <dir>.server/table/Server/shop_game*.xml
 //   KmsSplit --paths <Xml.m2d> <prefix>...                                  element@attr frequency (dev aid)
 using System.Text;
 using System.Xml.Linq;
@@ -24,7 +31,7 @@ if (args[0] == "--validate") return args.Length < 2 ? Usage() : Validate(args[1]
 if (args[0] == "--paths") return args.Length < 2 ? Usage() : Paths(args[1], args.Skip(2).ToArray());
 if (args[0] == "--verify") return args.Length < 4 ? Usage() : Verify(args[1], args[2], args[3], args.Length > 5 && args[4] == "--sample" ? int.Parse(args[5]) : 500);
 if (args[0] == "--fix-skin") return args.Length < 2 ? Usage() : Conv.FixSkinFiles(args[1]);
-if (args[0] == "--fix-items") return args.Length < 2 ? Usage() : Conv.FixItemFiles(args[1]);
+if (args[0] == "--fix-items") return args.Length is not (2 or 4) ? Usage() : Conv.FixItemFiles(args[1], args.Length == 4 ? Conv.ArchiveNames(args[2]).Contains : null, args.Length == 4 ? args[3] : null);
 if (args[0] == "--add-records") return args.Length is < 4 or 6 or > 7 ? Usage() : AddRecords(args[1], args[2], args[3], args.Length > 4 ? args[4] : args[1], args.Length > 6 ? args[5] : null, args.Length > 6 ? args[6] : null);
 if (args.Length < 2) return Usage();
 return RunConvert(args);
@@ -157,14 +164,42 @@ static int AddRecords(string dir, string kmsPath, string naPath, string itemsDir
         File.WriteAllBytes(Path.Combine(dir, "table", "petproperty.xml"), Encoding.UTF8.GetBytes(Conv.AddPetRows(naPets, pets)));
     }
     Console.WriteLine($"add-records: {rides} riding ({passengers} with passengers), {skills} glide skill, {pets.Count} petproperty rows; no KMS record: {(missing.Count == 0 ? "none" : string.Join(" ", missing))}");
+    var (instrumentRows, instrumentCategories, noInstrument) = Conv.AddInstruments(dir, na.Get, k.Tables, itemsDir); // IN-02; before CopyEffects, which copies their playEffect XMLs
+    Console.WriteLine($"add-records: {instrumentRows} instrument rows, {instrumentCategories} instrument categories; no KMS row: {(noInstrument.Count == 0 ? "none" : string.Join(" ", noInstrument))}");
+    int looks = PresetLooks(dir, k, na, skel, rules); // IT-07
+    Console.WriteLine($"add-records: {looks} KMS equipment item files take the slots and customize of the KMS itemmodel entry of their itemPreset");
     bool copied = Copies(dir, k, na, itemsDir);
     bool keyed = AnimationKeys(dir, k, na, itemsDir, pets);
+    var emotes = Conv.Emotes(dir, na.Get, na.Names.Contains, k.EmoteTexts, k.AniKeys, itemsDir); // after AnimationKeys, whose anikeytext.xml it adds to (EM-01)
+    Console.WriteLine($"add-records: {emotes.Skills} emote skills ({emotes.Items} items) listed and named, {emotes.Entries} emotion entries, {emotes.Rows} couple rows, {emotes.Keys} animation keys; no KMS key, record or name: {(emotes.Missing.Count == 0 ? "none" : string.Join(" ", emotes.Missing))}");
+    keyed &= emotes.Missing.Count == 0; // the emotes' animation keys count with the models'
     bool homed = serverM2d == null || KmsHomes(dir, k, na, itemsDir, serverM2d, homesTable!, skel, rules);
-    var (effects, noEffect) = Conv.CopyEffects(dir, na.Names.Contains, k.Effects); // after every record is written (BT-125)
+    var (effects, noEffect) = Conv.CopyEffects(dir, na.Names.Contains, k.Effects, emotes.Effects); // after every record is written (BT-125)
     Console.WriteLine($"add-records: {effects.Count} effect XMLs; named but in neither client: {(noEffect.Count == 0 ? "none" : string.Join(" ", noEffect))}");
-    return missing.Count == 0 && copied && keyed && homed ? 0 : 1;
+    return missing.Count == 0 && noInstrument.Count == 0 && copied && keyed && homed ? 0 : 1;
 }
 static void Save(XDocument doc, string path) { Directory.CreateDirectory(Path.GetDirectoryName(path)!); doc.Save(path); }
+
+// ---------- looks: KMS's equipment items take KMS's itemmodel entry of their preset (IT-07, BT-120) ----------
+// The pack build's overlays come from an older convert, which filled an empty-slot KMS item from NA's record of its preset and gave
+// the others the entry of their own id. Each KMS item file under <dir>/item (KMS has the id, NA does not) gets Conv.PresetLook,
+// and a changed file the NA-default fill and the NA rules, as Finish gives a converted record; an unchanged file is not written.
+// Global's records stay (D-9); KmsHomes writes its copies with Conv.Item, which takes the same entry.
+static int PresetLooks(string dir, Kms k, Na na, Skeleton skel, NaRules rules) {
+    string items = Path.Combine(dir, "item");
+    int changed = 0;
+    foreach (var path in Directory.Exists(items) ? Directory.EnumerateFiles(items, "*.xml", SearchOption.AllDirectories) : Enumerable.Empty<string>()) {
+        long id = long.Parse(Path.GetFileNameWithoutExtension(path));
+        if (na.Ids["item"].Contains(id) || !k.Items.ContainsKey(id)) continue;
+        var doc = XDocument.Load(path);
+        if (doc.Root!.Elements("environment").Count(env => Conv.PresetLook(env, id, k.ItemModels)) == 0) continue;
+        skel.Fill("item", doc);
+        rules.Apply("item", doc);
+        doc.Save(path);
+        changed++;
+    }
+    return changed;
+}
 
 // ---------- copies: a KMS mount's own skill (IM-03) ----------
 // The NA client casts the skill an item names. A KMS ground mount names none (the KMS client summons every mount with its
@@ -264,13 +299,18 @@ static bool AnimationKeys(string dir, Kms k, Na na, string itemsDir, List<XEleme
 // - A smart-drop group (a class box) that loses an id and keeps other rows stops the build: the server gives a class without
 //   a row the group's first entry, another class's item.
 // - The KMS items, the copies and the IB-01 gacha rows in dir name the homes; a Global gacha a copy names gets a home row.
+// - Coin shops (SH-01b, BT-115): a KMS coin opens the shop of its param1 (SH-01), and the pack's Server.m2d has those shops
+//   as KMS has them, KR rows and info among them. The ids of their KR and unlocalized rows join the walk, so the gate covers
+//   them, and the shops are rewritten in place in copies of shop_game.xml and shop_game_info.xml in <dir>.server: the KR
+//   mark removed, other locales' rows gone, the ids mapped as in the boxes. No Global item or NPC names these shops.
 // Global's records and rows stay as they are, so Global items open exactly as before.
 static bool KmsHomes(string dir, Kms k, Na na, string itemsDir, string serverM2d, string tablePath, Skeleton skel, NaRules rules) {
     var table = Homes.ReadTable(File.ReadAllText(tablePath));
-    byte[] finalBytes; string backup;
+    byte[] finalBytes; string backup; byte[][] shopBytes;
     using (var r = new M2dReader(serverM2d)) {
         var entries = r.Files.ToDictionary(f => Layout.Norm(f.Name), StringComparer.OrdinalIgnoreCase);
         finalBytes = r.GetBytes(entries[Homes.FinalPath]);
+        shopBytes = Homes.ShopPaths.Select(p => r.GetBytes(entries[p])).ToArray();
         backup = Encoding.UTF8.GetString(r.GetBytes(entries["table/Server/individualItemDrop_Final_Backup.xml"])).TrimStart('﻿');
     }
     bool bom = finalBytes.Length >= 3 && finalBytes[0] == 0xEF && finalBytes[1] == 0xBB && finalBytes[2] == 0xBF;
@@ -305,6 +345,11 @@ static bool KmsHomes(string dir, Kms k, Na na, string itemsDir, string serverM2d
         if (v is "kms" or "copy" && BoxItem(p) && owners.Add(p)) queue.Enqueue(p);
         return v;
     }
+    // the coin shops (SH-01b): the ids of their KMS rows are met before the boxes, so the walk follows the box items among them
+    var coins = shipped.Where(i => !naItems.Contains(i) && k.Items.ContainsKey(i) && Homes.CoinShop(k.Items[i]) > 0).ToList();
+    var coinShops = coins.Select(i => Homes.CoinShop(k.Items[i])).ToHashSet();
+    var shops = Homes.Shops(Homes.Utf8(shopBytes[0]).Text);
+    foreach (long p in coinShops.Where(shops.ContainsKey).SelectMany(s => Homes.ShopIds(shops[s])).Distinct().Order()) Meet(p);
     while (queue.Count > 0) {
         long owner = queue.Dequeue();
         var f = Kfn(owner);
@@ -342,6 +387,10 @@ static bool KmsHomes(string dir, Kms k, Na na, string itemsDir, string serverM2d
     }
     foreach (long c in copies.Where(c => !k.Items.ContainsKey(c) || !Homes.ItemHomeOk(c, table[c].Home, h => naItems.Contains(h) || naNames.Contains(h) || k.Items.ContainsKey(h) || copies.Count(o => table[o].Home == h) > 1)))
         bad.Add($"copy home {table[c].Home} of {c} is taken or outside its block");
+    // a copy of a mount or a pet would name no ride, glide skill or pet: add-records writes those records for the items under
+    // itemsDir (IM-02, IM-03), never for a copy under its home id
+    foreach (long c in copies.Where(c => k.Items.TryGetValue(c, out var ki) && Homes.MountOrPet(ki)))
+        bad.Add($"copy {c} is a mount or a pet, which add-records cannot copy yet (IM-02, IM-03)");
     foreach (var (b, h) in home) {
         if (h < 0) bad.Add($"box home of {b} is taken or outside its block");
         if (!Homes.Ids(Homes.Kept(kbox[b])).SetEquals(kcli.TryGetValue(b, out var c) ? Homes.Ids(Homes.Kept(c)) : new())) bad.Add($"box {b}: the Backup's KR ids are not the KMS client table's");
@@ -373,6 +422,27 @@ static bool KmsHomes(string dir, Kms k, Na na, string itemsDir, string serverM2d
         if (el == null) { bad.Add($"box home {h} of {b} has no rows"); continue; }
         blocks.Append($"  <!-- IB-02: KMS box {b} (KMS2 server table) under its home id -->{eol}").Append(Homes.Block(el, eol));
     }
+    // gacha_info.xml (IB-01's table, copied from tools/data/pack-overlay by the build) is read and its rows made before anything
+    // is written, so a missing table or row stops the run with the other refusals
+    string gachaPath = Path.Combine(dir, "table", "gacha_info.xml");
+    byte[] gachaRaw = Array.Empty<byte>();
+    string gachaText = "", gachaDone = "";
+    int gachaSkip = 0, gachaRows = 0;
+    if (gachaBox.Count + gachaHome.Count > 0) {
+        if (!File.Exists(gachaPath)) bad.Add($"{gachaPath} is missing");
+        else {
+            gachaRaw = File.ReadAllBytes(gachaPath);
+            gachaSkip = gachaRaw.Length >= 3 && gachaRaw[0] == 0xEF && gachaRaw[1] == 0xBB && gachaRaw[2] == 0xBF ? 3 : 0;
+            gachaText = Encoding.UTF8.GetString(gachaRaw, gachaSkip, gachaRaw.Length - gachaSkip);
+            try { (gachaDone, gachaRows) = Homes.GachaRows(gachaText, gachaBox, gachaHome); } catch (InvalidDataException e) { bad.Add(e.Message); }
+        }
+    }
+    var shopFiles = new List<(string Path, byte[] Bom, string Text, bool Changed, int Rows, int Removed)>();
+    foreach (var (path, bytes) in Homes.ShopPaths.Zip(shopBytes)) {
+        var (shopBom, text) = Homes.Utf8(bytes);
+        try { var (done, rows, removed) = Homes.ShopText(text, coinShops, Map); shopFiles.Add((path, shopBom, done, done != text, rows, removed)); }
+        catch (InvalidDataException e) { bad.Add(e.Message); }
+    }
     if (bad.Count > 0) { Console.WriteLine("add-records: no KMS homes written: " + string.Join("; ", bad)); return false; }
     if (home.Count > 0) {
         string server = Path.Combine(dir.TrimEnd(Path.DirectorySeparatorChar, (char)47) + ".server", "table", "Server", "individualItemDrop_Final.xml");
@@ -392,17 +462,15 @@ static bool KmsHomes(string dir, Kms k, Na na, string itemsDir, string serverM2d
         Homes.Point(doc, BoxTo, Map, GachaTo);
         Save(doc, Path.Combine(dir, Layout.Item(table[c].Home)));
     }
-    int gachaRows = 0;
-    string gachaPath = Path.Combine(dir, "table", "gacha_info.xml");
-    if (gachaBox.Count + gachaHome.Count > 0) {
-        byte[] raw = File.ReadAllBytes(gachaPath); // IB-01's table, copied from tools/data/pack-overlay by the build
-        int skip = raw.Length >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF ? 3 : 0;
-        string text = Encoding.UTF8.GetString(raw, skip, raw.Length - skip), done;
-        (done, gachaRows) = Homes.GachaRows(text, gachaBox, gachaHome);
-        if (done != text) File.WriteAllBytes(gachaPath, raw.Take(skip).Concat(Encoding.UTF8.GetBytes(done)).ToArray());
+    if (gachaDone != gachaText) File.WriteAllBytes(gachaPath, gachaRaw.Take(gachaSkip).Concat(Encoding.UTF8.GetBytes(gachaDone)).ToArray());
+    foreach (var f in shopFiles.Where(f => f.Changed)) {
+        string to = Path.Combine(dir.TrimEnd(Path.DirectorySeparatorChar, (char)47) + ".server", f.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+        File.WriteAllBytes(to, f.Bom.Concat(Encoding.UTF8.GetBytes(f.Text)).ToArray());
     }
     int twinRows = home.Keys.SelectMany(b => Homes.Ids(Homes.Kept(kbox[b]))).Distinct().Count(p => Verdict(p) == "twin");
     Console.WriteLine($"add-records: {home.Count} box homes, {copies.Count} copies, {twinRows} twins, {dropped} rows dropped, {pointed} functions pointed, {gachaRows} gacha rows");
+    Console.WriteLine($"add-records: {coins.Count} KMS coins name {coinShops.Count} shops; shop rows: {shopFiles[0].Rows} changed, {shopFiles[0].Removed} left out; shop info rows: {shopFiles[1].Rows} changed, {shopFiles[1].Removed} left out");
     return true;
 }
 
@@ -837,8 +905,9 @@ sealed class Kms {
     public Dictionary<long, XElement> Items = new(), Npcs = new(), QuestData = new(), Skills = new(), ItemModels = new();
     public Dictionary<long, XElement> Ridings = new(), Glides = new(), Pets = new(); // riding/<id>.xml roots, glidedata and petproperty rows
     public Dictionary<string, string> AniKeys = new(StringComparer.OrdinalIgnoreCase); // anikeytext.xml and anikeyinfo/<kfm>.xml texts (IM-04)
-    public Dictionary<string, string> Tables = new(StringComparer.OrdinalIgnoreCase); // the gacha_info.xml and individualitemdrop_final.xml texts (IB-02)
+    public Dictionary<string, string> Tables = new(StringComparer.OrdinalIgnoreCase); // the gacha_info.xml and individualitemdrop_final.xml texts (IB-02) and the instrument tables (IN-02)
     public Dictionary<string, byte[]> Effects = new(StringComparer.OrdinalIgnoreCase); // effect/*.xml by entry path (IT-08)
+    public Dictionary<string, string> EmoteTexts = new(StringComparer.OrdinalIgnoreCase); // string/kr/kordynamicaction.xml, emotion/common/<gender>custom.xml, table/coupleemotion.xml (EM-01)
     public Dictionary<long, byte[]> QuestFiles = new();
 
     public Kms(string m2d) {
@@ -850,8 +919,9 @@ sealed class Kms {
             bool quest = n.StartsWith("quest/") && n.Count(c => c == '/') == 1;
             if (n.StartsWith("riding/") && n.Count(c => c == '/') == 1 && long.TryParse(Path.GetFileNameWithoutExtension(n), out long ride)) { Ridings[ride] = Parse(r.GetBytes(f)).Root!; continue; }
             if (n == "anikeytext.xml" || n.StartsWith("anikeyinfo/")) { AniKeys[n] = Encoding.UTF8.GetString(r.GetBytes(f)).TrimStart('﻿'); continue; }
-            if (n.ToLowerInvariant() is "table/gacha_info.xml" or "table/individualitemdrop_final.xml") { Tables[n] = Encoding.UTF8.GetString(r.GetBytes(f)).TrimStart('﻿'); continue; }
+            if (n.ToLowerInvariant() is "table/gacha_info.xml" or "table/individualitemdrop_final.xml" or "table/instrumentinfo.xml" or "table/instrumentcategoryinfo.xml") { Tables[n] = Encoding.UTF8.GetString(r.GetBytes(f)).TrimStart('﻿'); continue; }
             if (n.StartsWith("effect/", StringComparison.OrdinalIgnoreCase)) { Effects[n] = r.GetBytes(f); continue; }
+            if (n.ToLowerInvariant() is "string/kr/kordynamicaction.xml" or "emotion/common/malecustom.xml" or "emotion/common/femalecustom.xml" or "table/coupleemotion.xml") { EmoteTexts[n] = Encoding.UTF8.GetString(r.GetBytes(f)).TrimStart('﻿'); continue; }
             if (n is "table/glidedata.xml" or "table/petproperty.xml") {
                 bool glide = n == "table/glidedata.xml";
                 foreach (var e in Parse(r.GetBytes(f)).Root!.Elements(glide ? "glide" : "pets"))
@@ -974,6 +1044,8 @@ static class Conv {
     //    26 package 10/18 (426/432), 27 other 10/0 (564/604). The server threw on the KMS numbers.
     //    TODO: a 27 without a function is 4/0 in Global (24 of 24), Misc like 10/0; none is converted yet, split 27 by function when one is.
     //  - OpenInstrument: KMS keeps the instrument id in property@param1, Global in function@parameter (94/94).
+    //  - shop: KMS keeps a coin's shop (type 20) in property@param1, Global in <Shop systemShopID>, the item's ShopId that the server
+    //    opens. Of the 61 type 20 ids both clients have with a param1, 57 name the same shop in Global (BT-115).
     //  - grade: Global keeps it in option@constant, KMS in property@rank (21,621 of 22,148 ids without a KMS constantID);
     //    KMS has no constant and the NA-default fill wrote 1. An item with a KMS constantID (gear option table) is left as is.
     static readonly Dictionary<string, (string Type, string SubType)> GlobalTypes = new() {
@@ -1000,6 +1072,8 @@ static class Conv {
             Set(prop, "subtype", "2");
         if (env.Element("function") is { } fn && A(fn, "name") == "OpenInstrument" && A(fn, "parameter") == "" && A(prop, "param1") != "")
             Set(fn, "parameter", A(prop, "param1"));
+        if (A(prop, "type") == "20" && int.TryParse(A(prop, "param1"), out int shop) && shop > 0 && (string?)env.Element("Shop")?.Attribute("systemShopID") is null or "" or "0")
+            Set(Sub(env, "Shop"), "systemShopID", shop.ToString());
         string rank = A(prop, "rank");
         if (rank is "1" or "2" or "3" or "4" or "5" or "6" && env.Element("option")?.Attribute("constantID") == null)
             Set(Sub(env, "option"), "constant", rank);
@@ -1037,27 +1111,107 @@ static class Conv {
         return changed;
     }
 
-    // GlobalItemRules and LookRules on every converted item file under <dir>/item. A changed file is saved as the converter saves it
+    // An equipment item's look (IT-07, BT-120): KMS draws it with the itemmodel entry of its tool@itemPreset, the NA client with its
+    // record's slot assets (TEST-1.2.2-RP: 12200477 drew the Phantom set its record names, not its preset's suit). An equipment item
+    // (property type 1) takes the entry of its preset where that entry has a slot asset, else the entry of its own id, which every
+    // other item takes (Global writes its fishing rods and instruments without slot assets).
+    public static XElement? PresetModel(IReadOnlyDictionary<long, XElement> models, XElement env, long id) {
+        long preset = env.Element("property") is { } prop && A(prop, "type") == "1" && env.Element("tool") is { } tool && long.TryParse(A(tool, "itemPreset"), out long b) ? b : id;
+        return models.TryGetValue(preset, out var model) && model.Element("slots")?.Descendants("asset").Any() == true ? model : models.GetValueOrDefault(id);
+    }
+
+    // An itemmodel entry on an environment: its slots in place of the environment's, its customize attributes and children.
+    public static void TakeModel(XElement env, XElement model) {
+        if (model.Element("slots") is { } sl) { if (env.Element("slots") is { } old) old.ReplaceWith(Clone(sl)); else env.Add(Clone(sl)); }
+        if (model.Element("customize") is { } cu) {
+            var dst = Sub(env, "customize");
+            foreach (var at in cu.Attributes()) dst.SetAttributeValue(at.Name, at.Value);
+            foreach (var ch in cu.Elements()) dst.Add(Clone(ch));
+            // lossy: NA holds a single palette index; KMS colour-cycling items list several ("19,3"), keep the first
+            if (A(dst, "defaultColorIndex") is { } dci && dci.Contains(',')) dst.SetAttributeValue("defaultColorIndex", dci.Split(',')[0]);
+        }
+    }
+
+    // A converted equipment environment whose slot assets name other models than PresetModel's entry (a model is the file name
+    // without folder, urn: prefix and .nif, in lower case) takes that entry: its slots, a customize of its own, then LookRules.
+    // True on a change.
+    public static bool PresetLook(XElement env, long id, IReadOnlyDictionary<long, XElement> models) {
+        static HashSet<string> Models(XElement? slots) => (slots?.Descendants("asset") ?? Enumerable.Empty<XElement>())
+            .Select(a => System.Text.RegularExpressions.Regex.Replace(A(a, "name").Replace((char)92, '/').Split('/')[^1].Split(':')[^1].ToLowerInvariant(), "[.]nif$", "")).Where(m => m != "").ToHashSet();
+        if (env.Element("property") is not { } prop || A(prop, "type") != "1" || PresetModel(models, env, id) is not { } model) return false;
+        var kms = Models(model.Element("slots"));
+        if (kms.Count == 0 || kms.SetEquals(Models(env.Element("slots")))) return false;
+        env.Element("customize")?.ReplaceWith(new XElement("customize")); // the entry's colours, not those of the record's old look
+        TakeModel(env, model);
+        LookRules(env, id);
+        return true;
+    }
+
+    // A cosmetic's icon as the pack's Image archive ships it (IC-01, BT-136, BT-119): the tile and the slot draw slotIcon with no
+    // fallback (BT-127), so a file the archive lacks shows a placeholder: 93 KMS items of pack 1.2.2 and 16 Global cosmetics, such as
+    // Wild Rider Jacket (F) 11420328, whose record names 11400328.png. A cosmetic's tool@itemPreset is the item whose look it wears;
+    // where the archive has that item's icon, the cosmetic takes it (12 KMS, 5 Global). The others keep theirs: no art is made up.
+    // A non-cosmetic's preset is not its look (Royal Guard Emote 20200085 names Martial Shout Emote's), so it stays.
+    public static bool PresetIcon(XElement env, Func<string, bool> inImage) {
+        const string image = "./Data/Resource/Image/";
+        if (env.Element("property") is not { } prop || prop.Attribute("skinType") == null) return false;
+        string icon = A(prop, "slotIcon").Trim(), preset = env.Element("tool") is { } tool ? A(tool, "itemPreset").Trim() : "";
+        if (!icon.StartsWith(image, StringComparison.OrdinalIgnoreCase) || inImage(icon[image.Length..])
+            || !long.TryParse(preset, out long look) || !inImage($"item/icon/{look}.png")) return false;
+        prop.SetAttributeValue("slotIcon", $"{image}item/icon/{look}.png");
+        return true;
+    }
+
+    // The entry names an archive header (.m2h) lists, as M2dPack lists them. The pack's Image archive is Global's with the old pack's
+    // tail and header (the pack build's resource step), so the old pack's Image.m2h names every image file the pack ships.
+    public static HashSet<string> ArchiveNames(string m2h) {
+        using var br = new BinaryReader(File.OpenRead(m2h));
+        var stream = Maple2.File.IO.Crypto.Stream.IPackStream.CreateStream(br);
+        string list = Encoding.UTF8.GetString(Maple2.File.IO.Crypto.CryptoManager.DecryptFileString(stream, br.BaseStream));
+        return Maple2.File.IO.Crypto.Common.PackFileEntry.CreateFileList(list).Select(e => Layout.Norm(e.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    // GlobalItemRules and LookRules on every converted item file under <dir>/item, then PresetIcon with the names of the pack's Image
+    // archive; with NA's Xml also PresetIcon on each NA item record that <dir> lacks, and a record it changes is written into
+    // <dir>/item, so the client and both server stages take it (for the five of pack 1.2.2 the nightly's server record adds only
+    // property@rank, which the ingest does not read). A changed file is saved as the converter saves it
     // (XDocument.Save), which keeps the rest of its bytes; a file without a change is not written. Returns 0.
-    public static int FixItemFiles(string dir) {
-        int files = 0, changed = 0;
+    public static int FixItemFiles(string dir, Func<string, bool>? inImage = null, string? naPath = null) {
+        int files = 0, changed = 0, icons = 0;
         foreach (var path in Directory.EnumerateFiles(System.IO.Path.Combine(dir, "item"), "*.xml", SearchOption.AllDirectories)) {
             files++;
             var doc = XDocument.Load(path);
             bool any = false;
             long id = long.Parse(System.IO.Path.GetFileNameWithoutExtension(path));
-            foreach (var env in doc.Root!.Elements("environment")) any |= GlobalItemRules(env) | LookRules(env, id);
+            foreach (var env in doc.Root!.Elements("environment")) {
+                any |= GlobalItemRules(env) | LookRules(env, id);
+                if (inImage != null && PresetIcon(env, inImage)) { any = true; icons++; }
+            }
             if (!any) continue;
             doc.Save(path);
             changed++;
         }
         Console.WriteLine($"fix-items: {changed} of {files} item files changed");
+        if (inImage == null) return 0;
+        var copied = new List<long>();
+        if (naPath != null) {
+            using var na = new Na(naPath);
+            foreach (long id in na.Ids["item"].Order()) {
+                string path = System.IO.Path.Combine(dir, Layout.Item(id));
+                if (File.Exists(path)) continue;
+                var doc = Kms.Parse(na.Get(Layout.Item(id)));
+                if (doc.Root!.Elements("environment").Count(env => PresetIcon(env, inImage)) == 0) continue;
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+                doc.Save(path);
+                copied.Add(id);
+            }
+        }
+        Console.WriteLine($"fix-items: {icons} preset icons set; NA item records written with a preset icon: {(copied.Count == 0 ? "none" : string.Join(" ", copied))}");
         return 0;
     }
 
     public static XDocument Item(Kms k, long id) {
         var root = new XElement("ms2");
-        k.ItemModels.TryGetValue(id, out var model);
         foreach (var src in k.Items[id].Elements("environment")) {
             var env = Env(A(src, "feature"));
             foreach (var c in src.Elements()) env.Add(Clone(c));
@@ -1081,16 +1235,7 @@ static class Conv {
             }
             // before the NA-default fill, which keeps values that are set
             GlobalItemRules(env);
-            if (model != null) {
-                if (model.Element("slots") is { } sl) env.Add(Clone(sl));
-                if (model.Element("customize") is { } cu) {
-                    var dst = Sub(env, "customize");
-                    foreach (var at in cu.Attributes()) dst.SetAttributeValue(at.Name, at.Value);
-                    foreach (var ch in cu.Elements()) dst.Add(Clone(ch));
-                    // lossy: NA holds a single palette index; KMS colour-cycling items list several ("19,3"), keep the first
-                    if (A(dst, "defaultColorIndex") is { } dci && dci.Contains(',')) dst.SetAttributeValue("defaultColorIndex", dci.Split(',')[0]);
-                }
-            }
+            if (PresetModel(k.ItemModels, env, id) is { } model) TakeModel(env, model); // IT-07: an equipment item's preset entry
             LookRules(env, id); // after the model's customize, before the NA-default fill
             root.Add(env);
         }
@@ -1360,17 +1505,170 @@ static class Conv {
     // KMS anikeyinfo/<kfm>.xml as NA writes the block: a start key at 0, then the end key, then the other KMS keys in their order
     // (NA keeps the ' -GlobalRatio' export keys, 205 of 205), times with 6 decimals (KMS writes 4). On the 2,256 models both
     // have, this gives NA's seq ids, names, keys and times (within 0.00005) on 2,232, and NA's key order on 1,018.
-    public static string AniKeyBlock(string name, string anikeyinfo, string eol) {
-        var sb = new StringBuilder($"\t<kfm {new XAttribute("name", name)}>{eol}");
-        foreach (var seq in XDocument.Parse(anikeyinfo).Root!.Elements("seq")) {
-            sb.Append($"\t\t<seq {new XAttribute("id", A(seq, "id"))} {new XAttribute("name", A(seq, "name"))}>{eol}\t\t\t<key name=\"start\" time=\"0.000000\" />{eol}");
-            foreach (var key in seq.Elements("key").Where(e => A(e, "name") != "start").OrderBy(e => A(e, "name") == "end" ? 0 : 1))
-                sb.Append($"\t\t\t<key {new XAttribute("name", A(key, "name"))} time=\"{double.Parse(A(key, "time"), Inv).ToString("F6", Inv)}\" />{eol}");
-            sb.Append($"\t\t</seq>{eol}");
+    public static string AniKeyBlock(string name, string anikeyinfo, string eol) =>
+        $"\t<kfm {new XAttribute("name", name)}>{eol}" + string.Concat(XDocument.Parse(anikeyinfo).Root!.Elements("seq").Select(seq => AniKeySeq(seq, eol))) + $"\t</kfm>{eol}";
+    // One seq of a KMS anikeyinfo file as NA writes it in a block (EM-01 adds KMS character sequences so).
+    public static string AniKeySeq(XElement seq, string eol) {
+        var sb = new StringBuilder($"\t\t<seq {new XAttribute("id", A(seq, "id"))} {new XAttribute("name", A(seq, "name"))}>{eol}\t\t\t<key name=\"start\" time=\"0.000000\" />{eol}");
+        foreach (var key in seq.Elements("key").Where(e => A(e, "name") != "start").OrderBy(e => A(e, "name") == "end" ? 0 : 1))
+            sb.Append($"\t\t\t<key {new XAttribute("name", A(key, "name"))} time=\"{double.Parse(A(key, "time"), Inv).ToString("F6", Inv)}\" />{eol}");
+        return sb.Append($"\t\t</seq>{eol}").ToString();
+    }
+
+    // ----- emotes (EM-01, BT-124): the Emotes window lists the skills of string/en/kordynamicaction.xml under their
+    // string/en/skillname.xml names. An emote plays the entry of emotion/common/<gender>custom.xml that its skill names
+    // (basic@paramStr; a buddy emote, mainType 15, the entries named as the animations of its table/coupleemotion.xml row, param1,
+    // without "Emotion_"), and an animation's keys in the gender's block of anikeytext.xml give its face (emo_), effects and end.
+    // NA has none of these for a KMS emote. Each emote item under <itemsDir>/item whose skill NA's list lacks gets KMS's key without
+    // its Korean chat words, the name of its item (the lowest id's) without " Emote" or " Buddy Emote", and the entries, couple rows
+    // and animation keys (KMS's anikeyinfo/<gender>.xml) that NA lacks and KMS has. NA's text stays as it is: the additions go before
+    // its end, a key at the end of its block, into <dir> (anikeytext.xml over AnimationKeys' file when it wrote one). Returns the
+    // counts, the skills without a KMS key, skill record or name, and the effect XMLs the additions name, for CopyEffects.
+    public static (int Skills, int Items, int Entries, int Rows, int Keys, List<long> Missing, List<string> Effects) Emotes(string dir, Func<string, byte[]> naGet,
+            Func<string, bool> naHas, IReadOnlyDictionary<string, string> kms, IReadOnlyDictionary<string, string> kmsAniKeys, string itemsDir) {
+        string NaText(string path) => Encoding.UTF8.GetString(naGet(path));
+        static string Eol(string text) => text.Contains("\r\n") ? "\r\n" : "\n";
+        string list = NaText("string/en/kordynamicaction.xml"), skillNames = NaText("string/en/skillname.xml"), couples = NaText("table/coupleemotion.xml");
+        var listed = XDocument.Parse(list.TrimStart('﻿')).Root!.Elements("key").Select(e => A(e, "skillID")).ToHashSet();
+        var emotes = new SortedDictionary<long, long>(); // skill -> its lowest item id
+        int items = 0;
+        foreach (var path in Directory.EnumerateFiles(System.IO.Path.Combine(itemsDir, "item"), "*.xml", SearchOption.AllDirectories)) {
+            var doc = XDocument.Load(path);
+            if (doc.Descendants("property").FirstOrDefault() is not { } prop || A(prop, "type") != "2" || A(prop, "subtype") != "14") continue; // ModelExtensions.IsEmote
+            if (!long.TryParse((string?)doc.Descendants("skill").FirstOrDefault()?.Attribute("skillID"), out long skill) || listed.Contains(skill.ToString())) continue;
+            long item = long.Parse(System.IO.Path.GetFileNameWithoutExtension(path));
+            items++;
+            if (!emotes.TryGetValue(skill, out long first) || item < first) emotes[skill] = item;
         }
-        return sb.Append($"\t</kfm>{eol}").ToString();
+        var names = new Dictionary<string, string>();
+        string itemNames = System.IO.Path.Combine(itemsDir, "string", "en", "itemname.xml");
+        if (File.Exists(itemNames)) foreach (var e in XDocument.Load(itemNames).Root!.Elements("key")) names.TryAdd(A(e, "id"), A(e, "name"));
+        var kmsKeys = new Dictionary<string, XElement>();
+        foreach (var e in XDocument.Parse(kms["string/kr/kordynamicaction.xml"]).Root!.Elements("key")) kmsKeys.TryAdd(A(e, "skillID"), e);
+        string[] genders = { "male", "female" };
+        var custom = genders.ToDictionary(g => g, g => NaText($"emotion/common/{g}custom.xml"));
+        var seqs = genders.ToDictionary(g => g, g => XDocument.Parse(kmsAniKeys[$"anikeyinfo/{g}.xml"]).Root!.Elements("seq").GroupBy(s => A(s, "name")).ToDictionary(s => s.Key, s => s.First()));
+        var entries = genders.ToDictionary(g => g, _ => new StringBuilder());
+        var anims = genders.ToDictionary(g => g, _ => new HashSet<string>());
+        var seen = genders.ToDictionary(g => g, _ => new HashSet<string>());
+        StringBuilder keyRows = new(), nameRows = new(), rows = new();
+        var missing = new List<long>();
+        var effects = new List<string>();
+        int entryCount = 0, rowCount = 0, keyCount = 0;
+        foreach (var (skill, item) in emotes) {
+            string name = EmoteName(names.GetValueOrDefault(item.ToString(), "")), skillPath = Layout.Skill(skill);
+            var basic = (File.Exists(System.IO.Path.Combine(itemsDir, skillPath)) ? XDocument.Load(System.IO.Path.Combine(itemsDir, skillPath))
+                : naHas(skillPath) ? Kms.Parse(naGet(skillPath)) : null)?.Descendants("basic").FirstOrDefault();
+            string code = basic != null && A(basic, "mainType") == "15" ? A(basic, "param1") : "";
+            bool naRow = code != "" && couples.Contains($"<coupleEmotion code=\"{code}\"");
+            string? row = code == "" ? null : TextBlock(naRow ? couples : kms["table/coupleemotion.xml"], "coupleEmotion", "code", code);
+            if (!kmsKeys.TryGetValue(skill.ToString(), out var key) || name == "" || basic == null || code != "" && row == null) { missing.Add(skill); continue; }
+            keyRows.Append($"\t<key {new XAttribute("skillID", skill)} {new XAttribute("default", (string?)key.Attribute("default") ?? "0")} reserved=\"\" />{Eol(list)}");
+            nameRows.Append($"\t<key {new XAttribute("id", skill)} {new XAttribute("name", name)} />{Eol(skillNames)}");
+            var couple = row == null ? null : XElement.Parse(row);
+            if (couple != null && !naRow) { rows.Append(row + Eol(couples)); rowCount++; effects.AddRange(EffectRefs(couple)); }
+            foreach (var g in genders) {
+                var played = couple == null ? new List<string>() : CoupleAnimations(couple, g == "female").ToList();
+                anims[g].UnionWith(played);
+                foreach (var entry in couple == null ? new List<string> { A(basic, "paramStr") } : played.Select(a => a.StartsWith("Emotion_") ? a[8..] : a).ToList()) {
+                    if (entry == "" || custom[g].Contains($"<emotion name=\"{entry}\"") || !seen[g].Add(entry)) continue;
+                    if (TextBlock(kms[$"emotion/common/{g}custom.xml"], "emotion", "name", entry) is not { } block) continue; // exact names only: KMS's femalecustom.xml writes Barbecue_Same_Female_Loop_B as Barbecue_Same_female_Loop_B
+                    var el = XElement.Parse(block);
+                    entries[g].Append(block + Eol(custom[g]));
+                    entryCount++;
+                    anims[g].UnionWith(el.Descendants().Where(x => x.Name.LocalName is "anim" or "idleAnim" or "boreAnim").Select(x => A(x, "name")));
+                    effects.AddRange(EffectRefs(el));
+                }
+            }
+        }
+        string keysPath = System.IO.Path.Combine(dir, "anikeytext.xml"), keys = File.Exists(keysPath) ? Encoding.UTF8.GetString(File.ReadAllBytes(keysPath)) : NaText("anikeytext.xml"), keysEol = Eol(keys);
+        foreach (var g in genders) {
+            var (start, end) = KfmSpan(keys, g);
+            string block = keys[start..end];
+            var add = anims[g].Where(a => a != "" && seqs[g].ContainsKey(a) && !block.Contains($" name=\"{a}\">")).Select(a => seqs[g][a]).OrderBy(s => int.Parse(A(s, "id"))).ToList();
+            effects.AddRange(add.SelectMany(s => s.Elements("key")).Select(x => KeyEffect(A(x, "name"))).OfType<string>());
+            keys = keys[..end] + string.Concat(add.Select(s => AniKeySeq(s, keysEol))) + keys[end..];
+            keyCount += add.Count;
+        }
+        void Write(string path, string text) {
+            string to = System.IO.Path.Combine(dir, path);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(to)!);
+            File.WriteAllBytes(to, Encoding.UTF8.GetBytes(text));
+        }
+        if (keyRows.Length > 0) {
+            Write("string/en/kordynamicaction.xml", InsertBefore(list, "</ms2>", keyRows.ToString()));
+            Write("string/en/skillname.xml", InsertBefore(skillNames, "</ms2>", nameRows.ToString()));
+        }
+        foreach (var g in genders) if (entries[g].Length > 0) Write($"emotion/common/{g}custom.xml", InsertBefore(custom[g], "</ms2>", entries[g].ToString()));
+        if (rowCount > 0) Write("table/coupleemotion.xml", InsertBefore(couples, "</ms2>", rows.ToString()));
+        if (keyCount > 0) Write("anikeytext.xml", keys);
+        return (emotes.Count - missing.Count, items, entryCount, rowCount, keyCount, missing, effects);
+    }
+    // An element of a client text, <tag attr="value" .../> or <tag attr="value" ...>...</tag>, as the text writes it with the indent
+    // before it (an emotion entry, a couple row); null when the text has none.
+    public static string? TextBlock(string text, string tag, string attr, string value) {
+        var m = System.Text.RegularExpressions.Regex.Match(text, "[ \t]*<" + tag + " " + attr + "=\"" + System.Text.RegularExpressions.Regex.Escape(value) + "\"(?:[^>]*/>|[^>]*>.*?</" + tag + ">)",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        return m.Success ? m.Value : null;
+    }
+    // An emote item's skill name, as Global names 226 of its 241 named emotes: the item's name without " Emote" or " Buddy Emote".
+    public static string EmoteName(string item) => System.Text.RegularExpressions.Regex.Replace(item, " (Buddy )?Emote$", "");
+    // A couple row's animations for one gender, in order: the different-gender one and the same-gender pair's, without the loop flags
+    // and models. 232 of the 266 animations of NA's 33 rows name an entry of the gender's file without "Emotion_".
+    public static IEnumerable<string> CoupleAnimations(XElement row, bool female) => row.Attributes().Select(a => a.Name.LocalName)
+        .Where(n => n.StartsWith("animation") && !n.EndsWith("_loop") && !n.EndsWith("_pathNif") && n.Contains("female", StringComparison.OrdinalIgnoreCase) == female)
+        .SelectMany(n => A(row, n).Split(',')).Select(v => v.Trim()).Where(v => v != "");
+    // The start of a model's block in an anikeytext.xml text and its end (its "\t</kfm>").
+    public static (int Start, int End) KfmSpan(string text, string kfm) {
+        int start = text.IndexOf($"\t<kfm name=\"{kfm}\">", StringComparison.Ordinal);
+        return (start, text.IndexOf("\t</kfm>", start, StringComparison.Ordinal));
+    }
+    // The effect XML an animation key plays (effect_<path>.xml, loopstart_effect_<path>.xml and the like), as EffectRefs writes it; null for another key.
+    public static string? KeyEffect(string key) {
+        var m = System.Text.RegularExpressions.Regex.Match(key, "^(?:[A-Za-z]+_)?effect_(.+\\.xml)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return m.Success ? "effect/" + Layout.Norm(m.Groups[1].Value).TrimStart('/').ToLowerInvariant() : null;
     }
     public static string InsertBefore(string text, string closing, string add) { int end = text.LastIndexOf(closing, StringComparison.Ordinal); return text[..end] + add + text[end..]; }
+
+    // ----- instruments (IN-02): an OpenInstrument item names its instrument row in its function parameter (KMS's param1, which
+    // --fix-items writes there as Global does). The rows that the items under <itemsDir>/item name and NA lacks (KMS-EoS 97-102) go
+    // before </ms2> of NA's table/instrumentinfo.xml as KMS writes them; the categories they name and NA lacks (35-40) go before
+    // </ms2> of NA's table/instrumentcategoryinfo.xml, with feature="" where KMS leaves it out (Global writes it on all 34 rows,
+    // KMS-EoS 36 and 37 have none). A table is written into <dir>/table only when it gains a row, NA's text byte-identical. Returns
+    // the counts and the named ids that neither client has a row for, or whose category neither has.
+    public static (int Rows, int Categories, List<long> Missing) AddInstruments(string dir, Func<string, byte[]> naGet, IReadOnlyDictionary<string, string> kmsTables, string itemsDir) {
+        static Dictionary<string, XElement> ById(string text) { var d = new Dictionary<string, XElement>(); foreach (var e in XDocument.Parse(text).Root!.Elements()) d[A(e, "id")] = e; return d; }
+        string naRows = Encoding.UTF8.GetString(naGet("table/instrumentinfo.xml")).TrimStart('﻿'), naCats = Encoding.UTF8.GetString(naGet("table/instrumentcategoryinfo.xml")).TrimStart('﻿');
+        var (na, naCat, kms, kmsCat) = (ById(naRows), ById(naCats), ById(kmsTables["table/instrumentinfo.xml"]), ById(kmsTables["table/instrumentcategoryinfo.xml"]));
+        var rows = new List<XElement>();
+        var cats = new List<XElement>();
+        var missing = new List<long>();
+        var named = Directory.EnumerateFiles(System.IO.Path.Combine(itemsDir, "item"), "*.xml", SearchOption.AllDirectories).SelectMany(p => XDocument.Load(p).Descendants("function"))
+            .Where(f => A(f, "name") == "OpenInstrument").Select(f => (Id: long.TryParse(A(f, "parameter"), out long id) ? id : 0, Preset: long.TryParse(f.Parent?.Element("tool") is { } tool ? A(tool, "itemPreset") : "", out long preset) ? preset : 0)).Where(x => x.Id > 0).ToList();
+        foreach (long id in named.Select(x => x.Id).Distinct().Order()) {
+            if (na.ContainsKey(id.ToString())) continue;
+            string category = kms.TryGetValue(id.ToString(), out var row) ? A(row, "category") : "";
+            if (row == null || !naCat.ContainsKey(category) && !kmsCat.ContainsKey(category)) { missing.Add(id); continue; }
+            // IN-03: Global names an instrument's hand model in equipItemId, the itemPreset of the KMS instruments naming the row (142 of 142);
+            // KMS leaves it "". The row takes the lowest such preset whose item record <dir> holds (tools/data/pack-overlay/item/1/91).
+            long hand = named.Where(x => x.Id == id && x.Preset > 0 && File.Exists(System.IO.Path.Combine(dir, Layout.Item(x.Preset)))).Select(x => x.Preset).DefaultIfEmpty().Min();
+            if (hand > 0 && A(row, "equipItemId") == "") { row = new XElement(row); row.SetAttributeValue("equipItemId", hand); }
+            rows.Add(row);
+            if (naCat.ContainsKey(category) || cats.Any(c => A(c, "id") == category)) continue;
+            var cat = new XElement(kmsCat[category]);
+            if (cat.Attribute("feature") == null) cat.SetAttributeValue("feature", "");
+            cats.Add(cat);
+        }
+        void Write(string name, string naText, List<XElement> add) {
+            if (add.Count == 0) return;
+            string eol = naText.Contains("\r\n") ? "\r\n" : "\n";
+            Directory.CreateDirectory(System.IO.Path.Combine(dir, "table"));
+            File.WriteAllBytes(System.IO.Path.Combine(dir, "table", name), Encoding.UTF8.GetBytes(InsertBefore(naText, "</ms2>", string.Concat(add.Select(e => $"\t{e}{eol}")))));
+        }
+        Write("instrumentinfo.xml", naRows, rows);
+        Write("instrumentcategoryinfo.xml", naCats, cats);
+        return (rows.Count, cats.Count, missing);
+    }
 
     // (kind, id) of the record each converted mount or pet under <dir>/item names (the param1 rule): riding, skill or pet.
     public static IEnumerable<(string Kind, long Id)> RecordRefs(string dir) {
@@ -1387,12 +1685,14 @@ static class Conv {
         .SelectMany(a => a.Value.Split(',')).Select(p => System.Text.RegularExpressions.Regex.Replace(p.Trim(), "^[A-Za-z]+[0-9]+=", ""))
         .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)).Select(p => Layout.Norm(p).TrimStart('/').ToLowerInvariant())
         .Select(p => "effect/" + (p.Contains('/') ? p : "item/ride/" + p));
-    // The KMS effect XMLs that the records under <dir> (item, npc, quest, skill, riding) name and NA lacks, written under <dir>/effect
+    // The KMS effect XMLs that the records under <dir> (item, npc, quest, skill, riding, and table/instrumentinfo.xml: IN-02) name and NA lacks, written under <dir>/effect
     // with KMS's bytes (no effect XML of either client names another XML); returns the paths written and those neither client has.
-    public static (List<string> Written, List<string> Missing) CopyEffects(string dir, Func<string, bool> naHas, IReadOnlyDictionary<string, byte[]> kms) {
+    // alsoNamed: more paths to copy so, those the emotes' entries, couple rows and animation keys name (EM-01).
+    public static (List<string> Written, List<string> Missing) CopyEffects(string dir, Func<string, bool> naHas, IReadOnlyDictionary<string, byte[]> kms, IEnumerable<string>? alsoNamed = null) {
         var named = Layout.Kinds.Select(kind => System.IO.Path.Combine(dir, kind)).Where(Directory.Exists)
-            .SelectMany(d => Directory.EnumerateFiles(d, "*.xml", SearchOption.AllDirectories)).SelectMany(p => EffectRefs(XDocument.Load(p).Root!))
-            .Where(x => !naHas(x)).Distinct().Order(StringComparer.Ordinal).ToList();
+            .SelectMany(d => Directory.EnumerateFiles(d, "*.xml", SearchOption.AllDirectories)).Append(System.IO.Path.Combine(dir, "table", "instrumentinfo.xml")).Where(File.Exists)
+            .SelectMany(p => EffectRefs(XDocument.Load(p).Root!))
+            .Concat(alsoNamed ?? Enumerable.Empty<string>()).Where(x => !naHas(x)).Distinct().Order(StringComparer.Ordinal).ToList();
         var written = named.Where(kms.ContainsKey).ToList();
         foreach (var x in written) {
             string to = System.IO.Path.Combine(dir, x);
@@ -1453,6 +1753,7 @@ static class Conv {
 // ---------- homes (IB-02): the parts of KmsHomes the self-test checks ----------
 static class Homes {
     public const string FinalPath = "table/Server/individualItemDrop_Final.xml";
+    public static readonly string[] ShopPaths = { "table/Server/shop_game.xml", "table/Server/shop_game_info.xml" };
     public static readonly string[] BoxFns = { "OpenItemBox", "OpenItemBoxWithKey", "SelectItemBox", "OpenGachaBox" };
     public sealed record Row(string Verdict, long Home, string Reason);
     static long L(XElement e, string a) => long.TryParse((string?)e.Attribute(a), out long v) ? v : 0;
@@ -1485,6 +1786,44 @@ static class Homes {
     public static HashSet<long> Ids(IEnumerable<XElement> rows) => rows.SelectMany(v => new[] { L(v, "itemID"), L(v, "itemID2") }).Where(x => x > 0).ToHashSet();
     // the pack's ids of a box, as the server reads Final: unlocalized and NA groups and rows
     public static HashSet<long> NaIds(XElement? box) => box == null ? new() : Ids(box.Elements("group").Where(NoneOrNa).SelectMany(g => g.Elements("v").Where(NoneOrNa)));
+    // a file's BOM (or none) and its text
+    public static (byte[] Bom, string Text) Utf8(byte[] b) { int n = b.Length >= 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF ? 3 : 0; return (b[..n], Encoding.UTF8.GetString(b, n, b.Length - n)); }
+    // a KMS coin's shop: property@param1 of a type 20 item in its KR environment (Global writes it as Shop@systemShopID, SH-01), else 0
+    public static long CoinShop(XElement item) => KrEnv(item)?.Element("property") is { } p && (string?)p.Attribute("type") == "20" ? Math.Max(L(p, "param1"), 0) : 0;
+    // shopID -> shop element of shop_game.xml (the first, should an id repeat), and the item ids of KMS's rows: KR and unlocalized
+    public static Dictionary<long, XElement> Shops(string text) {
+        var shops = new Dictionary<long, XElement>();
+        foreach (var e in XDocument.Parse(text).Root!.Elements("shop")) shops.TryAdd(L(e, "shopID"), e);
+        return shops;
+    }
+    public static HashSet<long> ShopIds(XElement shop) => shop.Elements("item").Where(KrOrNone).Select(v => L(v, "id")).Where(x => x > 0).ToHashSet();
+    // shop_game.xml or shop_game_info.xml text with the rows of shops as KMS has them, line by line: an <item> row of such a shop or
+    // its info row keeps its line, a KR row without the mark; a row of another locale goes, an item id is mapped, and a row whose
+    // id maps to 0 goes; every other line (comments among them) stays. The ingest keys a shop's rows by sn and the info rows by
+    // shopID and stops on a repeat, so a repeat among the kept rows is refused. Returns the text, the rows changed and the rows left out.
+    public static (string Text, int Rows, int Removed) ShopText(string text, IReadOnlySet<long> shops, Func<long, long> map) {
+        var lines = new List<string>();
+        var keys = new HashSet<string>();
+        long open = 0;
+        int rows = 0, removed = 0;
+        foreach (string line in text.Split('\n')) {
+            string t = line.Trim();
+            if (t == "</shop>") open = 0;
+            else if (t.StartsWith("<shop ") && !t.EndsWith("/>")) open = L(XElement.Parse(t[..^1] + "/>"), "shopID") is var s && shops.Contains(s) ? s : 0;
+            bool item = open > 0 && t.StartsWith("<item ") && t.EndsWith("/>");
+            var row = item || t.StartsWith("<shop ") && t.EndsWith("/>") ? XElement.Parse(t) : null;
+            if (row == null || !item && !shops.Contains(L(row, "shopID"))) { lines.Add(line); continue; }
+            long id = item ? L(row, "id") : 0, to = item ? map(id) : 0;
+            if (Locale(row) is not ("" or "KR") || item && to == 0) { removed++; continue; }
+            string key = item ? $"shop {open}: two rows with sn {(string?)row.Attribute("sn")}" : $"shop {L(row, "shopID")}: two info rows";
+            if (!keys.Add(key)) throw new InvalidDataException(key);
+            string kept = line.Replace(" locale=\"KR\"", "");
+            if (to != id) kept = System.Text.RegularExpressions.Regex.Replace(kept, "(?<=\\s)id=\"[0-9]+\"", $"id=\"{to}\"");
+            if (kept != line) rows++;
+            lines.Add(kept);
+        }
+        return (string.Join("\n", lines), rows, removed);
+    }
     // randomBoxID -> individualDropBoxID, a KR row (locale KR or a KR season) over the others
     public static Dictionary<long, long> GachaBoxes(string text) {
         var rows = new Dictionary<long, (long Box, bool Kr)>();
@@ -1519,6 +1858,8 @@ static class Homes {
     public static bool GenderOk(int kms, int pack) => pack == 2 || pack == kms;
     // a KMS item's KR environment, else its first
     public static XElement? KrEnv(XElement item) => item.Elements("environment").FirstOrDefault(e => Locale(e) == "KR") ?? item.Elements("environment").FirstOrDefault();
+    // a mount or a pet: property type 9 (ground mount), 5 (air mount) or 11 (pet) in its KR environment, as the param1 rule reads them
+    public static bool MountOrPet(XElement item) => KrEnv(item)?.Element("property") is { } p && (string?)p.Attribute("type") is "9" or "5" or "11";
     // an item's look: its preset, else its icon, else its id (KMS: the KR environment, else the first; NA: the icon file's id)
     public static long KmsLook(XElement item, long id) {
         var env = KrEnv(item);
@@ -1747,6 +2088,33 @@ static class Cmp {
         Check("re-issue chain: 2 hops resolved, cycle ends empty", hop2.Descendants("asset").Count() == 1 && !cyc.Descendants("asset").Any());
         Check("re-issue slots: copied+rule2, none stays empty, self/non-empty untouched", reis.Descendants("asset").Count() == 1 && (string)reis.Descendants("asset").First().Attribute("replace")! == "0"
             && !none.Descendants("asset").Any() && !own.Descendants("asset").Any() && has.Descendants("slot").Single().Attribute("name")!.Value == "CL");
+        // IT-07 (BT-120): equipment takes its preset's itemmodel entry where that has a slot asset, else its own id's, as every other
+        // item; TakeModel puts the entry's slots in place of the environment's and adds its customize (the first index of a list)
+        var presetModels = new Dictionary<long, XElement> {
+            [7] = P("<ItemModel id=\"7\"><slots><slot name=\"CP\"><asset name=\"Data/Resource/Model/Item/1/13/7_C_Kms.nif\" /><userrotation /></slot></slots><customize color=\"1\" colorPalette=\"10\" defaultColorIndex=\"3,5\" /></ItemModel>"),
+            [8] = P("<ItemModel id=\"8\"><slots /></ItemModel>"),
+            [5] = P("<ItemModel id=\"5\"><slots><slot name=\"CP\"><asset name=\"urn:5_C_Own\" /></slot></slots></ItemModel>") };
+        XElement Equip(string type, string preset, string slots) => P($"<environment><property type=\"{type}\" /><tool itemPreset=\"{preset}\" />{slots}<customize colorPalette=\"0\" ch1=\"7\" /></environment>");
+        const string naSlots = "<slots><slot name=\"CP\"><asset name=\"Data/Resource/Model/Item/1/13/9_C_Global.nif\" /></slot></slots>";
+        var taken = Equip("1", "7", naSlots);
+        Conv.TakeModel(taken, presetModels[7]);
+        Check("preset model (IT-07): equipment takes its preset's itemmodel entry where it has a slot asset, else its own id's, as every other item; TakeModel replaces the slots and adds the customize",
+            Conv.PresetModel(presetModels, Equip("1", "7", ""), 5) == presetModels[7] && Conv.PresetModel(presetModels, Equip("1", "8", ""), 5) == presetModels[5]
+            && Conv.PresetModel(presetModels, Equip("10", "7", ""), 5) == presetModels[5] && Conv.PresetModel(presetModels, Equip("1", "6", ""), 4) == null
+            && Conv.PresetModel(presetModels, P("<environment><property type=\"1\" /></environment>"), 5) == presetModels[5]
+            && taken.Elements("slots").Count() == 1 && taken.Descendants("asset").Single().Attribute("name")?.Value == "Data/Resource/Model/Item/1/13/7_C_Kms.nif"
+            && (string?)taken.Element("customize")?.Attribute("colorPalette") == "10" && (string?)taken.Element("customize")?.Attribute("defaultColorIndex") == "3");
+        // IT-07 (BT-120): a converted equipment record whose slots name other models takes PresetModel's entry: its slots, a customize
+        // of its own and a turning hat's CP flags; a record naming the entry's models (any case or folder) and a non-equipment item stay
+        var onNa = Equip("1", "7", naSlots); var onStale = Equip("1", "8", naSlots); var onBare = Equip("1", "7", "<slots />"); var onRod = Equip("10", "7", "<slots />");
+        var onKept = Equip("1", "7", "<slots><slot name=\"CP\"><asset name=\"data/resource/model/item/1/13/7_c_kms.nif\" ani=\"0\" /></slot></slots>");
+        bool[] onSet = new[] { onNa, onStale, onBare, onRod, onKept }.Select(e => Conv.PresetLook(e, 5, presetModels)).ToArray();
+        string EquipAssets(XElement e) => string.Join(",", e.Descendants("asset").Select(a => (string?)a.Attribute("name")));
+        string? EquipCu(XElement e, string a) => (string?)e.Element("customize")?.Attribute(a);
+        Check("preset look (IT-07): a converted equipment record with other models takes its entry's slots, its customize alone and a turning hat's CP flags; one with those models and a non-equipment item stay",
+            onSet.SequenceEqual(new[] { true, true, true, false, false }) && EquipAssets(onNa) == "Data/Resource/Model/Item/1/13/7_C_Kms.nif" && EquipAssets(onBare) == EquipAssets(onNa)
+            && EquipCu(onNa, "colorPalette") == "10" && EquipCu(onNa, "defaultColorIndex") == "3" && EquipCu(onNa, "ch1") == null && (string?)onNa.Element("customize")?.Element("CP")?.Attribute("xrotation") == "1"
+            && EquipAssets(onStale) == "urn:5_C_Own" && EquipAssets(onRod) == "" && EquipCu(onRod, "ch1") == "7" && EquipCu(onKept, "ch1") == "7" && onKept.Descendants("asset").Single().Attribute("ani")?.Value == "0");
         // 9 NA rules: attribute fill at >= 98% presence, most common value; rarer attributes are not added
         var ruleFill = NaRules.Learn(Enumerable.Range(0, 100).Select(i => ("npc", D($"<ms2><environment><collision x=\"{(i < 60 ? 1 : 2)}\"{(i == 0 ? " rare=\"1\"" : "")}/></environment></ms2>"))));
         var fd = D("<ms2><environment><collision/></environment></ms2>"); ruleFill.Apply("npc", fd);
@@ -1834,6 +2202,14 @@ static class Cmp {
         Check("consumable subtype: a type 2 potion or snare without a subtype gets subtype 2 once; emotes and skill books keep theirs",
             Conv.GlobalItemRules(psItem) && V(psItem, "property", "subtype") == "2" && Conv.GlobalItemRules(tamingItem) && V(tamingItem, "property", "subtype") == "2"
             && !Conv.GlobalItemRules(psItem) && !Conv.GlobalItemRules(actionItem) && V(actionItem, "property", "subtype") == "14" && !Conv.GlobalItemRules(skbItem) && V(skbItem, "property", "subtype") == "8");
+        var coinItem = E("<property type=\"20\" param1=\"101025\"/><housing filter=\"100\"/>");
+        var shopSet = E("<property type=\"20\" param1=\"101025\"/><Shop systemShopID=\"101001\"/>");
+        var noShop = E("<property type=\"20\" param1=\"0\"/>");
+        var mountItem = E("<property type=\"9\" param1=\"50600118\"/>");
+        Check("coin shop: a type 20 item's param1 becomes its Shop systemShopID, last in its environment, once; a set shop, a 0 and other types stay",
+            Conv.GlobalItemRules(coinItem) && V(coinItem, "Shop", "systemShopID") == "101025" && coinItem.Elements().Last().Name == "Shop" && !Conv.GlobalItemRules(coinItem)
+            && !Conv.GlobalItemRules(shopSet) && V(shopSet, "Shop", "systemShopID") == "101001" && !Conv.GlobalItemRules(noShop) && V(noShop, "Shop", "systemShopID") == "-"
+            && !Conv.GlobalItemRules(mountItem) && V(mountItem, "Shop", "systemShopID") == "-");
         string tmpItems = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kmssplit-items-" + Guid.NewGuid().ToString("N"));
         string itemDir = System.IO.Path.Combine(tmpItems, "item", "2", "02");
         Directory.CreateDirectory(itemDir);
@@ -1887,6 +2263,20 @@ static class Cmp {
         Check("turns: fix-items gives a hat with userrotation whose CP flags do not let it turn Global's flags, once, and keeps its userrotation and scale; turning hats and a hat without userrotation stay",
             Cap(turnLook) == "<customize><CP xrotation=\"1\" yrotation=\"1\" zrotation=\"1\" scale=\"0\" attach=\"1\" /></customize>"
             && turned.Descendants("userrotation").Count() == 2 && turned.Descendants("physx").Count() == 1 && looksOnce);
+        // the preset's icon (IC-01): with the names of the pack's Image archive, a cosmetic whose icon file the archive lacks takes its
+        // preset's where the archive has it, once; a cosmetic whose icon ships, one whose preset's icon is missing too and a
+        // non-cosmetic whose preset's icon ships stay
+        var image = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "item/icon/11301385.png", "item/icon/11220055.png", "item/icon/20200001.png" };
+        string presetLook = Look(11301415, "<property skinType=\"2\" slotIcon=\"./Data/Resource/Image/item/icon/11301415.png\" /><tool itemPreset=\"11301385\" />");
+        string[] keptIcons = { Look(11220056, "<property skinType=\"2\" slotIcon=\"./Data/Resource/Image/item/icon/11220055.png\" /><tool itemPreset=\"11301385\" />"),
+            Look(11320374, "<property skinType=\"2\" slotIcon=\"./Data/Resource/Image/item/icon/11320374.png\" /><tool itemPreset=\"11320373\" />"),
+            Look(20200085, "<property type=\"2\" subtype=\"14\" category=\"Action\" slotIcon=\"./Data/Resource/Image/item/icon/20200085.png\" /><tool itemPreset=\"20200001\" />") };
+        string keptIconsBefore = Snap(keptIcons);
+        Conv.FixItemFiles(looks, image.Contains);
+        string presetOnce = Snap(new[] { presetLook });
+        Conv.FixItemFiles(looks, image.Contains);
+        Check("preset icons: with the pack's Image names, fix-items gives a cosmetic whose icon file is missing its preset's icon where the archive has it, once; a cosmetic whose icon ships, one whose preset's icon is missing too and a non-cosmetic stay",
+            Icon(presetLook) == "./Data/Resource/Image/item/icon/11301385.png" && Snap(new[] { presetLook }) == presetOnce && Snap(keptIcons) == keptIconsBefore);
         Directory.Delete(looks, recursive: true);
         string fx = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kmssplit-effects-" + Guid.NewGuid().ToString("N"));
         foreach (var (rel, xml) in new[] {
@@ -1936,6 +2326,53 @@ static class Cmp {
             Conv.AddPetRows(NaPets, new[] { XElement.Parse("<pets code=\"60000062\" isCollectPreview=\"0\" slotNum=\"14\" />"), XElement.Parse("<pets code=\"61100150\" type=\"1\" feature=\"Pet_70Lv_Boss\" />") })
                 == NaPets.Replace("</ms2>", "\t<pets code=\"60000062\" isCollectPreview=\"0\" npcID=\"60000062\" slotNum=\"14\">\r\n\t\t<skill id=\"0\" level=\"0\" />\r\n\t</pets>\r\n"
                     + "\t<pets code=\"61100150\" npcID=\"61100150\" type=\"1\" feature=\"Pet_70Lv_Boss\">\r\n\t\t<skill id=\"0\" level=\"0\" />\r\n\t</pets>\r\n</ms2>"));
+        // instruments (IN-02): the rows and categories the instruments name and NA lacks, and the effect XMLs the rows name
+        string instr = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kmssplit-instruments-" + Guid.NewGuid().ToString("N"));
+        foreach (var (sub, item, function, parameter) in new[] { ("all", "34000101", "OpenInstrument", "98"), ("all", "34000113", "OpenInstrument", "98"), ("all", "34000111", "OpenInstrument", "101"),
+                     ("all", "34000072", "OpenInstrument", "58"), ("all", "34000199", "OpenInstrument", "103"), ("all", "20300291", "OpenItemBox", "0,1,0,98"), ("na", "34000072", "OpenInstrument", "58") }) {
+            Directory.CreateDirectory(System.IO.Path.Combine(instr, sub, "item", "3", "40"));
+            File.WriteAllText(System.IO.Path.Combine(instr, sub, "item", "3", "40", item + ".xml"), $"<ms2><environment><function name=\"{function}\" parameter=\"{parameter}\" /></environment></ms2>");
+        }
+        const string NaInstruments = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<ms2>\r\n\t<instrument id=\"58\" category=\"10\" playEffect=\"\" feature=\"JazzInstrument\" />\r\n</ms2>";
+        const string NaCategories = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<ms2>\r\n\t<category id=\"10\" GMId=\"43\" icon=\"c.png\" defaultOctave=\"o4\" feature=\"JazzInstrument\" />\r\n</ms2>";
+        var kmsInstruments = new Dictionary<string, string> {
+            ["table/instrumentinfo.xml"] = "<ms2>\r\n\t<instrument id=\"58\" category=\"10\" playEffect=\"\" feature=\"\" />\r\n"
+                + "\t<instrument id=\"98\" category=\"36\" playEffect=\"Item/MusicInstrument/Eff_perform_marimbar_A01_play.xml\" feature=\"\" />\r\n"
+                + "\t<instrument id=\"101\" category=\"39\" playEffect=\"\" feature=\"MusicInstrument\" />\r\n</ms2>",
+            ["table/instrumentcategoryinfo.xml"] = "<ms2>\r\n\t<category id=\"36\" GMId=\"12\" icon=\"v.png\" defaultOctave=\"o5\" />\r\n"
+                + "\t<category id=\"39\" GMId=\"60\" icon=\"t.png\" defaultOctave=\"o5\" feature=\"MusicInstrument\" />\r\n</ms2>" };
+        byte[] NaTable(string name) => Encoding.UTF8.GetBytes(name == "table/instrumentinfo.xml" ? NaInstruments : NaCategories);
+        string InstrTable(string name) => File.ReadAllText(System.IO.Path.Combine(instr, "all", "table", name));
+        var (rowsAdded, categoriesAdded, noRow) = Conv.AddInstruments(System.IO.Path.Combine(instr, "all"), NaTable, kmsInstruments, System.IO.Path.Combine(instr, "all"));
+        var naOnly = Conv.AddInstruments(System.IO.Path.Combine(instr, "na"), NaTable, kmsInstruments, System.IO.Path.Combine(instr, "na"));
+        Check("instruments: the rows the instruments name and NA lacks go before </ms2> as KMS writes them, once, and the categories they name and NA lacks, with feature=\"\" where KMS leaves it out; NA's rows and text kept, other functions ignored, an id without a KMS row reported, no table written without a new row",
+            rowsAdded == 2 && categoriesAdded == 2 && noRow.SequenceEqual(new[] { 103L })
+            && InstrTable("instrumentinfo.xml") == NaInstruments.Replace("</ms2>", "\t<instrument id=\"98\" category=\"36\" playEffect=\"Item/MusicInstrument/Eff_perform_marimbar_A01_play.xml\" feature=\"\" />\r\n"
+                + "\t<instrument id=\"101\" category=\"39\" playEffect=\"\" feature=\"MusicInstrument\" />\r\n</ms2>")
+            && InstrTable("instrumentcategoryinfo.xml") == NaCategories.Replace("</ms2>", "\t<category id=\"36\" GMId=\"12\" icon=\"v.png\" defaultOctave=\"o5\" feature=\"\" />\r\n"
+                + "\t<category id=\"39\" GMId=\"60\" icon=\"t.png\" defaultOctave=\"o5\" feature=\"MusicInstrument\" />\r\n</ms2>")
+            && naOnly.Rows == 0 && naOnly.Categories == 0 && naOnly.Missing.Count == 0 && !Directory.Exists(System.IO.Path.Combine(instr, "na", "table")));
+        var (instrFx, instrNoFx) = Conv.CopyEffects(System.IO.Path.Combine(instr, "all"), _ => false,
+            new Dictionary<string, byte[]> { ["effect/item/musicinstrument/eff_perform_marimbar_a01_play.xml"] = Encoding.UTF8.GetBytes("<ms2 />") });
+        Check("instrument effects: CopyEffects reads table/instrumentinfo.xml too, so the playEffect XML of an added row is copied",
+            instrFx.SequenceEqual(new[] { "effect/item/musicinstrument/eff_perform_marimbar_a01_play.xml" }) && instrNoFx.Count == 0
+            && File.Exists(System.IO.Path.Combine(instr, "all", "effect", "item", "musicinstrument", "eff_perform_marimbar_a01_play.xml")));
+        // hand models (IN-03): an added row's equipItemId is the preset of an instrument naming it where <dir> holds that preset's item record
+        string hand = System.IO.Path.Combine(instr, "hand");
+        foreach (var (item, parameter, preset) in new[] { ("34000101", "98", "19100095"), ("34000111", "101", "19100070") }) {
+            Directory.CreateDirectory(System.IO.Path.Combine(hand, "item", "3", "40"));
+            File.WriteAllText(System.IO.Path.Combine(hand, "item", "3", "40", item + ".xml"), $"<ms2><environment><function name=\"OpenInstrument\" parameter=\"{parameter}\" /><tool itemPreset=\"{preset}\" itemPresetPath=\"1/91/\" /></environment></ms2>");
+        }
+        Directory.CreateDirectory(System.IO.Path.Combine(hand, "item", "1", "91"));
+        File.WriteAllText(System.IO.Path.Combine(hand, "item", "1", "91", "19100095.xml"), "<ms2 />");
+        var kmsHand = new Dictionary<string, string> {
+            ["table/instrumentinfo.xml"] = "<ms2>\r\n\t<instrument id=\"98\" category=\"10\" equipItemId=\"\" feature=\"\" />\r\n\t<instrument id=\"101\" category=\"10\" equipItemId=\"\" feature=\"MusicInstrument\" />\r\n</ms2>",
+            ["table/instrumentcategoryinfo.xml"] = "<ms2 />" };
+        var handAdded = Conv.AddInstruments(hand, NaTable, kmsHand, hand);
+        Check("instrument hand models: an added row's equipItemId is the itemPreset of the instrument naming it where the item record of that preset is in <dir>, else KMS's \"\"",
+            handAdded.Rows == 2 && handAdded.Categories == 0 && handAdded.Missing.Count == 0 && File.ReadAllText(System.IO.Path.Combine(hand, "table", "instrumentinfo.xml")) == NaInstruments.Replace("</ms2>",
+                "\t<instrument id=\"98\" category=\"10\" equipItemId=\"19100095\" feature=\"\" />\r\n\t<instrument id=\"101\" category=\"10\" equipItemId=\"\" feature=\"MusicInstrument\" />\r\n</ms2>"));
+        Directory.Delete(instr, recursive: true);
         string recs = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kmssplit-records-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(System.IO.Path.Combine(recs, "item", "5", "06"));
         File.WriteAllText(System.IO.Path.Combine(recs, "item", "5", "06", "50600349.xml"), "<ms2><environment><property type=\"9\" param1=\"50600349\" /></environment></ms2>");
@@ -2014,6 +2451,74 @@ static class Cmp {
             && parsed.kfm[3].seq.Select(s => s.id).SequenceEqual(new[] { 1, 3 }) && parsed.kfm[3].seq[0].key.Count == 5
             && parsed.kfm[3].seq[1].key.Single(x => x.name == "end").time == 1.3333);
 
+        // emotes (EM-01): the keys, names, emotion entries, couple rows, animation keys and effect XMLs of the KMS emotes NA's window lacks
+        const string Blocks = "<ms2ani>\n\t<kfm name=\"female\">\n\t</kfm>\n\t<kfm name=\"male\">\n\t</kfm>\n</ms2ani>";
+        var span = Conv.KfmSpan(Blocks, "male");
+        Check("emote helpers: an element as its text writes it, not one of a longer name; a skill name without \" Emote\" or \" Buddy Emote\"; a couple row's animations for one gender; a model's block, male not female; an animation key's effect XML",
+            Conv.TextBlock("<ms2>\r\n\t<emotion name=\"A2\">\r\n\t</emotion>\r\n\t<emotion name=\"A\" isTool=\"1\">\r\n\t\t<anim name=\"x\" />\r\n\t</emotion>\r\n</ms2>", "emotion", "name", "A") == "\t<emotion name=\"A\" isTool=\"1\">\r\n\t\t<anim name=\"x\" />\r\n\t</emotion>"
+            && Conv.TextBlock("<ms2>\r\n\t<c code=\"1\" a=\"x/y.xml \" />\r\n</ms2>", "c", "code", "1") == "\t<c code=\"1\" a=\"x/y.xml \" />" && Conv.TextBlock("<ms2><emotion name=\"A2\" /></ms2>", "emotion", "name", "A") == null
+            && Conv.EmoteName("Chick Clap Dance Buddy Emote") == "Chick Clap Dance" && Conv.EmoteName("Squishy Black Bean Emote") == "Squishy Black Bean" && Conv.EmoteName("Emote Box") == "Emote Box"
+            && string.Join(",", Conv.CoupleAnimations(XElement.Parse("<c animationDiffGender_loop=\"1\" animationDiffGender_male=\"M_Ready,M_Loop \" animationDiffGender_female=\"F\" animationDiffGender_pathNif=\"d.nif\" "
+                + "animationSameGenderMale_loop=\"1\" animationSameGenderMale_requestUser=\"MB\" animationSameGenderMale_targetUser=\"MA\" animationSameGenderFemale_requestUser=\"FB \" />"), false)) == "M_Ready,M_Loop,MB,MA"
+            && string.Join(",", Conv.CoupleAnimations(XElement.Parse("<c animationDiffGender_female=\"F\" animationSameGenderMale_requestUser=\"MB\" animationSameGenderFemale_requestUser=\"FB \" />"), true)) == "F,FB"
+            && span.Start >= 0 && Blocks[span.Start..span.End] == "\t<kfm name=\"male\">\n"
+            && Conv.KeyEffect("loopstart_effect_CH/CoupleAction/Eff_A.xml") == "effect/ch/coupleaction/eff_a.xml" && Conv.KeyEffect("effect_CH\\Common\\B.xml") == "effect/ch/common/b.xml"
+            && Conv.KeyEffect("emo_A") == null && Conv.KeyEffect("EventSound/x") == null);
+        string em = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kmssplit-emotes-" + Guid.NewGuid().ToString("N"));
+        string Emote(string skill, string subtype = "14") => $"<ms2><environment><property type=\"2\" subtype=\"{subtype}\" /><skill skillID=\"{skill}\" /></environment></ms2>";
+        foreach (var (rel, xml) in new[] {
+            ("item/2/02/20201080.xml", Emote("90200147")), ("item/2/02/20201154.xml", Emote("90200147")), ("item/2/02/20201998.xml", Emote("90200998")), ("item/2/02/20200001.xml", Emote("90200002")),
+            ("item/2/02/20209999.xml", Emote("90200999", "2")), ("item/2/21/20210055.xml", Emote("90220038")),
+            ("skill/90/90200147.xml", "<ms2><basic mainType=\"14\" paramStr=\"MalangBlackbean_A\" /></ms2>"), ("skill/90/90200998.xml", "<ms2><basic mainType=\"14\" paramStr=\"Gone_A\" /></ms2>"),
+            ("skill/90/90220038.xml", "<ms2><basic mainType=\"15\" param1=\"100036\" /></ms2>"),
+            ("string/en/itemname.xml", "<ms2><key id=\"20201080\" name=\"Squishy Black Bean Emote\" /><key id=\"20201154\" name=\"Another Emote\" /><key id=\"20201998\" name=\"Gone Emote\" /><key id=\"20210055\" name=\"Chick Clap Dance Buddy Emote\" /></ms2>") }) {
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.Combine(em, rel))!);
+            File.WriteAllText(System.IO.Path.Combine(em, rel), xml);
+        }
+        const string Head = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<ms2>\r\n", Pinkbean = "\t<emotion name=\"Pinkbean_01_A\">\r\n\t\t<anim name=\"Emotion_Pinkbean_01_A\" />\r\n\t</emotion>\r\n</ms2>";
+        var naEmote = new Dictionary<string, string> {
+            ["string/en/kordynamicaction.xml"] = Head + "\t<key skillID=\"90200002\" default=\"0\" reserved=\"power\" />\r\n</ms2>", ["string/en/skillname.xml"] = Head + "\t<key id=\"90200002\" name=\"Martial Shout\" />\r\n</ms2>",
+            ["table/coupleemotion.xml"] = Head + "\t<coupleEmotion code=\"100001\" animationDiffGender_male=\"Emotion_Hug_Diff_Male_Loop\" />\r\n</ms2>",
+            ["emotion/common/malecustom.xml"] = Head + Pinkbean, ["emotion/common/femalecustom.xml"] = Head + Pinkbean,
+            ["anikeytext.xml"] = "<ms2ani>\n\t<kfm name=\"female\">\n\t\t<seq id=\"1127\" name=\"Emotion_Pinkbean_01_A\">\n\t\t</seq>\n\t</kfm>\n\t<kfm name=\"male\">\n\t\t<seq id=\"1127\" name=\"Emotion_Pinkbean_01_A\">\n\t\t</seq>\n\t</kfm>\n</ms2ani>" };
+        const string KmsRow = "\t<coupleEmotion code=\"100036\" animationDiffGender_loop=\"1\" animationDiffGender_male=\"Emotion_ClapDance2_Diff_Male_Loop\" animationDiffGender_female=\"Emotion_ClapDance2_Diff_Female_Loop\" "
+            + "animationDiffGender_pathNif=\"CoupleAction_Dummy_ClapDance_Diff_Loop.nif \" animationSameGenderFemale_requestUser=\"Emotion_ClapDance2_Same_Female_Loop_B \" teleport_effect=\"CH/CoupleAction/Eff_Start.xml\" />";
+        const string Malang = "\t<emotion name=\"MalangBlackbean_A\">\r\n\t\t<anim name=\"Emotion_Pinkbean_01_A\" />\r\n\t\t<effect file=\"CH/Emotion/Eff_Malang.xml\" />\r\n\t</emotion>";
+        string Clap(string g) => $"\t<emotion name=\"ClapDance2_Diff_{g}_Loop\">\r\n\t\t<anim name=\"Emotion_ClapDance2_Diff_{g}_Loop\" />\r\n\t</emotion>";
+        var kmsEmote = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            ["string/kr/kordynamicaction.xml"] = "<ms2>\r\n\t<key skillID=\"90200147\" default=\"0\" reserved=\"kr|words\" />\r\n\t<key skillID=\"90220038\" default=\"0\" reserved=\"\" />\r\n\t<key skillID=\"90200002\" default=\"0\" reserved=\"kr\" />\r\n</ms2>",
+            ["table/coupleemotion.xml"] = "<ms2>\r\n" + KmsRow + "\r\n</ms2>",
+            ["emotion/common/malecustom.xml"] = "<ms2>\r\n\t<emotion name=\"MalangBlackbean_A2\">\r\n\t</emotion>\r\n" + Malang + "\r\n" + Clap("Male") + "\r\n</ms2>",
+            ["emotion/common/femalecustom.xml"] = "<ms2>\r\n" + Malang + "\r\n" + Clap("Female") + "\r\n</ms2>" };
+        var kmsEmoteKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            ["anikeyinfo/male.xml"] = "<ms2><seq id=\"1127\" name=\"Emotion_Pinkbean_01_A\"><key name=\"end\" time=\"1.0000\" /></seq><seq id=\"2070\" name=\"Emotion_ClapDance2_Diff_Male_Loop\"><key name=\"emo_ClapDance2_Diff_Male_Loop\" time=\"0.0000\" />"
+                + "<key name=\"loopstart_effect_CH/CoupleAction/Eff_CoupleAction_ClapDance2_Loop.xml\" time=\"0.0010\" /><key name=\"end\" time=\"2.0000\" /></seq></ms2>",
+            ["anikeyinfo/female.xml"] = "<ms2><seq id=\"2081\" name=\"Emotion_ClapDance2_Same_Female_Loop_B\"><key name=\"end\" time=\"2.0000\" /></seq><seq id=\"2080\" name=\"Emotion_ClapDance2_Diff_Female_Loop\"><key name=\"end\" time=\"2.0000\" /></seq></ms2>" };
+        var emoted = Conv.Emotes(em, p => Encoding.UTF8.GetBytes(naEmote[p]), naEmote.ContainsKey, kmsEmote, kmsEmoteKeys, em);
+        string[] emFiles = { "string/en/kordynamicaction.xml", "string/en/skillname.xml", "table/coupleemotion.xml", "emotion/common/malecustom.xml", "emotion/common/femalecustom.xml", "anikeytext.xml" };
+        string Em(string rel) => File.Exists(System.IO.Path.Combine(em, rel)) ? File.ReadAllText(System.IO.Path.Combine(em, rel)) : "";
+        var emFirst = emFiles.Select(Em).ToList();
+        var again = Conv.Emotes(em, p => Encoding.UTF8.GetBytes(naEmote[p]), naEmote.ContainsKey, kmsEmote, kmsEmoteKeys, em);
+        string Seq(string id, string name, string keys) => $"\t\t<seq id=\"{id}\" name=\"{name}\">\n\t\t\t<key name=\"start\" time=\"0.000000\" />\n\t\t\t<key name=\"end\" time=\"2.000000\" />\n{keys}\t\t</seq>\n";
+        var emParsed = Em("anikeytext.xml") == "" ? null : (Maple2.File.Parser.Xml.AnimationData?)new System.Xml.Serialization.XmlSerializer(typeof(Maple2.File.Parser.Xml.AnimationData)).Deserialize(new StringReader(Em("anikeytext.xml")));
+        Check("emotes: an emote whose skill NA's list lacks gets KMS's key without its chat words, its item's name, and KMS's emotion entries, couple row and character animation keys NA lacks, at the end of NA's text or block; NA's emotes, other items and NA's records left alone, a skill without a KMS key reported, an entry KMS lacks skipped; the ingest's type reads the keys; a second run writes the same files",
+            (emoted.Skills, emoted.Items, emoted.Entries, emoted.Rows, emoted.Keys) == (2, 4, 4, 1, 3) && emoted.Missing.SequenceEqual(new[] { 90200998L })
+            && Em("string/en/kordynamicaction.xml") == naEmote["string/en/kordynamicaction.xml"].Replace("</ms2>", "\t<key skillID=\"90200147\" default=\"0\" reserved=\"\" />\r\n\t<key skillID=\"90220038\" default=\"0\" reserved=\"\" />\r\n</ms2>")
+            && Em("string/en/skillname.xml") == naEmote["string/en/skillname.xml"].Replace("</ms2>", "\t<key id=\"90200147\" name=\"Squishy Black Bean\" />\r\n\t<key id=\"90220038\" name=\"Chick Clap Dance\" />\r\n</ms2>")
+            && Em("table/coupleemotion.xml") == naEmote["table/coupleemotion.xml"].Replace("</ms2>", KmsRow + "\r\n</ms2>")
+            && Em("emotion/common/malecustom.xml") == naEmote["emotion/common/malecustom.xml"].Replace("</ms2>", Malang + "\r\n" + Clap("Male") + "\r\n</ms2>")
+            && Em("emotion/common/femalecustom.xml") == naEmote["emotion/common/femalecustom.xml"].Replace("</ms2>", Malang + "\r\n" + Clap("Female") + "\r\n</ms2>")
+            && Em("anikeytext.xml") == naEmote["anikeytext.xml"].Replace("\t</kfm>\n\t<kfm name=\"male\">", Seq("2080", "Emotion_ClapDance2_Diff_Female_Loop", "") + Seq("2081", "Emotion_ClapDance2_Same_Female_Loop_B", "") + "\t</kfm>\n\t<kfm name=\"male\">")
+                .Replace("\t</kfm>\n</ms2ani>", Seq("2070", "Emotion_ClapDance2_Diff_Male_Loop", "\t\t\t<key name=\"emo_ClapDance2_Diff_Male_Loop\" time=\"0.000000\" />\n\t\t\t<key name=\"loopstart_effect_CH/CoupleAction/Eff_CoupleAction_ClapDance2_Loop.xml\" time=\"0.001000\" />\n") + "\t</kfm>\n</ms2ani>")
+            && emParsed != null && emParsed.kfm.Single(m => m.name == "male").seq.Select(s => s.id).SequenceEqual(new[] { 1127, 2070 }) && emParsed.kfm.Single(m => m.name == "female").seq.Select(s => s.id).SequenceEqual(new[] { 1127, 2080, 2081 })
+            && emoted.Effects.Distinct().Order(StringComparer.Ordinal).SequenceEqual(new[] { "effect/ch/coupleaction/eff_coupleaction_clapdance2_loop.xml", "effect/ch/coupleaction/eff_start.xml", "effect/ch/emotion/eff_malang.xml" })
+            && again.Skills == 2 && again.Keys == 0 && emFiles.Select(Em).SequenceEqual(emFirst));
+        var (emFx, emNoFx) = Conv.CopyEffects(em, p => p == "effect/ch/coupleaction/eff_start.xml", new Dictionary<string, byte[]> { ["effect/ch/emotion/eff_malang.xml"] = stubFx }, emoted.Effects);
+        Check("emote effects: CopyEffects also writes the effect XMLs the emotes name, NA's own not, one neither client has reported",
+            emFx.SequenceEqual(new[] { "effect/ch/emotion/eff_malang.xml" }) && emNoFx.SequenceEqual(new[] { "effect/ch/coupleaction/eff_coupleaction_clapdance2_loop.xml" })
+            && File.Exists(System.IO.Path.Combine(em, "effect", "ch", "emotion", "eff_malang.xml")));
+        Directory.Delete(em, recursive: true);
+
         // KMS homes (IB-02): the box writer, the function and gacha row edits, the home rules, the gate, a copy's own references
         const string KmsBox = "<dropBox dropBoxID=\"320000392\" comment=\"c\"><group dropGroupID=\"1\" locale=\"KR\"><v itemID=\"20800019\" minCount=\"10\" weight=\"100\" locale=\"KR\" />"
             + "<v itemID=\"11320293\" itemID2=\"11320294\" weight=\"50\" /><v itemID=\"20303049\" weight=\"40\" locale=\"CN\" /><v itemID=\"20301788\" weight=\"30\" /><v itemID=\"20899999\" weight=\"20\" /><v itemID=\"20899999\" itemID2=\"14120191\" weight=\"5\" /></group>"
@@ -2076,6 +2581,10 @@ static class Cmp {
         Check("copy: its own preset and origin name the copy, another preset stays",
             self.ToString(SaveOptions.DisableFormatting) == "<ms2><environment><basic originID=\"11290083\" /><tool itemPreset=\"11290083\" itemPresetPath=\"1/12/\" /></environment></ms2>"
             && (string?)otherPreset.Descendants("tool").Single().Attribute("itemPreset") == "11900001");
+        Check("copies: a mount (type 9 or 5) or a pet (type 11) in its KR environment is refused; another item is not",
+            Homes.MountOrPet(XElement.Parse("<item><environment locale=\"CN\"><property type=\"2\" /></environment><environment locale=\"KR\"><property type=\"9\" /></environment></item>"))
+            && Homes.MountOrPet(XElement.Parse("<item><environment><property type=\"5\" /></environment></item>")) && Homes.MountOrPet(XElement.Parse("<item><environment><property type=\"11\" /></environment></item>"))
+            && !Homes.MountOrPet(XElement.Parse("<item><environment><property type=\"2\" /></environment></item>")) && !Homes.MountOrPet(XElement.Parse("<item><environment /></item>")));
         var dupRow = new Homes.Row("twin", 13100329, "same as pack item 13100329");
         Check("twins: a shipped KMS record is kms; a Global item takes its row, else keep; an id the pack lacks takes only a twin row (the item shipped in its place), else unshipped; a twin is for the KMS item's gender or both, KMS's missing genderLimit both and the server's male",
             Homes.Verdict(false, true, dupRow) == "kms" && Homes.Verdict(false, false, dupRow) == "twin" && Homes.Verdict(false, false, null) == "unshipped"
@@ -2094,6 +2603,26 @@ static class Cmp {
         Check("smart drop: a smart-drop group that loses a row or an id and keeps other rows is a class gap; one that loses all its rows, and a plain group that loses a row, are not",
             !wholeGap && rowGap && idGap && whole?.ToString(SaveOptions.DisableFormatting) == "<dropBox dropBoxID=\"320090181\"><group dropGroupID=\"1\" smartDropRate=\"100\"><v itemID=\"13100329\" weight=\"10000\" />"
                 + "<v itemID=\"13200324\" itemID2=\"14100294\" weight=\"10000\" /></group><group dropGroupID=\"3\"><v itemID=\"20303208\" /></group></dropBox>");
+
+        // coin shops (SH-01b): KR rows kept without the mark, other locales' rows gone, ids mapped, dropped rows gone, other shops and comments kept
+        const string ShopGame = "<ms2>\r\n\t<shop shopID=\"101025\">\r\n\t\t<item sn=\"1\" id=\"11320427\" price=\"50\" />\r\n\t\t<item sn=\"2\" id=\"20303049\" paymentItemID=\"22201025\" locale=\"KR\" />\r\n"
+            + "\t\t<item sn=\"2\" id=\"20303049\" locale=\"CN\" />\r\n\t\t<!-- <item sn=\"3\" id=\"20301788\" /> -->\r\n\t\t<item sn=\"4\" id=\"20301788\" />\r\n\t</shop>\r\n"
+            + "\t<shop shopID=\"101\">\r\n\t\t<item sn=\"1\" id=\"20303049\" locale=\"KR\" />\r\n\t</shop>\r\n</ms2>\r\n";
+        const string ShopInfo = "<ms2>\r\n\t<shop shopID=\"286\" categoryID=\"76\" locale=\"KR\" />\r\n\t<shop shopID=\"286\" categoryID=\"76\" locale=\"CN\" />\r\n\t<shop shopID=\"177\" locale=\"KR\" />\r\n</ms2>\r\n";
+        var shopMap = new Dictionary<long, long> { [20303049] = 20393049, [20301788] = 0 };
+        long ShopTo(long p) => shopMap.GetValueOrDefault(p, p);
+        var coinIds = new HashSet<long> { 101025, 286 };
+        var (shopText, shopRows, shopGone) = Homes.ShopText(ShopGame, coinIds, ShopTo);
+        var (infoText, infoRows, infoGone) = Homes.ShopText(ShopInfo, coinIds, ShopTo);
+        bool repeat = false;
+        try { Homes.ShopText(ShopGame.Replace("sn=\"4\"", "sn=\"1\"").Replace("id=\"20301788\" />\r\n\t</shop>", "id=\"11320428\" locale=\"KR\" />\r\n\t</shop>"), coinIds, ShopTo); } catch (InvalidDataException) { repeat = true; }
+        Check("coin shops: a coin's shop is its type 20 param1; its KR rows and info keep their lines without the mark, other locales' rows go, ids are mapped and dropped ones go; other shops and comments stay; a repeated sn is refused; a second run changes nothing",
+            shopText == ShopGame.Replace("id=\"20303049\" paymentItemID=\"22201025\" locale=\"KR\"", "id=\"20393049\" paymentItemID=\"22201025\"").Replace("\t\t<item sn=\"2\" id=\"20303049\" locale=\"CN\" />\r\n", "").Replace("\t\t<item sn=\"4\" id=\"20301788\" />\r\n", "")
+            && (shopRows, shopGone) == (1, 2) && infoText == "<ms2>\r\n\t<shop shopID=\"286\" categoryID=\"76\" />\r\n\t<shop shopID=\"177\" locale=\"KR\" />\r\n</ms2>\r\n" && (infoRows, infoGone) == (1, 1)
+            && Homes.ShopText(shopText, coinIds, ShopTo) == (shopText, 0, 0) && Homes.ShopText(infoText, coinIds, ShopTo) == (infoText, 0, 0) && repeat
+            && Homes.ShopIds(Homes.Shops(ShopGame)[101025]).SetEquals(new long[] { 11320427, 20303049, 20301788 })
+            && Homes.CoinShop(XElement.Parse("<item><environment locale=\"CN\"><property type=\"20\" param1=\"5\" /></environment><environment locale=\"KR\"><property type=\"20\" param1=\"101025\" /></environment></item>")) == 101025
+            && Homes.CoinShop(XElement.Parse("<item><environment><property type=\"2\" param1=\"101025\" /></environment></item>")) == 0);
 
         Console.WriteLine(fail == 0 ? "selftest passed" : $"selftest FAILED ({fail})");
         return fail == 0;

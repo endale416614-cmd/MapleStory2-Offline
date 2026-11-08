@@ -154,6 +154,7 @@ public class ProblemReportTests {
         Save(Path.Combine(saveData, "game-server.db"), "Mei", "player1");
         Save(Path.Combine(saveData, "Alt Save", "game-server.db"), "Rook", "offline");
         Directory.CreateDirectory(Path.Combine(saveData, "New Game"));
+        Directory.CreateDirectory(Path.Combine(saveData, "ugc"));
         using (var empty = new SqliteConnection($"Data Source={Path.Combine(saveData, "New Game", "game-server.db")};Pooling=False")) {
             empty.Open(); // a save the server has not filled yet
         }
@@ -163,6 +164,7 @@ public class ProblemReportTests {
             Assert.That(unreadable, Is.Null);
             Assert.That(names, Is.SupersetOf(new[] { "Mei", "player1", "Rook", "Alt Save", "New Game", Environment.UserName, Environment.MachineName }));
             Assert.That(names, Does.Not.Contain("backups"));
+            Assert.That(names, Does.Not.Contain("ugc"));
         });
 
         Directory.CreateDirectory(Path.Combine(saveData, "Broken"));
@@ -285,6 +287,40 @@ public class ProblemReportTests {
         return path;
     }
 
+    private void QuestFiles(out string save, out string data) {
+        save = Path.Combine(folder, "game-server.db");
+        data = Path.Combine(folder, "maple-data.db");
+        using (var connection = new SqliteConnection($"Data Source={save};Pooling=False")) {
+            connection.Open();
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "CREATE TABLE \"character\" (Id INTEGER, LastModified TEXT); CREATE TABLE quest (OwnerId INTEGER, Id INTEGER, State INTEGER); " +
+                                  "INSERT INTO \"character\" VALUES (1, '2026-01-01'), (2, '2026-02-02'); " +
+                                  "INSERT INTO quest VALUES (2, 10001002, 1), (2, 10001003, 2), (2, 70000001, 1), (1, 10001004, 1);";
+            command.ExecuteNonQuery();
+        }
+        using (var connection = new SqliteConnection($"Data Source={data};Pooling=False")) {
+            connection.Open();
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "CREATE TABLE quest (Id INTEGER, Name TEXT, Basic TEXT); " +
+                                  "INSERT INTO quest VALUES (10001002, 'The Empress'' Levee', '{\"ChapterId\":1}'), (10001003, 'Done', '{\"ChapterId\":2}'), " +
+                                  "(10001004, 'Another''s', '{\"ChapterId\":2}'), (70000001, 'A mission', '{\"Type\":3}');";
+            command.ExecuteNonQuery();
+        }
+    }
+
+    [Test]
+    public void StartedEpicQuests_TheLastCharactersOnly() {
+        QuestFiles(out string save, out string data);
+        Assert.That(ProblemReport.StartedEpicQuests(save, data), Is.EqualTo("Started epic quests: 10001002 The Empress' Levee"));
+    }
+
+    [Test]
+    public void StartedEpicQuests_NoFileNeverThrows() {
+        QuestFiles(out string save, out _);
+        Assert.That(ProblemReport.StartedEpicQuests(save, Path.Combine(folder, "none.db")), Does.StartWith("Started epic quests: (could not read them:"));
+        Assert.That(ProblemReport.StartedEpicQuests(Path.Combine(folder, "none.db"), save), Does.StartWith("Started epic quests: (could not read them:"));
+    }
+
     private static void Save(string path, string character, string account) {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
@@ -300,6 +336,44 @@ public class ProblemReportTests {
     private static JsonDocument Parse(byte[] payload) {
         using var gzip = new GZipStream(new MemoryStream(payload), CompressionMode.Decompress);
         return JsonDocument.Parse(gzip);
+    }
+
+    // Golden: session reports of 2026-10-25 and 2026-10-30.
+    private const string ServerError = "BuffManager: Failed to mount 99910230 on 10000015";
+    private const string ClientError = "GameSession: [sock_exception] [SendOp: FunctionCube] [Offset: 285] [Hint: DecodeStr] [LastPacket:";
+
+    [TestCase("always", true)]
+    [TestCase("ask", false)]
+    [TestCase("never", false)]
+    public void OffersReport_AServerErrorOnlyUnderAlways(string sendReports, bool expected) {
+        Assert.That(ProblemReport.OffersReport(false, sendReports, true, [ServerError]), Is.EqualTo(expected));
+    }
+
+    [TestCase("always")]
+    [TestCase("ask")]
+    [TestCase("never")]
+    public void OffersReport_ALauncherProblemCountsAsBefore(string sendReports) {
+        Assert.That(ProblemReport.OffersReport(true, sendReports, false, []), Is.True);
+    }
+
+    [Test]
+    public void OffersReport_NotWhenTheGameNeverRan() {
+        Assert.That(ProblemReport.OffersReport(false, "always", false, [ServerError]), Is.False);
+    }
+
+    [Test]
+    public void OffersReport_NotForWhatOnlyTheClientWrote() {
+        Assert.That(ProblemReport.OffersReport(false, "always", true, [ClientError, "LogSendHandler: Client Log: hello"]), Is.False);
+    }
+
+    [Test]
+    public void OffersReport_AServerErrorAmongClientLines() {
+        Assert.That(ProblemReport.OffersReport(false, "always", true, [ClientError, ServerError]), Is.True);
+    }
+
+    [Test]
+    public void OffersReport_NotWithoutErrors() {
+        Assert.That(ProblemReport.OffersReport(false, "always", true, []), Is.False);
     }
 
     /// <summary>Answers each request with the next status code and records it; Failure is thrown instead when set.</summary>

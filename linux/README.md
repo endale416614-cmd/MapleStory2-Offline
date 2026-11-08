@@ -59,6 +59,7 @@ ms2offline report        write a session report from the latest logs
 ms2offline report-problem  send the developer a problem report with your own words (--note "...")
 ms2offline diagnostics   zip logs and reports for a bug report (--include-save adds your save)
 ms2offline unpatch       put the game's own NxCharacter64.dll back
+ms2offline verify        check the game files the content pack needs, repair them, or open Steam's verify
 ```
 
 Problem reports: from 1.2.1 the launcher sends a report to the developer automatically after a session with a problem,
@@ -66,7 +67,7 @@ after a one-time notice at the next `play` where you can answer no; then it asks
 `reports/to-send.txt` first. Every report helps the game's development. The **Send problem reports to the developer
 automatically** checkbox in the window changes this too (it shows what a report contains before it turns on), and
 **Report a problem...** / `ms2offline report-problem` sends your own words. A report holds the servers' error and
-warning lines, the launcher's steps, versions and folders, and a random install number; never your user name, computer
+warning lines, the launcher's steps, versions and folders, what your PC is (Linux version, Steam Deck or not, session type, screen size, memory, graphics card, umu version), the names (never the values) of the proxy and server environment variables that are set, and a random install number; never your user name, computer
 name, character, account or save names, chat, the game client's own text, your save or your game files. Without
 internet it waits for the next start. `SendReports=always`, `ask` or `never` in `launcher.ini` changes the choice.
 
@@ -75,6 +76,46 @@ keys as on Windows. Linux-only keys: `Proton` (which Proton build; default GE-Pr
 newest GE-Proton), `Prefix`, `LaunchEnv` (extra environment for the game, e.g. MangoHud), `ClientConsole`, and `Profile`.
 
 Downloads are installed only when the release's signed file list verifies (needs the `openssl` command).
+
+## Updates
+
+When you press Play, the launcher asks GitHub whether a newer release exists. Without internet the check is skipped and
+the game starts. `AutoUpdate` in `launcher.ini` decides the rest:
+
+- `AutoUpdate=ask` (the default) shows the question in the window, in a kdialog or zenity dialog, or in the terminal. No
+  plays the installed version and asks again at the next start. When nobody can answer (no window, no dialog tool that
+  works and no terminal) it installs the update.
+- `AutoUpdate=always` installs without asking.
+- `AutoUpdate=off` never checks. `ms2offline update` or **Check for updates** in the window installs a newer release.
+
+An update is a large download: 623 MB for the update to 1.2.2, over 1 GB when your version needs the full Setup. The
+window and the terminal show its progress, and `logs/launcher.log` has it too. With `ms2offline play` as a Steam shortcut
+in Game Mode there is no window or terminal to show it, so the game opens when the update is done, which can take
+minutes: wait for it. If the game does not open and the log stops at `available online`, a question is waiting where you
+cannot see it: set `AutoUpdate=always` in Desktop Mode. None of this has been tested on a Steam Deck.
+
+If an update fails, you play the installed version and it is tried again at the next start. The reason is in the session
+report, and that session counts as one with a problem (see Problem reports above). If an update stops halfway, the next
+Play finishes it when it can, and otherwise refuses to start and says so: `ms2offline install`, `ms2offline update` or
+**Check for updates** finishes it. Your save is backed up first and is not changed.
+
+An update also brings the launcher: from 1.2.3 a package holds `linux/`, and `ms2offline` and the window run the newer copy
+from the program folder. A git clone as new or newer keeps running. A launcher older than 1.2.3 does not do this yet, so
+update that clone by hand this one time: `git -C <clone> fetch origin`, then `git -C <clone> reset --hard origin/main`, or
+clone it again.
+
+## A bigger interface on a Steam Deck
+
+Most of the game's text is 13 to 16 pixels, which is small on a Deck's screen, and a lower resolution does not help. The
+client has its own setting for this. Nobody has measured what it does on this client yet, so try it and tell us:
+
+1. In Desktop Mode, close the game and open `Config/GameOption.xml` in the game folder with a text editor.
+2. On the `<interface ...>` line, change `UIScale="1"` to `UIScale="0.8"` and save.
+3. Start the game. In an older client of this game 0.8 made the interface about 25 % larger. If it got smaller here, use
+   `UIScale="1.2"`. If the file says `1` again after the game closes, the game does not keep the setting.
+
+Please tell us on Discord which value worked: the launcher can then set it for everyone. Put `UIScale="1"` back to undo
+it. Nothing else changes, and your save is not touched.
 
 ## How it maps to the Windows launcher
 

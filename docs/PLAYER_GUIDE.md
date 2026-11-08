@@ -42,6 +42,7 @@ Setup creates:
   - **MapleStory 2 Offline - Export Diagnostics**,
   - **MapleStory 2 Offline - Report a Problem**,
   - **MapleStory 2 Offline - Install Update**,
+  - **MapleStory 2 Offline - Verify Game Files**,
   - **Uninstall MapleStory 2 Offline**;
 - an entry in the Windows list of installed apps.
 
@@ -104,7 +105,8 @@ This window opens at every start. Your last choice is already selected.
   dungeon gear, easier pet taming, party-size dungeons open to you (except Cathy Mart, which needs a full group),
   bosses scaled for one player, and a Black Market with items for sale.
 - **Save:** pick **Main save** or another save. **New game...** makes a new, empty save. Type its name (letters,
-  digits, spaces, - or _, up to 32 characters, not "backups") and click **OK**. Each save has its own characters.
+  digits, spaces, - or _, up to 32 characters, not "backups" or "ugc") and click **OK**. Each save has its own
+  characters.
 - **Send problem reports to the developer automatically**, **What is sent?** and **Report a problem...**: see
   "Problem reports".
 - **Play** starts the game. **Quit** closes the launcher.
@@ -115,7 +117,7 @@ Your characters work in either mode. To switch modes, close the game and start i
 
 | What | Legacy Mode | Offline Adapted Mode | launcher.ini line |
 |---|---|---|---|
-| Faster exp, more drops, upgrade materials from monsters | off | on | `GrindRates` |
+| Faster exp, more drops, upgrade materials from monsters; field Elites come back after 10 seconds; Dr. Pippy appears in Clock Tower Square (his kills count for the trophy Out of Time, whose text names Clock Tower Passage) | off | on | `GrindRates` |
 | Dungeons drop every item of their loot tables | off | on | `DungeonAllDrops` |
 | Dungeon clear rewards on every clear (up to 9999 a week and a day) | off | on | `UnlimitedDungeonClears` |
 | Weapons, armor and accessories dropped in dungeons are at least Epic (where the item exists at Epic) | off | on | `DungeonEpicGear` |
@@ -124,6 +126,10 @@ Your characters work in either mode. To switch modes, close the game and start i
 | Party-size dungeons open to a smaller group or one player (not Cathy Mart, which needs 4) | off | on | `PartyDungeons` |
 | Bosses and group-dungeon monsters scaled for one player | off | on | `FairFight` |
 | Black Market sells gear near your level, upgrade materials, gems and potions (a new pick at every start) | off | on | `BlackMarket` |
+| All 15 character slots open, no Character Cards needed (Legacy Mode: each card opens one more, up to 15) | off | on | `CharacterSlots` |
+| `/autoenchant`: one press of Enchant keeps trying (off until you type it) | off | on | none |
+| `/autoreroll`: one press of Change Attributes keeps rolling for the line you name (off until you type it) | off | on | none |
+| Change Attributes takes half its materials, rounded down (weapons, armor, accessories and pets; lock scrolls as before) | off | on | none |
 | Cheat commands (`/godmode`, `/unstuck` and the others below) | off | on | `CheatCommands` |
 | Mail never expires (otherwise it expires after 30 days) | on | on | `MailNeverExpires` |
 
@@ -181,6 +187,42 @@ type these in the chat box:
 
 When the cheat commands are off, the game answers "Cheats are off. Set CheatCommands=true in launcher.ini and restart the game."
 
+`/autoenchant` is not a cheat command, and it works only in Offline Adapted Mode. It is off until you type it, and off
+again the next time you start the game. While it is on, one press of **Enchant** at Ophelia or Peachy keeps trying
+until the item gains a level, or until you run out of materials or clean copies. `/autoenchant 12` keeps trying until
++12; an item already at or past its target gets one ordinary try per press. Type `/autoenchant` alone to turn it off.
+
+Each try costs what a click costs and has the same odds, so one press can spend all your materials. From +10, Epic gear
+and better needs copies for every try: the game takes them from your bag by itself, but only copies of the same rarity
+at +0, never rerolled, with no gems, that are not locked. Lock a copy to keep it. The copies and charges you pick go on
+the first try only. Later tries use no charges, and the charges a failed try adds stay on the item for your next press.
+
+A gem upgrade has no roll, so here the number is the gem's tier, the one in its name. With `/autoenchant 5`, one press of
+a gem upgrade takes the gem to Tier 5, in a socket or in your bag, or as far as your materials go. Each tier costs what a
+click costs. A number above the gem's highest tier takes it to that highest tier, so `/autoenchant 12` left on after an
+enchant can spend your gem dust on one gem. With no number, or on a gem already at or past the number, a press is one tier.
+
+`/autoreroll` is not a cheat command either, and it also works only in Offline Adapted Mode. It is off until you type
+it, and off again the next time you start the game. `/autoreroll CriticalRate` (or `/autoreroll critical rate`) makes
+one press of **Change Attributes** keep rolling until the item rolls that line, until you run out of materials or lock
+scrolls, or for 100 rolls. You see only the last roll, and you apply it or roll again as usual. Type `/autoreroll` alone
+to turn it off.
+
+Each roll costs what a click costs and has the same odds. The price rises with every roll up to the 15th,
+and it does not come back down, so one press can spend all your materials, and the mode stays on for every item until
+you turn it off. If you lock a line, each roll takes a lock scroll. If the item can not roll the line you named, a press
+is one ordinary roll.
+
+The lines you can name: `Strength`, `Dexterity`, `Intelligence`, `Luck`, `PhysicalAtk`, `MagicalAtk`, `BonusAtk`,
+`Accuracy`, `AttackSpeed`, `CriticalRate`, `CriticalDamage`, `Piercing`, `PhysicalPiercing`, `MagicalPiercing`,
+`TotalDamage`, `BossNpcDamage`, `MeleeDamage`, `RangedDamage`, `FireDamage`, `IceDamage`, `DarkDamage`, `HolyDamage`,
+`PoisonDamage`, `ElectricDamage`, `Health`, `PhysicalRes`, `MagicalRes`, `Evasion`, `CriticalEvasion`, `MovementSpeed`,
+`ReduceMeleeDamage`, `ReduceRangedDamage`, `ReduceFireDamage`, `ReduceIceDamage`, `ReduceDarkDamage`,
+`ReduceHolyDamage`, `ReducePoisonDamage`, `ReduceElectricDamage`, `ReduceStun`, `ReduceKnockBack`, `ReduceDebuff`,
+`ReduceCooldown`, `HpOnKill`, `RecoveryBonus`, `BonusRecoveryFromAlly`, `Meso`, `DropRate`. `BossNpcDamage` is the
+Bonus Boss Damage line, `HpOnKill` is Heal from Beating Enemies, `Meso` is Mesos from Monsters, and `DropRate` is Enemy
+Item Drop Chance.
+
 In both modes, `/time` shows the in-game time, day, season and year. The world clock only runs while you play.
 
 ## Updates
@@ -201,7 +243,12 @@ When a newer version exists (with the default `AutoUpdate=ask`):
 
 Some versions can only be installed with their full Setup. The launcher then offers to open the download page.
 
-With `AutoUpdate=always` the launcher installs updates without asking. With `AutoUpdate=off` it never checks.
+With `AutoUpdate=always` the launcher installs updates without asking. With `AutoUpdate=off` it never checks. On Linux,
+`AutoUpdate=ask` also installs without asking when nobody can answer, and from 1.2.3 an update brings the Linux launcher
+too, which runs from the next start: see `linux/README.md`.
+
+If an update fails or is refused, you play the installed version and it is tried again at the next start. That counts as
+a session with a problem: the session report names the reason (see "Problem reports").
 
 ### Updating by hand
 
@@ -273,6 +320,8 @@ show again once the pack is back on.
 
 - The main save: `%LOCALAPPDATA%\MapleStory 2 Offline\SaveData\game-server.db`.
 - A save you made with **New game...**: `SaveData\` and the save's name, then `game-server.db`.
+- What you made in the game (portraits, designs, banners, guild marks, blueprints): the `ugc` folder next to the save's
+  `game-server.db`. The automatic backups hold only the save, so copy `SaveData` as below to keep these too.
 
 ### Automatic backups
 
@@ -340,6 +389,9 @@ A report names a section of `TROUBLESHOOTING.txt` (in the program folder) next t
 Since 1.2.1 the launcher sends a report to the developer after a session with a problem (a crash, a stuck loading
 screen, server errors), or when the launcher itself fails. Every report helps fix bugs for every player.
 
+With reports on automatically, a session whose only problem is a server error is also sent, with no message, and its
+report's name does not end with ` - PROBLEM`. **Ask me each time** does not ask about such a session.
+
 - The first start shows the notice "Problem reports are now sent automatically". **Keep it on** sends them
   automatically. **Ask me each time** asks after each session with a problem.
 - In the "Choose how to play" window, the box **Send problem reports to the developer automatically** shows your
@@ -375,9 +427,10 @@ A report contains:
 - when you played: the session's date and times, and the launcher's steps;
 - your MapleStory 2 Offline and content pack versions, your launcher settings, install folders and save size;
 - your Windows version and basic PC details: processor, graphics card and driver, memory, screen size, free disk
-  space;
+  space, whether a proxy handles this PC's own connections, and the names (never the values) of the proxy and server
+  environment variables that are set;
 - if the game crashed: which part of it crashed (program and module names, versions, error code and address from the
-  Windows event log);
+  Windows event log and the offline patch's log);
 - your last character's level, job and map (not its name);
 - which online addresses the game tried to reach (they are blocked offline);
 - a random install number, so reports from the same PC can be grouped.
@@ -438,20 +491,21 @@ characters and its own backups.
 | "Another program is using a network port MapleStory 2 Offline needs" | Close the program it names (or another copy of MapleStory 2 Offline), or restart the PC, then start again. Servers left over from an earlier session of this install are closed by the launcher itself. |
 | "The offline patch could not be installed into the game folder" | Start the launcher again and click **Yes** at the Windows prompt. |
 | "MapleStory 2 closed while starting" | The offline patch or the game files may be damaged. Verify the game files in Steam, then start again: the launcher installs the patch again. |
+| "The game's own NxCharacter64.dll is missing from the game folder" | Verify the game files in Steam, or copy `NxCharacter64.dll` from your game download into the game's `x64` folder. Then start again: the launcher installs the patch itself. Never copy the patch files into the game folder yourself. |
 | "MapleStory 2 has not opened a window yet. Keep waiting?" | Click **Yes** to wait longer. **No** closes the game. |
 | The game's servers do not start after an update. | Click **Yes** when the launcher offers to go back to the version before it. |
 | "The game servers are still running. Close the game, wait a moment and try again." (Install Update) | Wait until the launcher has closed, then try again. |
 | "Your save failed its integrity check" | Click **No**, then restore a backup (see "Saves and backups"). |
 | "Your progress from this session could not be saved. Your previous save was kept." | Use **MapleStory 2 Offline - Export Diagnostics** and post the file with your report on Discord. |
 | "Your progress is still being saved. Keep waiting?" | Click **Yes**. **No** closes the servers, and progress since your last save may be lost. |
-| "The unified content does not fit this game client" | The game starts without the content pack. Verify the game files in Steam to use it again. |
+| "The unified content does not fit this game client" | The game starts without the content pack. Run **MapleStory 2 Offline - Verify Game Files** (Linux: `ms2offline verify`): it repairs what it can and offers Steam's verify for the rest. |
 | "The unified content is only partly applied" | Start the game again. If it repeats, verify the game files in Steam. |
 | "The unified content could not be prepared" | Close Steam and any virus scan of the game folder, then start the game again. |
 | "The unified content could not be removed from the game folder" | Start the game again and click **Yes** at the Windows prompt, or put `UnifiedContent=true` back in launcher.ini. |
 | An update is refused ("is not signed by the MapleStory 2 Offline developer") | Get updates only from the project's Releases page. Nothing was changed. |
 | A report names "Save file in use by another program" [T5] | Close the other launcher, and exclude the `SaveData` folder from virus scans and backup or sync tools. |
 
-`TROUBLESHOOTING.txt` in the program folder explains every problem a session report names ([T1] to [T7]). If your
+`TROUBLESHOOTING.txt` in the program folder explains every problem a session report names ([T1] to [T9]). If your
 problem is not there, post the whole report on Discord.
 
 ---

@@ -142,6 +142,10 @@ item	itemname.xml	11229990	1	client		Unicorn Earrings (M)	client name
 item	itemname.xml	11250185	-	client		Devoted Adventurer Earrings	client name
 item	itemname.xml	11290083	3	copy	스위트 컵케이크 이어링 (남)	Cupcake Puff Earrings (M)	copy of 11220083 (IB-02); Global's name of the same item
 item	itemname.xml	11290084	3	copy	스위트 컵케이크 이어링 (여)	Cupcake Puff Earrings (F)	copy of 11220084 (IB-02); Global's name of the same item
+item	itemname.xml	11290359	3	copy	로맨틱 웨딩 펄 이어링 (남)	Romantic Wedding Pearl Earrings (M)	copy of 11220359 (BT-121); the name the pack shows for 11220359
+item	itemname.xml	11290360	3	copy	로맨틱 웨딩 펄 이어링 (여)	Romantic Wedding Pearl Earrings (F)	copy of 11220360 (BT-121); the name the pack shows for 11220360
+item	itemname.xml	11290389	3	copy	발랄한 앨리스 하트 이어링 (남)	Lively Alice Heart Earrings (M)	copy of 11220389 (BT-121); the name the pack shows for 11220389
+item	itemname.xml	11290390	3	copy	발랄한 앨리스 하트 이어링 (여)	Lively Alice Heart Earrings (F)	copy of 11220390 (BT-121); the name the pack shows for 11220390
 item	itemname.xml	11300000	-	invented		Silver Crown	template id (lv 1, gear score 1) named after its look: SilverCrown model, as 11300139; doubtful: repeats that name
 item	itemname.xml	11300634	-	invented		Narubashan Headgear	model holder of the Fighter10 look worn by Brawling/Ritualistic Narubashan Headgear
 item	itemname.xml	11300656	-	gated		Mushroom Pattern Hard Hat	client line locale=CN
@@ -295,6 +299,17 @@ item	itemname.xml	11361398	-	client		Mischievous Black Bean Orbiter	client name
 item	itemname.xml	11361399	-	client		Mischievous Black Bean Orbiter	client name
 item	itemname.xml	11390088	3	copy	스위트 컵케이크 모자 (남)	Cupcake Puff Hat (M)	copy of 11320083 (IB-02); Global's name of the same item
 item	itemname.xml	11390095	3	copy	스위트 컵케이크 모자 (여)	Cupcake Puff Hat (F)	copy of 11320084 (IB-02); Global's name of the same item
+item	itemname.xml	11390111	3	copy	붕어빵 인형탈 모자	Fish Pastry Costume Hat	copy of 11300111 (SH-01b); translation of the KMS name
+item	itemname.xml	11390331	3	copy	수박조각 모자 (남)	Watermelon Slice Hat (M)	copy of 11320331 (SH-01b); translation of the KMS name
+item	itemname.xml	11390336	3	copy	수박조각 모자 (여)	Watermelon Slice Hat (F)	copy of 11320332 (SH-01b); translation of the KMS name
+item	itemname.xml	11390337	3	copy	빙글빙글 무지개 바람개비 (남)	Whirlwind Rainbow Pinwheel (M)	copy of 11320333 (SH-01b); translation of the KMS name
+item	itemname.xml	11390338	3	copy	빙글빙글 무지개 바람개비 (여)	Whirlwind Rainbow Pinwheel (F)	copy of 11320334 (SH-01b); translation of the KMS name
+item	itemname.xml	11390347	3	copy	머리 위 얼룩냥이 (남)	Calico Cat (M)	copy of 11320347 (BT-121); the name the pack shows for 11320347
+item	itemname.xml	11390348	3	copy	머리 위 얼룩냥이 (여)	Calico Cat (F)	copy of 11320348 (BT-121); the name the pack shows for 11320348
+item	itemname.xml	11390359	3	copy	로맨틱 웨딩 페도라 (남)	Romantic Wedding Fedora (M)	copy of 11320359 (BT-121); the name the pack shows for 11320359
+item	itemname.xml	11390360	3	copy	로맨틱 웨딩 티아라 (여)	Romantic Wedding Tiara (F)	copy of 11320360 (BT-121); the name the pack shows for 11320360
+item	itemname.xml	11390389	3	copy	발랄한 앨리스 티컵 햇 (남)	Lively Alice Teacup Hat (M)	copy of 11320389 (BT-121); the name the pack shows for 11320389
+item	itemname.xml	11390390	3	copy	발랄한 앨리스 티컵 햇 (여)	Lively Alice Teacup Hat (F)	copy of 11320390 (BT-121); the name the pack shows for 11320390
 item	itemname.xml	11400545	-	invented		Narubashan Top	model holder of the Fighter10 look worn by Brawling/Ritualistic Narubashan Top
 item	itemname.xml	11400885	-	invented		Rage Top	model holder of the Violent look worn by the Rage set (Spectral Rage Top)
 item	itemname.xml	11400886	-	invented		Extreme Top	model holder of the Limit look worn by the Extreme set (Barbaric Extreme Top)
@@ -583,6 +598,10 @@ item	itemname.xml	11651040	-	gated		Crimson Balrog's Ritual Gloves	client line f
 item	itemname.xml	11651041	-	gated		Infernog's Gloves	client line feature=WorldBossDungeon
 item	itemname.xml	11690090	3	copy	스위트 컵케이크 링 (남)	Cupcake Puff Ring (M)	copy of 11620083 (IB-02); Global's name of the same item
 item	itemname.xml	11690092	3	copy	스위트 컵케이크 링 (여)	Cupcake Puff Ring (F)	copy of 11620084 (IB-02); Global's name of the same item
+item	itemname.xml	11690359	3	copy	로맨틱 웨딩 펄 글러브 (남)	Romantic Wedding Pearl Gloves (M)	copy of 11620359 (BT-121); the name the pack shows for 11620359
+item	itemname.xml	11690360	3	copy	로맨틱 웨딩 펄 글러브 (여)	Romantic Wedding Pearl Gloves (F)	copy of 11620360 (BT-121); the name the pack shows for 11620360
+item	itemname.xml	11690389	3	copy	발랄한 앨리스 프릴 글러브 (남)	Lively Alice Flower Ring (M)	copy of 11620389 (BT-121); the name the pack shows for 11620389
+item	itemname.xml	11690410	3	copy	발랄한 앨리스 플라워 링 (여)	Lively Alice Flower Ring (F)	copy of 11620390 (BT-121); the name the pack shows for 11620390
 item	itemname.xml	11700598	-	invented		Narubashan Shoes	model holder of the Fighter10 look worn by Brawling/Ritualistic Narubashan Shoes
 item	itemname.xml	11701031	-	invented		Rage Shoes	model holder of the Violent look worn by the Rage set (Spectral Rage Shoes)
 item	itemname.xml	11701032	-	invented		Extreme Shoes	model holder of the Limit look worn by the Extreme set (Barbaric Extreme Shoes)
@@ -687,6 +706,10 @@ item	itemname.xml	11790083	3	copy	스위트 컵케이크 슈즈 (남)	Cupcake Pu
 item	itemname.xml	11790084	3	copy	스위트 컵케이크 슈즈 (여)	Cupcake Puff Shoes (F)	copy of 11720084 (IB-02); Global's name of the same item
 item	itemname.xml	11790251	3	copy	에너제틱 스타 애나멜 부츠 (남)	Energetic Star Enamel Boots (M)	copy of 11720251 (IB-02); Global's name of the same item
 item	itemname.xml	11790252	3	copy	에너제틱 스타 애나멜 부츠 (여)	Energetic Star Enamel Boots (F)	copy of 11720252 (IB-02); Global's name of the same item
+item	itemname.xml	11790359	3	copy	로맨틱 웨딩 펄 슈즈 (남)	Romantic Wedding Pearl Shoes (M)	copy of 11720359 (BT-121); the name the pack shows for 11720359
+item	itemname.xml	11790360	3	copy	로맨틱 웨딩 펄 슈즈 (여)	Romantic Wedding Pearl Shoes (F)	copy of 11720360 (BT-121); the name the pack shows for 11720360
+item	itemname.xml	11790389	3	copy	발랄한 앨리스 로퍼 (남)	Lively Alice Loafers (M)	copy of 11720389 (BT-121); the name the pack shows for 11720389
+item	itemname.xml	11790390	3	copy	발랄한 앨리스 슈즈 (여)	Lively Alice Shoes (F)	copy of 11720390 (BT-121); the name the pack shows for 11720390
 item	itemname.xml	11800094	-	gated		True Barkan's Wings	client line feature=DungeonOpenCN1705
 item	itemname.xml	11800095	-	gated		True Balrog's Wings	client line feature=DungeonOpenCN1705
 item	itemname.xml	11800114	-	invented		Lapenshard Cape	Lv. 60 accessory with the Lapenshard look (icon item Lapenshard Cape (for testing))
@@ -733,6 +756,10 @@ item	itemname.xml	11820389	-	server		Lively Alice Teapot (M)	server name
 item	itemname.xml	11820390	-	server		Lively Alice Teapot (F)	server name
 item	itemname.xml	11829990	1	client		Unicorn Cape	client name
 item	itemname.xml	11890181	3	copy	천계의 선녀 리본망토 (여)	Celestial Fairy Ribbon Cape (F)	copy of 11850181 (IB-02); translation of the KMS name
+item	itemname.xml	11890359	3	copy	로맨틱 웨딩 파티 벌룬 (남)	Romantic Wedding Party Balloon (M)	copy of 11820359 (BT-121); the name the pack shows for 11820359
+item	itemname.xml	11890360	3	copy	로맨틱 웨딩 파티 벌룬 (여)	Romantic Wedding Party Balloon (F)	copy of 11820360 (BT-121); the name the pack shows for 11820360
+item	itemname.xml	11890389	3	copy	발랄한 앨리스 티포트 (남)	Lively Alice Teapot (M)	copy of 11820389 (BT-121); the name the pack shows for 11820389
+item	itemname.xml	11890390	3	copy	발랄한 앨리스 티포트 (여)	Lively Alice Teapot (F)	copy of 11820390 (BT-121); the name the pack shows for 11820390
 item	itemname.xml	11900115	-	invented		Lapenshard Necklace	Lv. 60 accessory with the Lapenshard look (icon item Lapenshard Necklace (for testing))
 item	itemname.xml	11990124	3	copy	게오르크 카이 목걸이	Georg Kai Necklace	copy of 11900120 (IB-02); translation of the KMS name
 item	itemname.xml	12000104	-	invented		Lapenshard Ring	Lv. 60 accessory with the Lapenshard look (icon item Lapenshard Ring (for testing))
@@ -780,6 +807,10 @@ item	itemname.xml	12220390	-	server		Lively Alice Dress (F)	server name
 item	itemname.xml	12229990	1	client		Unicorn Outfit (M)	client name
 item	itemname.xml	12290083	3	copy	스위트 컵케이크 셔츠 앤 팬츠 (남)	Cupcake Puff Outfit (M)	copy of 12220083 (IB-02); Global's name of the same item
 item	itemname.xml	12290084	3	copy	스위트 컵케이크 셔츠 앤 팬츠 (여)	Cupcake Puff Outfit (F)	copy of 12220084 (IB-02); Global's name of the same item
+item	itemname.xml	12290359	3	copy	로맨틱 웨딩 턱시도 (남)	Romantic Wedding Tuxedo (M)	copy of 12220359 (BT-121); the name the pack shows for 12220359
+item	itemname.xml	12290360	3	copy	로맨틱 웨딩 드레스 (여)	Romantic Wedding Dress (F)	copy of 12220360 (BT-121); the name the pack shows for 12220360
+item	itemname.xml	12290389	3	copy	발랄한 앨리스 클래식 수트 (남)	Lively Alice Suit (M)	copy of 12220389 (BT-121); the name the pack shows for 12220389
+item	itemname.xml	12290390	3	copy	발랄한 앨리스 클래식 드레스 (여)	Lively Alice Dress (F)	copy of 12220390 (BT-121); the name the pack shows for 12220390
 item	itemname.xml	13100000	-	invented		Old Dirk	template id (lv 1, gear score 1) named after its look: WornOutDirk model, as 13100001; doubtful: repeats that name
 item	itemname.xml	13100310	-	gated		Level 70 Excellent 3 Dagger	client line feature=Develop
 item	itemname.xml	13100326	-	translated	(PC방) 엘리트 어드벤쳐 나이프	(PC Cafe) Exceptional Adventuring Knife	translation of the KMS name
@@ -862,6 +893,8 @@ item	itemname.xml	18200005	-	gated		Red Lapenta	client line feature=Develop
 item	itemname.xml	18300004	-	gated		Purification Spring Watering Can	client line feature=GuildRaid02
 item	itemname.xml	19000059	-	translated	成金釣り竿(本)	Rich Fishing Pole (Dummy)	JP 成金釣り竿(本); dummy weapon of rod 32000059 Rich Fishing Pole, series style of 19000058 Frog Umbrella Fishing Pole (Dummy)
 item	itemname.xml	19000065	-	invented		Mop Fishing Rod (Dummy)	dummy weapon of rod 32000065 (server name Mop Fishing Rod, KMS 대걸레 낚싯대), series style "<rod> (Dummy)"
+item	itemname.xml	19100095	-	invented		Arlano Classic Marimba Mallets (Dummy)	hand model of instrument row 98, 34000101 Arlano Classic Marimba: the two mallets of KMS itemmodel 19100095 (악기 : 마림바), series style "<instrument> (Dummy)"; Global's 19100070 line already reads Arlano Classic Marimba (Dummy)
+item	itemname.xml	19100097	-	invented		Arlano Classic Flute (Dummy)	hand model of instrument row 99, 34000103 Arlano Classic Flute: KMS itemmodel 19100097 (악기 : 플루트), series style "<instrument> (Dummy)"
 item	itemname.xml	20000491	-	gated		Valentine's Chocolate	client line locale=CN
 item	itemname.xml	20000650	-	invented	dev label: (Test) One-Shot Doping OK 01	All-in-One Buff Tonic (Tier 1)	dev label "(Test) One-Shot Doping OK 01" is no name; test tonic combining the tonic, doping, guild, pet, home and maid buffs (desc), for guild raid gear 20001
 item	itemname.xml	20000651	-	invented	dev label: (Test) One-Shot Doping OK 02	All-in-One Buff Tonic (Tier 2)	dev label "(Test) One-Shot Doping OK 02" is no name; test tonic combining the tonic, doping, guild, pet, home and maid buffs (desc), for guild raid gear 20002
@@ -1253,6 +1286,7 @@ item	itemname.xml	20303336	3	client		Meta Core	client name
 item	itemname.xml	20303378	3	client		Meta Core	client name
 item	itemname.xml	20303383	3	client		Meta Core	client name
 item	itemname.xml	20391431	3	copy	할로윈 웨폰 박스	Halloween Weapon Box	copy of 20301431 (IB-02); translation of the KMS name
+item	itemname.xml	20391435	3	copy	임페리얼 골드 웨폰 박스	Imperial Gold Weapon Box	copy of 20301435 (SH-01b); Taiwan English client
 item	itemname.xml	20391632	3	copy	스톤 버터플라이 웨폰 박스	Stone Butterfly Weapon Box	copy of 20301632 (IB-02); Taiwan English client
 item	itemname.xml	20391698	3	copy	할로윈 웨폰 박스	Halloween Weapon Box	copy of 20301698 (IB-02); Taiwan English client
 item	itemname.xml	20391700	3	copy	뮤직 스타 웨폰 박스	Music Star Weapon Box	copy of 20301700 (IB-02); Taiwan English client
@@ -1280,6 +1314,9 @@ item	itemname.xml	20392956	3	copy	건설 패키지 : 인어공주	Construction P
 item	itemname.xml	20393045	3	copy	길드 소환 스크롤 : 3개	Guild Summon Scroll (3)	copy of 20303045 (IB-02); Taiwan English client
 item	itemname.xml	20393048	3	copy	파티 소환 스크롤 : 10개	Party Summon Scroll (10)	copy of 20303048 (IB-02); Taiwan English client
 item	itemname.xml	20393049	3	copy	마법의 생산 쿠폰 : 50개	Instant Gathering Voucher (50)	copy of 20303049 (IB-02); Taiwan English client
+item	itemname.xml	20393051	3	copy	길드 소환 스크롤 : 3개	Guild Summon Scroll (3)	copy of 20303051 (SH-01b); Taiwan English client
+item	itemname.xml	20393052	3	copy	파티 소환 스크롤 : 10개	Party Summon Scroll (10)	copy of 20303052 (SH-01b); Taiwan English client
+item	itemname.xml	20393053	3	copy	마법의 생산 쿠폰 : 50개	Instant Gathering Voucher (50)	copy of 20303053 (SH-01b); Taiwan English client
 item	itemname.xml	20393055	3	copy	건설 패키지 : 택배박스	Construction Package: Parcel Box	copy of 20303055 (IB-02); translation of the KMS name
 item	itemname.xml	20393111	3	copy	블랙 엠퍼러 장갑 상자	Black Emperor Gloves Box	copy of 20303111 (IB-02); Taiwan English client
 item	itemname.xml	20393133	3	copy	블랙 엠퍼러 모자 상자	Black Emperor Headgear Box	copy of 20303133 (IB-02); Taiwan English client
@@ -1293,6 +1330,7 @@ item	itemname.xml	22004203	-	invented		Special Theme Capsule	third NA theme caps
 item	itemname.xml	22004301	-	gated		Christmas Special Capsule	client line locale=JP
 item	itemname.xml	22004302	-	gated		Valentine's Special Capsule	client line locale=JP
 item	itemname.xml	22004303	-	invented		Seasonal Special Capsule	third JP special capsule (after Christmas and Valentine's Special Capsule); its box 543000003 is empty; doubtful: no theme in the data
+item	itemname.xml	22091024	3	copy	2월 더키의 꾸미기 캡슐	February 2021 Ducky Outfit Capsule	copy of 22001024 (SH-01b); Taiwan English client
 item	itemname.xml	22093001	3	copy	주황버섯의 파워업 캡슐	Orange Mushroom Power Up Capsule	copy of 22003001 (IB-02); Global's name of the same item
 item	itemname.xml	22101001	-	gated		Ducky Modern Capsule Machine	client line locale=CN
 item	itemname.xml	22101002	-	gated		Ducky Fireworks	client line locale=CN
@@ -2602,6 +2640,15 @@ npc	npcname.xml	23000010	-	invented		Wind Lizard Dragon	wind recolor of Pyrros F
 npc	npcname.xml	23000014	-	invented		Red Doondun	red recolor of Doondun 23000013, uses its AI
 npc	npcname.xml	23000040	-	invented		Green Pamokan	green recolor of Pamokan 23000041 (red), uses its AI
 npc	npcname.xml	23000048	-	invented		Black Kalp	black recolor of Kalp (white) and Kakalp (green), SkullWizardCaptain series
+npc	npcname.xml	23000460	-	invented		Crystal 0	hard-mode copy of 23000450 Crystal 0 in the Blue Rook fight (AI_BlueLuke_Summon_Extra1_Hard, the same model); stage-119 names it NPC 23000460
+npc	npcname.xml	23000461	-	invented		Crystal 1	hard-mode copy of 23000451 Crystal 1 in the Blue Rook fight (AI_BlueLuke_Summon_Extra2_Hard, the same model); stage-119 names it NPC 23000461
+npc	npcname.xml	23000462	-	invented		Crystal 2	hard-mode copy of 23000452 Crystal 2 in the Blue Rook fight (AI_BlueLuke_Summon_Extra3_Hard, the same model); stage-119 names it NPC 23000462
+npc	npcname.xml	23000463	-	invented		Crystal 3	hard-mode copy of 23000453 Crystal 3 in the Blue Rook fight (AI_BlueLuke_Summon_Extra4_Hard, the same model); stage-119 names it NPC 23000463
+npc	npcname.xml	23000464	-	invented		Crystal 4	hard-mode copy of 23000454 Crystal 4 in the Blue Rook fight (AI_BlueLuke_Summon_Extra5_Hard, the same model); stage-119 names it NPC 23000464
+npc	npcname.xml	23000465	-	invented		Crystal 5	hard-mode copy of 23000455 Crystal 5 in the Blue Rook fight (AI_BlueLuke_Summon_Extra6_Hard, the same model); stage-119 names it NPC 23000465
+npc	npcname.xml	23000466	-	invented		Crystal 6	hard-mode copy of 23000456 Crystal 6 in the Blue Rook fight (AI_BlueLuke_Summon_Extra7_Hard, the same model); stage-119 names it NPC 23000466
+npc	npcname.xml	23000467	-	invented		Crystal 7	hard-mode copy of 23000457 Crystal 7 in the Blue Rook fight (AI_BlueLuke_Summon_Extra8_Hard, the same model); stage-119 names it NPC 23000467
+npc	npcname.xml	23000470	-	invented		Splash Dummy	splash attack of the hard Blue Rook fight with the Dummy model (AI_BlueLuke_Summon_Splash_Hard), in Global's style for helper NPCs (Wave Dummy); stage-119 names it NPC 23000470
 npc	npcname.xml	23200089	-	invented		Schatten's Floor Trap	invisible floor attack of the Schatten fight in Close Quarters (AI_SchattenFloor1_FR_Lv1)
 npc	npcname.xml	23200090	-	invented		Schatten's Floor Trap	invisible floor attack of the Schatten fight in Close Quarters (AI_SchattenFloor2_FR_Lv1)
 npc	npcname.xml	23200091	-	invented		Schatten's Floor Trap	invisible floor attack of the Schatten fight in Close Quarters (AI_SchattenFloor3_FR_Lv1)
@@ -2950,6 +2997,7 @@ npc	npcname.xml	60000054	-	invented		Bouncy Kangaroo	existing English name of pe
 npc	npcname.xml	60000055	-	invented		Flower Fairy	existing English name of pet item 60000055 (Global names pet NPCs after the pet item of the same id)
 npc	npcname.xml	60000060	-	invented		Kittywampus	existing English name of pet item 60000060 (Global names pet NPCs after the pet item of the same id)
 npc	npcname.xml	60000061	-	invented		Gingerbread	existing English name of pet petname 60000061 (Global names pet NPCs after the pet item of the same id)
+npc	npcname.xml	60000064	-	invented		Mountain Bunny	existing English name of pet item 60000064 (Global names pet NPCs after the pet item of the same id); stage-119 names it NPC 60000064
 npc	npcname.xml	60010001	-	invented		Battle Control Dummy	invisible controller of the Queen Bean Arena fight (AI_BattleControl_01_Colosseum)
 npc	npcname.xml	60010002	-	invented		Battle Control Dummy	invisible controller of the Queen Bean Arena fight (AI_BattleControl_02_Colosseum)
 npc	npcname.xml	60900101	-	invented		Cube Skill Dummy	invisible caster of skill 60300301 in an epic quest event dungeon (AI_CubeSkillDummy_EpicQuest); Global's style: Buff Minion Skill Dummy

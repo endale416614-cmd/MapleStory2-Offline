@@ -8,7 +8,7 @@ report to the developer after a session with a problem, unless you chose otherwi
 
 ## Download
 
-### [⬇ Download MapleStory 2 Offline 1.2.2 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
+### [⬇ Download MapleStory 2 Offline 1.2.3 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
 
 1. Run the downloaded file and click **Install**. No administrator rights are needed.
 2. Start the game from the **MapleStory 2 Offline** icon on your desktop.
@@ -22,8 +22,8 @@ Updates install themselves: when you press Play and a newer version exists, the 
 is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
 Start menu → **MapleStory 2 Offline - Install Update**. All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
 
-**Still on 1.2.0 or older?** Install 1.2.2 once with the Setup above; it keeps your save. The automatic update to 1.2.2
-needs 1.2.1, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
+**Still on 1.2.1 or older?** Install 1.2.3 once with the Setup above; it keeps your save. The automatic update to 1.2.3
+needs 1.2.2, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
 
 **New here?** The [player guide](docs/PLAYER_GUIDE.md) walks you through install, first start, modes, updates and saves.
 
@@ -60,6 +60,9 @@ priority:
 4. Co-op wLAN RPG, not an MMORPG: like Stardew Valley's co-op, your character is a save on your own PC. Join a
    friend's game over wLAN or a community server, then take your character and everything it earned back home.
 5. Modding tools for customizing and expanding your own game.
+
+These are the goals, not all of them done. Today the Epic Quests can be followed up to quest 10003455 of Epic Apocalypse:
+the maps its next steps need exist in no usable build of the game.
 
 Own your game. Own your character. Keep your progress. The full plan is in [VISION.md](VISION.md).
 

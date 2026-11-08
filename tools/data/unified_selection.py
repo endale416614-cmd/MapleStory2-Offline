@@ -32,8 +32,14 @@ Hold (BA-08, maintainer D-9 2026-10-25: what has no data to work is held back, n
 the hold list (--hold, default unified-hold.tsv beside this file: id and reason; --hold "" none) get decision hold and
 leave the overlay like a later batch's items; the pack gates count them as gone. A listed id that is not a pack item,
 has no file of its own in the overlay (the nightly gives it) or that an --extra file names stops the run.
+Quests (BA-15, the maintainer's batch 4 default of 2026-11-07): batch 4 ships only the quest files of the quest list
+(--quests, default unified-quests.tsv beside this file: id and reason; --quests "" every one), the 10 quests that can
+run. The 151 EventMissions, the 7 balloon quests and 10003455 (BA-15f: its dispatch map 52100305 has no data) are
+held, the 17 from 10003456 on are cut (their chain needs an instance map with no data), and the 150 quest files the
+ingest skips (KR or CN locale, or the feature event) go too.
+A listed id without a quest file in the overlay stops the run. The quest list changes no item's decision or batch.
 Usage: unified_selection.py --report <tsv> --db <maple-data.db> --overlay <dir> [--extra <path>...] --out <tsv>
-       [--overlay-out <dir>] [--global-xml <dir>] [--batches N] [--hold <tsv>] | --selftest
+       [--overlay-out <dir>] [--global-xml <dir>] [--batches N] [--hold <tsv>] [--quests <tsv>] | --selftest
 """
 import argparse
 import collections
@@ -48,6 +54,7 @@ import xml.etree.ElementTree as ET
 
 TOKEN = re.compile(rb"(?<![0-9])[0-9]{8}(?![0-9])")
 HOLD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unified-hold.tsv")
+QUESTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unified-quests.tsv")
 # Binary or id-free tables: compressed map blocks, collision meshes, the ingest's bookkeeping, chat filter words.
 SKIP_TABLES = {"checksum", "schema_version", "sqlite_sequence", "map-data", "nxs-mesh", "ban-word"}
 
@@ -268,13 +275,21 @@ def decide(rows, refs, has_file, names, variants=None):
     return out
 
 
-def run(report, db_path, overlay, extra, out, overlay_out=None, global_xml=None, max_batch=4, hold=None):
+def run(report, db_path, overlay, extra, out, overlay_out=None, global_xml=None, max_batch=4, hold=None, quests=None):
     with open(report, encoding="utf-8", newline="") as f:
         rows = [r for r in csv.DictReader(f, delimiter="\t") if r["in_pack"] == "true"]
     held = {}
     if hold:
         with open(hold, encoding="utf-8", newline="") as f:
             held = {int(r["id"]): r["reason"] for r in csv.DictReader(f, delimiter="\t")}
+    shipped = None  # the quest ids whose files batch 4 copies; None: every quest file
+    if quests:
+        with open(quests, encoding="utf-8", newline="") as f:
+            shipped = {r["id"] for r in csv.DictReader(f, delimiter="\t")}
+        quest_files = {os.path.splitext(name)[0] for name in os.listdir(os.path.join(overlay, "quest"))}
+        if shipped - quest_files:
+            raise SystemExit(f"quest list {quests}: {len(shipped - quest_files)} without a quest file in the overlay: {sorted(shipped - quest_files)[:8]}")
+        print(f"quest files: {len(shipped)} of {len(quest_files)} ship in batch 4 ({quests})")
     # Every pack item: a group's first item (verdict unique) can be the one a shop sells (M2c-05 db diff, shop_game).
     wanted = {int(r["id"]) for r in rows}
     own = own_files(overlay)
@@ -341,7 +356,8 @@ def run(report, db_path, overlay, extra, out, overlay_out=None, global_xml=None,
         for dirpath, _, files in os.walk(overlay):
             for name in files:
                 rel = os.path.relpath(os.path.join(dirpath, name), overlay).replace(os.sep, "/")
-                if rel not in skip and not (max_batch < 4 and rel.startswith("quest/")):
+                left = rel.startswith("quest/") and (max_batch < 4 or shipped is not None and os.path.splitext(name)[0] not in shipped)
+                if rel not in skip and not left:  # batch 4 copies only the quest list's quest files (BA-15)
                     os.makedirs(os.path.join(overlay_out, os.path.dirname(rel)), exist_ok=True)
                     shutil.copy2(os.path.join(dirpath, name), os.path.join(overlay_out, rel))
     counts = collections.Counter((d, re.sub(r" [0-9]+|\(.*|; same.*", "", r).strip()) for d, r in decisions.values())
@@ -528,6 +544,26 @@ def selftest():
                 assert str(bad) in str(stop), (bad, stop)
             else:
                 raise AssertionError(f"hold {bad} accepted")
+        # Quests (BA-15): batch 4 copies only the quest list's quest files and the selection stays (11000002, which only
+        # the left-out quest 10000001 names, is kept); a listed quest without a file stops the run.
+        def quest_list(*ids):
+            path = os.path.join(tmp, "quests.tsv")
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                f.write("id\treason\n" + "".join(f"{i}\truns (selftest)\n" for i in ids))
+            return path
+        listed = os.path.join(tmp, "overlay-quests")
+        run(report, db_path, overlay, [mods], out, listed, quests=quest_list(10000002))
+        files_listed = sorted(os.path.relpath(os.path.join(d, n), listed).replace(os.sep, "/")
+                              for d, _, names in os.walk(listed) for n in names)
+        assert files_listed == [f for f in kept_files if f != "quest/10000001.xml"], files_listed
+        with open(out, encoding="utf-8", newline="") as f:
+            assert {int(r["id"]): r["decision"] for r in csv.DictReader(f, delimiter="\t")}[11000002] == "keep"
+        try:
+            run(report, db_path, overlay, [mods], out, quests=quest_list(10000003))
+        except SystemExit as stop:
+            assert "10000003" in str(stop), stop
+        else:
+            raise AssertionError("quest 10000003 without a file accepted")
 
     print("selftest ok")
 
@@ -547,11 +583,12 @@ def main(argv):
     parser.add_argument("--batches", type=int, choices=range(1, 5), default=4,
                         help="Maximum batch to include (1-4, default 4)")
     parser.add_argument("--hold", default=HOLD, help="the hold list (id, reason; default unified-hold.tsv beside this file; an empty value: none)")
+    parser.add_argument("--quests", default=QUESTS, help="the quest files batch 4 ships (id, reason; default unified-quests.tsv beside this file; an empty value: every one)")
     args = parser.parse_args(argv[1:])
     if args.overlay_out and os.path.exists(args.overlay_out) and os.listdir(args.overlay_out):
         print(f"--overlay-out must be empty: {args.overlay_out}", file=sys.stderr)
         return 2
-    run(args.report, args.db, args.overlay, args.extra, args.out, args.overlay_out, args.global_xml, args.batches, args.hold)
+    run(args.report, args.db, args.overlay, args.extra, args.out, args.overlay_out, args.global_xml, args.batches, args.hold, args.quests)
     return 0
 
 

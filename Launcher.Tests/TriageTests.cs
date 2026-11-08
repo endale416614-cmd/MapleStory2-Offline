@@ -18,6 +18,8 @@ public class TriageTests {
             ("SQLite Error 5: 'database is locked'.", "[T5]"),
             ("This save was written by a newer version of the game (save format 9, this version understands 8).", "[T6]"),
             ("Only one usage of each socket address (protocol/network address/port) is normally permitted.", "[T7]"),
+            ("Failed to add channel to World Server. Is the World Server running?", "[T8]"),
+            ("The game's own NxCharacter64.dll is missing from the game folder:", "[T9]"),
         };
 
         foreach ((string line, string expectedSection) in testCases) {
@@ -31,6 +33,19 @@ public class TriageTests {
     public void Classify_UnknownLine_IsNull() {
         var signature = Triage.Classify("Player entered the world");
         Assert.That(signature, Is.Null);
+    }
+
+    /// <summary>BT-216: the launcher's stop when the game's own NxCharacter64.dll is gone is known problem [T9], in its own words.</summary>
+    [Test]
+    public void Classify_TheMissingOriginalStop_IsT9() {
+        string client = Path.Combine(Path.GetTempPath(), "TriageTests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(client);
+        try {
+            File.WriteAllText(Path.Combine(client, "MapleStory2.exe"), "the game");
+            Assert.That(Triage.Classify(ClientPatch.MissingOriginal(client, client)!)?.Section, Is.EqualTo("[T9]"));
+        } finally {
+            Directory.Delete(client, true);
+        }
     }
 
     [Test]

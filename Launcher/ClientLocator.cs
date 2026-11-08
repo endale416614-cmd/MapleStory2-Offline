@@ -14,8 +14,6 @@ internal static class ClientLocator {
     private const string GameExe = "MapleStory2.exe";
     private const string Proxy = "NxCharacter64.dll";
     private const string Backup = "NxCharacter64.dll.bak";
-    /// <summary>sha256 of the game's own NxCharacter64.dll (Steam release, final NA version).</summary>
-    public const string OriginalProxySha256 = "E742CA44B24AAD0787D73C5DA530EED16FA945BD539B1AB00ED0408AB69D0949";
 
     /// <summary>The client's x64 folder, or null. Order: the saved choice, then every Steam library.</summary>
     public static string? Find(string? saved) {
@@ -96,7 +94,7 @@ internal static class ClientLocator {
             if (!File.Exists(backup) && File.Exists(proxy) && Hash(proxy) != Hash(patchedProxy)) {
                 // Keep whatever is there (normally the game's original) so uninstalling can put it back.
                 string current = Hash(proxy);
-                if (current != OriginalProxySha256) {
+                if (current != ClientPatch.OriginalProxySha256) {
                     EventLog.Write("patch", $"client NxCharacter64.dll is not the original (sha256 {current[..16]}); kept as .bak");
                 }
                 File.Copy(proxy, backup);
@@ -141,7 +139,7 @@ internal static class ClientLocator {
             return "missing";
         }
         string hash = Hash(proxy);
-        return hash == OriginalProxySha256 ? "pristine" : hash == Hash(Path.Combine(patchDir, Proxy)) ? "patched" : "modified";
+        return hash == ClientPatch.OriginalProxySha256 ? "pristine" : hash == Hash(Path.Combine(patchDir, Proxy)) ? "patched" : "modified";
     }
 
     /// <summary>Runs "--install-patch" as administrator (game folders under Program Files are write-protected).</summary>

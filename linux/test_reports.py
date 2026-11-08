@@ -245,6 +245,102 @@ class ConsentTest(unittest.TestCase):
         self.assertIn("main save", launcher.ui.infos[0])
 
 
+class OffersReportTest(unittest.TestCase):
+    """ProblemReport.offers_report and SessionReport.offered. Golden: session reports of 2026-10-25 and 2026-10-30."""
+    SERVER_ERROR = "15:15:44.174  BuffManager [ERR] <1> Failed to mount 99910230 on 10000015"
+    CLIENT_ERROR = "00:05:53.160  GameSession [ERR] <1> [sock_exception] [SendOp: FunctionCube] [Offset: 285] [Hint: DecodeStr] [LastPacket:"
+
+    def test_a_server_error_only_under_always(self):
+        for send_reports, expected in (("always", True), ("ask", False), ("never", False)):
+            self.assertEqual(PR.offers_report(False, send_reports, True, [self.SERVER_ERROR]), expected, send_reports)
+
+    def test_a_launcher_problem_counts_as_before(self):
+        for send_reports in ("always", "ask", "never"):
+            self.assertTrue(PR.offers_report(True, send_reports, False, []), send_reports)
+
+    def test_not_when_the_game_never_ran(self):
+        self.assertFalse(PR.offers_report(False, "always", False, [self.SERVER_ERROR]))
+
+    def test_not_for_what_only_the_client_wrote(self):
+        self.assertFalse(PR.offers_report(False, "always", True, [self.CLIENT_ERROR, "12:00:00.000  LogSendHandler [ERR] <1> Client Log: hello"]))
+
+    def test_a_server_error_among_client_lines(self):
+        self.assertTrue(PR.offers_report(False, "always", True, [self.CLIENT_ERROR, self.SERVER_ERROR]))
+
+    def test_not_without_errors(self):
+        self.assertFalse(PR.offers_report(False, "always", True, []))
+
+    def test_offered_reads_only_errors_of_the_server_logs(self):
+        with tempfile.TemporaryDirectory() as logs:
+            settings = types.SimpleNamespace(log_dir=logs)
+            report = ms2offline.SessionReport(settings)
+            report.exit_code = 0
+            self.assertFalse(report.offered("always"))  # no log at all
+            with open(os.path.join(logs, "game.log"), "w", encoding="utf-8") as f:
+                f.write("12:00:00.000  Field [WRN] <1> A warning\n12:00:01.000  Field [INF] <1> Fine\n")
+            self.assertEqual(list(report.log_errors()), [])
+            self.assertFalse(report.offered("always"))
+            with open(os.path.join(logs, "world.log"), "w", encoding="utf-8") as f:
+                f.write(self.SERVER_ERROR + "\n")
+            self.assertEqual(list(report.log_errors()), [self.SERVER_ERROR])
+            self.assertTrue(report.offered("always"))
+            report.exit_code = None
+            self.assertFalse(report.offered("always"))  # a log left by an earlier session
+
+    def test_an_error_past_the_lines_the_upload_keeps_does_not_count(self):
+        warning = "12:00:00.000  Field [WRN] <1> A warning\n"
+        with tempfile.TemporaryDirectory() as logs:
+            report = ms2offline.SessionReport(types.SimpleNamespace(log_dir=logs))
+            report.exit_code = 0
+            with open(os.path.join(logs, "game.log"), "w", encoding="utf-8") as f:
+                f.write(self.SERVER_ERROR + "\n" + warning * 29)
+            self.assertEqual(list(report.log_errors()), [self.SERVER_ERROR])
+            self.assertTrue(report.offered("always"))
+            with open(os.path.join(logs, "game.log"), "a", encoding="utf-8") as f:
+                f.write(warning)
+            self.assertEqual(list(report.log_errors()), [])
+            self.assertFalse(report.offered("always"))
+
+    def play_with_a_server_error(self, send_reports, cancel):
+        """Launcher.play in a temporary home, the machine mocked: a server logs an error once the servers started (after play
+        moved the old logs aside), then the game closes, or the start is cancelled. Returns the mock that stands for offer_report."""
+        with tempfile.TemporaryDirectory() as home:
+            with open(os.path.join(home, "launcher.ini"), "w", encoding="utf-8") as f:
+                f.write(f"AutoUpdate=off\nSendReports={send_reports}\nClientDir=" + os.path.join(home, "MS2", "x64") + "\n")
+            launcher = ms2offline.Launcher(home)
+
+            def start_servers():
+                os.makedirs(launcher.settings.log_dir, exist_ok=True)
+                with open(os.path.join(launcher.settings.log_dir, "game.log"), "w", encoding="utf-8") as f:
+                    f.write(self.SERVER_ERROR + "\n")
+                if cancel:
+                    raise KeyboardInterrupt
+
+            prepared = (os.path.join(home, "GameData"), None, None, None)
+            with mock.patch.object(ms2offline, "prepare_content", return_value=prepared), \
+                    mock.patch.object(ms2offline.Client, "running_pids", return_value=[]), \
+                    mock.patch.object(launcher, "take_lock"), mock.patch.object(launcher, "start_up_reports"), \
+                    mock.patch.object(launcher, "locate_client", return_value=True), mock.patch.object(launcher, "claim_ports"), \
+                    mock.patch.object(launcher, "backup_save"), mock.patch.object(launcher, "start_servers", side_effect=start_servers), \
+                    mock.patch.object(launcher, "install_client_patch"), mock.patch.object(launcher, "set_mod"), \
+                    mock.patch.object(launcher, "prepare_prefix"), \
+                    mock.patch.object(launcher, "launch_game", return_value=mock.MagicMock(returncode=0)), \
+                    mock.patch.object(launcher, "wait_for_game"), mock.patch.object(launcher, "wait_for_save", return_value="nothing"), \
+                    mock.patch.object(launcher, "offer_report") as offer, \
+                    mock.patch.object(launcher.ui, "status"), mock.patch.object(launcher.ui, "notify"), \
+                    mock.patch.object(launcher.ui, "error") as error:
+                self.assertEqual(launcher.play(), 0)
+            error.assert_not_called()  # no "Something went wrong" for such a session
+        return offer
+
+    def test_play_offers_a_server_error_session_only_when_the_game_ran_under_always(self):
+        offer = self.play_with_a_server_error("always", cancel=False)
+        offer.assert_called_once()
+        self.assertIn("Failed to mount", offer.call_args.args[0])
+        self.play_with_a_server_error("ask", cancel=False).assert_not_called()
+        self.play_with_a_server_error("always", cancel=True).assert_not_called()  # the log is in place, the game never ran
+
+
 class NoticeTest(unittest.TestCase):
     """Launcher.show_report_notice (1.2.1): once, only to a player who never chose, and never answered unseen."""
 
@@ -453,6 +549,120 @@ class SettingsTest(unittest.TestCase):
             with open(ini, encoding="utf-8") as f:
                 lines = f.read().splitlines()
             self.assertEqual((lines.count("GameMode=Legacy"), lines.count("GrindRates=true")), (1, 1))
+
+
+class CharacterLinesTest(unittest.TestCase):
+    """SessionReport.character_lines; the same rows as Launcher.Tests' StartedEpicQuests tests."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        home = self.tmp.name
+        self.settings = types.SimpleNamespace(save_file=os.path.join(home, "game-server.db"), content_pack_dir=os.path.join(home, "ContentPack"), game_data_dir=os.path.join(home, "GameData"))
+        os.makedirs(self.settings.game_data_dir)
+
+    def save(self, rows=True):
+        db = sqlite3.connect(self.settings.save_file)
+        db.execute('CREATE TABLE "character" (Id INTEGER, Name TEXT, Level INTEGER, Job INTEGER, MapId INTEGER, LastModified TEXT)')
+        db.execute("CREATE TABLE quest (OwnerId INTEGER, Id INTEGER, State INTEGER)")
+        if rows:
+            db.executemany('INSERT INTO "character" VALUES (?, ?, ?, ?, ?, ?)', [(1, "Old", 20, 100, 2000001, "2026-01-01"), (2, "New", 65, 201, 2000002, "2026-02-02")])
+            db.executemany("INSERT INTO quest VALUES (?, ?, ?)", [(2, 10001002, 1), (2, 10001003, 2), (2, 70000001, 1), (1, 10001004, 1)])
+        db.commit()
+        db.close()
+
+    def data(self, folder):
+        os.makedirs(folder, exist_ok=True)
+        db = sqlite3.connect(os.path.join(folder, "maple-data.db"))
+        db.execute("CREATE TABLE quest (Id INTEGER, Name TEXT, Basic TEXT)")
+        db.executemany("INSERT INTO quest VALUES (?, ?, ?)", [(10001002, "The Empress' Levee", '{"ChapterId":1}'), (10001003, "Done", '{"ChapterId":2}'), (10001004, "Another's", '{"ChapterId":2}'), (70000001, "A mission", '{"Type":3}')])
+        db.commit()
+        db.close()
+
+    def test_the_last_characters_started_epic_quests(self):
+        self.save()
+        self.data(self.settings.game_data_dir)
+        self.assertEqual(ms2offline.SessionReport(self.settings).character_lines(), [
+            "Last played: Lv 65 Berserker, map 2000002, saved 2026-02-02", "Started epic quests: 10001002 The Empress' Levee"])
+
+    def test_the_packs_data_comes_first(self):
+        self.save()
+        self.data(os.path.join(self.settings.content_pack_dir, "GameData"))
+        self.assertEqual(ms2offline.SessionReport(self.settings).character_lines()[1], "Started epic quests: 10001002 The Empress' Levee")
+
+    def test_no_data_file_and_no_character_and_no_save(self):
+        report = ms2offline.SessionReport(self.settings)
+        self.assertIn("could not read the save file", report.character_lines()[0])
+        self.save(rows=False)
+        self.assertEqual(report.character_lines(), ["No character yet."])
+        os.remove(self.settings.save_file)
+        self.save()
+        self.assertIn("could not read them", report.character_lines()[1])
+
+
+class SystemLineTest(unittest.TestCase):
+    """SessionReport.system_line. Golden: the kernel's and os-release's file formats, as no file was read on a Deck."""
+
+    def line(self, files, environ, run):
+        with tempfile.TemporaryDirectory() as root:
+            for path, text in files.items():
+                full = os.path.join(root, *path.split("/"))
+                os.makedirs(os.path.dirname(full), exist_ok=True)
+                with open(full, "w", encoding="utf-8") as f:
+                    f.write(text)
+            with mock.patch.object(ms2offline.subprocess, "run", run):
+                return ms2offline.SessionReport.system_line("/home/someone/umu-run", root, environ)
+
+    def test_a_deck_in_desktop_mode(self):
+        run = mock.Mock(return_value=types.SimpleNamespace(stdout="umu-launcher version 1.2.6\n"))
+        line = self.line({
+            "etc/os-release": 'NAME="SteamOS"\nPRETTY_NAME="SteamOS"\nVARIANT_ID=steamdeck\n',
+            "proc/meminfo": "MemTotal:       16069452 kB\nMemFree:          100 kB\n",
+            "sys/devices/virtual/dmi/id/board_name": "Jupiter\n",
+            "sys/class/drm/card0/device/uevent": "DRIVER=amdgpu\nPCI_CLASS=30000\nPCI_ID=1002:163F\n",
+            "sys/class/drm/card0-eDP-1/status": "connected\n",
+            "sys/class/drm/card0-eDP-1/modes": "800x1280\n800x800\n",
+            "sys/class/drm/card0-DP-1/status": "disconnected\n",
+            "sys/class/drm/card0-DP-1/modes": "1920x1080\n",
+        }, {"DISPLAY": "somehost:10.0", "XDG_SESSION_TYPE": "x11", "XDG_CURRENT_DESKTOP": "KDE"}, run)
+        self.assertEqual(line, "System: SteamOS | Steam Deck yes | session x11 KDE | display x11 | screen 800x1280 | RAM 15 GB | GPU amdgpu 1002:163F | umu umu-launcher version 1.2.6")
+        self.assertEqual(run.call_args.args[0], ["/home/someone/umu-run", "--version"])
+
+    def test_nothing_readable_breaks_nothing(self):
+        line = self.line({}, {}, mock.Mock(side_effect=OSError("no such file")))
+        self.assertEqual(line, "System: unknown | Steam Deck no | session unknown unknown | display none | screen unknown | RAM unknown | GPU unknown | umu not found")
+
+    def test_steam_says_it_is_a_deck_and_a_runner_that_hangs(self):
+        line = self.line({}, {"SteamDeck": "1", "WAYLAND_DISPLAY": "wayland-0"}, mock.Mock(side_effect=ms2offline.subprocess.TimeoutExpired("umu-run", 5)))
+        self.assertEqual(line, "System: unknown | Steam Deck yes | session unknown unknown | display wayland | screen unknown | RAM unknown | GPU unknown | umu not found")
+
+    def test_the_upload_keeps_it(self):
+        with tempfile.TemporaryDirectory() as logs:
+            settings = types.SimpleNamespace(version="1.2.3", prefix="/p", home="/h", client_dir="/c", log_dir=logs, runner="umu-run",
+                                             save_file=os.path.join(logs, "none.db"), content_pack_dir=logs, game_data_dir=logs)
+            with mock.patch.object(ms2offline.SessionReport, "system_line", return_value="System: Some Linux"):
+                raw = ms2offline.SessionReport(settings).raw_text()
+        self.assertIn("\nSystem: Some Linux\n", raw)
+        self.assertIn("\nSystem: Some Linux\n", PR.for_upload(raw, []))
+        self.assertIn("\nSystem: Some Linux\nNetwork: variables set: ", PR.for_upload(raw, []))
+
+
+class NetworkTest(unittest.TestCase):
+    """BT-215: the report names the proxy and server variables set, never a value, and the servers do not inherit .NET's HTTP/2 switch."""
+
+    def test_names_only(self):
+        line = ms2offline.SessionReport.network_line({"http_proxy": "http://someone:secret@proxy.example:8080", "GRPC_WORLD_PORT": "21005", "NO_PROXY": ""})
+        self.assertEqual(line, "Network: variables set: http_proxy, GRPC_WORLD_PORT")
+        self.assertEqual(ms2offline.SessionReport.network_line({}), "Network: variables set: none")
+
+    def test_the_servers_do_not_inherit_the_http2_switch(self):
+        with tempfile.TemporaryDirectory() as home:
+            host = ms2offline.ServerHost(ms2offline.Settings(home), mock.MagicMock())
+            with mock.patch.dict(os.environ, {"DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT": "false"}):
+                env = host.environment()
+        # A bool, so a failure prints no environment values.
+        self.assertFalse("DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT" in env, "the switch reaches the servers")
+        self.assertEqual(env["OFFLINE_MODE"], "true")
 
 
 if __name__ == "__main__":

@@ -8,8 +8,9 @@ namespace MapleStory2Offline;
 ///   --export-diagnostics    save a diagnostics zip on the desktop (works when the game cannot start)
 ///   --report-problem        send the developer a problem report with the player's own words (when the build has a report service)
 ///   --install-update        pick a downloaded update zip and install it
+///   --verify-files          check the game files the unified content needs, repair them, or open Steam's verify
 ///   --uninstall             remove the program (asks about saves)
-/// Helpers: --install-patch/--remove-patch &lt;client dir&gt; (run elevated by the launcher), --apply-content-pack/--restore-content-pack &lt;client dir&gt; &lt;pack dir&gt;, --report, --triage &lt;report or log&gt;, and for automated
+/// Helpers: --install-patch/--remove-patch &lt;client dir&gt; (run elevated by the launcher), --apply-content-pack/--restore-content-pack/--repair-content-pack &lt;client dir&gt; &lt;pack dir&gt;, --report, --triage &lt;report or log&gt;, and for automated
 /// tests --setup-silent --dir &lt;folder&gt; --data &lt;folder&gt; [--no-shortcuts] [--no-registry], --apply-updates, --check-updates,
 /// --export-diagnostics --quiet [--include-save], --uninstall --quiet [--delete-data], --prepare-content.
 /// Silent modes write their outcome to "last-result.txt" in the data (or target) folder and set the exit code.
@@ -34,6 +35,15 @@ internal static class Program {
             // Started elevated by the launcher when the game folder is write-protected.
             string patchDir = Settings.Load().PatchDir;
             return (args[0] == "--install-patch" ? ClientLocator.InstallPatch(args[1], patchDir) : ClientLocator.RemovePatch(args[1], patchDir)) ? 0 : 1;
+        }
+        if (args.Length == 3 && args[0] == "--repair-content-pack") {
+            // Started elevated by VerifyFiles when the game folder is write-protected.
+            try {
+                return ContentPack.Repair(args[1], args[2]) == null ? 1 : 0;
+            } catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException) {
+                Console.Error.WriteLine(ex.Message);
+                return 1;
+            }
         }
         if (args.Length == 3 && args[0] is "--apply-content-pack" or "--restore-content-pack") {
             // Started elevated by ContentPack.ApplyElevated when the game folder is write-protected.
@@ -87,6 +97,9 @@ internal static class Program {
             }
             if (Has(args, "--install-update")) {
                 return InstallUpdate(settings, quiet, Value(args, "--install-update"));
+            }
+            if (Has(args, "--verify-files")) {
+                return VerifyFiles.Run(settings);
             }
             if (Has(args, "--check-updates")) {
                 return CheckUpdatesQuiet(settings);
@@ -205,7 +218,7 @@ internal static class Program {
                 EventLog.Write("recovery", recovered);
             }
             List<UpdateInstaller.Result> results = installer.InstallPending();
-            message = results.Count == 0 ? "Nothing to install: this update is already installed." : $"Updated to version {results[^1].Version}.";
+            message = results.Count == 0 ? $"Nothing to install: version {settings.Version} is installed, and this file holds no newer update." : $"Updated to version {results[^1].Version}.";
             code = 0;
         } catch (Exception ex) {
             message = ex.Message;

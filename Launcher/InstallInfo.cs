@@ -32,6 +32,25 @@ internal static class InstallInfo {
         File.WriteAllText(Path.Combine(root, FileName), JsonSerializer.Serialize(new Data(installId, dataDir), new JsonSerializerOptions { WriteIndented = true }));
     }
 
+    /// <summary>
+    /// Copies the files the web server of an older version uploaded into its program folder to a new program folder, so Setup's
+    /// swap does not delete them before the new web server's first start copied them into the save (BT-15). The shipped system
+    /// folder stays the new one's, and so does a file already there. Throws when a file cannot be copied.
+    /// </summary>
+    public static void CarryWebData(string oldProgramDir, string newProgramDir) {
+        string webData = Path.Combine("Maple2", "Maple2.Server.Web", "Data"), from = Path.Combine(oldProgramDir, webData);
+        if (!Directory.Exists(from)) {
+            return;
+        }
+        foreach (string file in Directory.EnumerateFiles(from, "*", SearchOption.AllDirectories)) {
+            string relative = Path.GetRelativePath(from, file), target = Path.Combine(newProgramDir, webData, relative);
+            if (!relative.StartsWith("system" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && !File.Exists(target)) {
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(file, target);
+            }
+        }
+    }
+
     private static string PortableId(string root) {
         string path = Path.Combine(root, "install-id");
         try {

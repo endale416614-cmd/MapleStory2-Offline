@@ -1,0 +1,149 @@
+id	source	npc	type	name
+02000532_BF__MAIN__0	invented	systemMSG	ShowCaption	[Infiltrate Black Onyx Tower]
+02000532_BF__MAIN__1	invented	systemMSG	ShowCaption	$map:02000532$
+02000532_BF__MAIN__2	invented	systemMSG	SetEventUI	Get past the guards in the lobby and reach the door.
+02000532_BF__MAIN__3	invented	systemMSG	SetEventUI	Break down the door and head inside.
+02000532_BF__MAIN__4	invented	NotUse	AddBalloonTalk	Wh-who's there?!
+02000532_BF__MAIN__5	invented	NotUse	AddBalloonTalk	Intruders! Sound the alarm!
+02000532_BF__MAIN__6	invented	NotUse	AddBalloonTalk	How did they get in here?!
+02000532_BF__MAIN__7	invented	NotUse	AddBalloonTalk	Don't let them through!
+02000532_BF__MAIN__8	invented	NotUse	AddBalloonTalk	Stay alert!
+02000532_BF__MAIN__9	invented	NotUse	AddBalloonTalk	Watch the entrance!
+02000532_BF__MAIN__10	invented	NotUse	AddBalloonTalk	Nobody gets past the lobby!
+02000532_BF__MAIN__11	invented	NotUse	AddBalloonTalk	Word from $npcName:11004639$. We're to keep moving.
+02000532_BF__MAIN__12	invented	NotUse	AddBalloonTalk	Got it. Clear the way up!
+02000532_BF__MAIN__13	invented	Jei	SideNpcTalk	Something's not right. This is going too smoothly...
+02000532_BF__MAIN__14	invented	NotUse	AddBalloonTalk	You don't think it's a trap, do you?
+02000532_BF__MAIN__15	invented	systemMSG	SetEventUI	The Black Onyx is striking back. Defeat them all.
+02000532_BF__MAIN__16	invented	Blackstar Gangster	SideNpcTalk	You picked the wrong tower to walk into!
+02000532_BF__MAIN__17	invented	Jei	SideNpcTalk	Watch the side passages. More of them are coming!
+02000532_BF__MAIN__18	invented	NotUse	AddBalloonTalk	There they are!
+02000532_BF__MAIN__19	invented	NotUse	AddBalloonTalk	Get them!
+02000532_BF__MAIN__20	invented	NotUse	AddBalloonTalk	You won't leave this tower alive!
+02000532_BF__MAIN__21	invented	Jei	SideNpcTalk	One more push. Hold them off and we'll reach the elevator!
+02000532_BF__MAIN__22	invented	systemMSG	SetEventUI	The elevator is open. Take it to the next floor.
+02000532_BF__TALK__0	invented	NotUse	AddBalloonTalk	Stay sharp. I heard something outside.
+02000533_BF__GAMELOGIC_9002__0	copy	systemMSG	SetEventUI	Preparing security release code.
+02000533_BF__GAMELOGIC_9002__1	copy	systemMSG	SetEventUI	Enter the security release code.
+02000533_BF__GAMELOGIC_9002__2	copy	systemMSG	SetEventUI	Security release successful
+02000533_BF__GAMELOGIC_9002__3	copy	systemMSG	SetEventUI	Security release failed
+02000533_BF__GAMELOGIC_9002__4	copy	systemMSG	SetEventUI	Security release code preparation (2/3)
+02000533_BF__GAMELOGIC_9002__5	copy	systemMSG	SetEventUI	Enter the security release code. (2/3)
+02000533_BF__GAMELOGIC_9002__6	copy	systemMSG	SetEventUI	Security release successful
+02000533_BF__GAMELOGIC_9002__7	copy	systemMSG	SetEventUI	Security release failed
+02000533_BF__GAMELOGIC_9002__8	copy	systemMSG	SetEventUI	Security release code preparation (3/3)
+02000533_BF__GAMELOGIC_9002__9	copy	systemMSG	SetEventUI	Enter the security release code. (3/3)
+02000533_BF__GAMELOGIC_9002__10	copy	systemMSG	SetEventUI	Security release successful
+02000533_BF__GAMELOGIC_9002__11	copy	systemMSG	SetEventUI	Security release failed
+02000533_BF__MAIN__0	invented	Jei	SideNpcTalk	This door's reinforced. We'll have to break it down!
+02000533_BF__MAIN__1	invented	systemMSG	SetEventUI	Destroy the door to enter the office.
+02000533_BF__MAIN__2	invented	NotUse	AddBalloonTalk	They made it past the lobby?!
+02000533_BF__MAIN__3	invented	Blackstar Gangster	SideNpcTalk	Stop them before they reach the third floor!
+02000533_BF__MAIN__4	invented	Jei	SideNpcTalk	The way to the third floor runs through this office. Keep going!
+02000533_BF__MAIN__5	invented	NotUse	AddBalloonTalk	Protect the documents!
+02000533_BF__MAIN__6	invented	NotUse	AddBalloonTalk	Nobody touches the boss's files!
+02000533_BF__MAIN__7	invented	Jei	SideNpcTalk	That door has a security lock. See if you can crack the code.
+02000533_BF__MAIN__8	copy	systemMSG	SetEventUI	[Security System Challenge]\nQuickly enter the numbers as they appear.\nIf you fail 3 times, the security system will punish you.
+02000533_BF__MAIN__9	invented	systemMSG	SetEventUI	[Success]\nYou entered it correctly.\nThe way to $map:02000534$ is opening.
+02000533_BF__MAIN__10	copy	systemMSG	SetEventUI	[Failure]\nThe security system doesn't like you.\nThe lock device is activating.
+02000533_BF__MAIN__11	invented	player	AddCinematicTalk	Fine. If the lock won't open, I'll break it by hand!
+02000533_BF__MAIN__12	copy	systemMSG	SetEventUI	[Battle of Patience]\nCan't be helped. Just force it open.
+02000533_BF__MAIN__13	invented	Jei	SideNpcTalk	Nice work! The door's down. Let's move.
+02000533_BF__MAIN__14	invented	Jei	SideNpcTalk	The stairs are clear. On to the third floor!
+02000533_BF__MAIN2__0	invented	NotUse	AddBalloonTalk	Intruders on this floor!
+02000533_BF__MAIN2__1	invented	NotUse	AddBalloonTalk	Call for backup!
+02000533_BF__MAIN2__2	invented	NotUse	AddBalloonTalk	Don't let them near the office!
+02000533_BF__MAIN2__3	invented	NotUse	AddBalloonTalk	Get them!
+02000534_BF__MAIN__0	invented	systemMSG	SetEventUI	Search the labs and find out what the Black Onyx is planning.
+02000534_BF__MAIN__1	invented	NotUse	AddBalloonTalk	How did you get up here?!
+02000534_BF__MAIN__2	invented	NotUse	AddBalloonTalk	Protect the research data!
+02000534_BF__MAIN__3	invented	NotUse	AddBalloonTalk	Stop right there!
+02000534_BF__MAIN__4	invented	Jei	SideNpcTalk	Good. The first lab should be just ahead.
+02000534_BF__MAIN__5	invented	Haren	SideNpcTalk	Oh my, visitors~ Let's see how far you get.
+02000534_BF__MAIN__6	invented	NotUse	AddBalloonTalk	Lady Haren is watching! Don't let her down!
+02000534_BF__MAIN__7	invented	NotUse	AddBalloonTalk	For the Black Onyx!
+02000534_BF__MAIN__8	invented	Haren	SideNpcTalk	So this is where it gets interesting.
+02000534_BF__MAIN__9	invented	Haren	SideNpcTalk	Go on, then. Entertain me~
+02000534_BF__MAIN__10	invented	NotUse	AddBalloonTalk	Get out of my lab!
+02000534_BF__MAIN__11	invented	NotUse	AddBalloonTalk	Don't touch that device!
+02000534_BF__MAIN__12	invented	player	AddBalloonTalk	This machine must be what they're guarding.
+02000534_BF__MAIN__13	invented	NotUse	AddBalloonTalk	You'll go no further!
+02000534_BF__MAIN__14	invented	NotUse	AddBalloonTalk	The second lab is off limits!
+02000534_BF__MAIN__15	invented	player	AddBalloonTalk	Another one of these machines. I should shut it down.
+02000534_BF__MAIN__16	invented	player	AddBalloonTalk	That's two. On to the next room.
+02000534_BF__MAIN__17	invented	NotUse	AddBalloonTalk	Time to end this!
+02000534_BF__MAIN__18	invented	NotUse	AddBalloonTalk	They're at the third lab!
+02000534_BF__MAIN__19	invented	NotUse	AddBalloonTalk	Hide the data, quickly!
+02000534_BF__MAIN__20	invented	NotUse	AddBalloonTalk	We can't hold them for long!
+02000534_BF__MAIN__21	invented	NotUse	AddBalloonTalk	Stop, or I'll destroy it all!
+02000534_BF__MAIN__22	invented	player	AddBalloonTalk	Too late. I've already seen enough.
+02000534_BF__MAIN__23	invented	NotUse	AddBalloonTalk	Stop them before they reach the last lab!
+02000534_BF__MAIN__24	invented	NotUse	AddBalloonTalk	You can't be in here!
+02000534_BF__MAIN__25	invented	NotUse	AddBalloonTalk	Those files are classified!
+02000534_BF__MAIN__26	invented	Jei	SideNpcTalk	Check that computer. The plans must be on it.
+02000534_BF__MAIN__27	invented	Haren	SideNpcTalk	Oh, reading other people's files? How rude~
+02000534_BF__MAIN__28	invented	NotUse	AddBalloonTalk	Lady Haren, they've reached the computer!
+02000534_BF__MAIN__29	invented	player	AddBalloonTalk	This is it. Their whole plan is on this screen.
+02000534_BF__MAIN__30	invented	player	AddBalloonTalk	I'll copy what I can.
+02000534_BF__MAIN__31	invented	Jei	SideNpcTalk	Got it? Then get out of there. Something's coming!
+02000534_BF__MAIN__32	invented	player	AddBalloonTalk	What's that noise?
+02000534_BF__MAIN__33	invented	Jei	SideNpcTalk	Here it comes! Take it down!
+02000534_BF__MAIN__34	invented	NotUse	AddBalloonTalk	Intruders! You'll be my first test!
+02000534_BF__MAIN__35	invented	NotUse	AddBalloonTalk	Upgrade, start!
+02000534_BF__MAIN__36	invented	systemMSG	SetEventUI	Stop the upgrade before it finishes!
+02000534_BF__MAIN__37	invented	NotUse	AddBalloonTalk	Upgrade complete! Now you all go down with me!
+02000534_BF__MAIN__38	invented	NotUse	AddBalloonTalk	No! The upgrade failed!
+02000534_BF__MAIN__39	invented	Jei	SideNpcTalk	Well done! I've opened a way upstairs.
+02000534_BF__MAIN__40	invented	systemMSG	SetEventUI	The portal to $map:02000535$ has opened.
+02000535_BF__MAIN__0	invented	NotUse	AddBalloonTalk	An intruder in the executive wing?!
+02000535_BF__MAIN__1	invented	NotUse	AddBalloonTalk	Seize them!
+02000535_BF__MAIN__2	invented	NotUse	AddBalloonTalk	Protect the meeting room!
+02000535_BF__MAIN__3	invented	NotUse	AddBalloonTalk	They're not getting past me!
+02000535_BF__MAIN__4	invented	player	AddBalloonTalk	That's the first group. Let's keep moving.
+02000535_BF__MAIN__5	invented	player	AddBalloonTalk	There are too many of them. I need to be smarter about this.
+02000535_BF__MAIN__6	invented	systemMSG	SetEventUI	Watch the floor and time your steps to slip past the guards.
+02000535_BF__MAIN__7	invented	NotUse	AddBalloonTalk	Did you hear something?
+02000535_BF__MAIN__8	invented	NotUse	AddBalloonTalk	Just the wind.
+02000535_BF__MAIN__9	invented	NotUse	AddBalloonTalk	It's been quiet tonight.
+02000535_BF__MAIN__10	invented	NotUse	AddBalloonTalk	Too quiet.
+02000535_BF__MAIN__11	invented	NotUse	AddBalloonTalk	The executives are meeting again?
+02000535_BF__MAIN__12	invented	NotUse	AddBalloonTalk	I could use a break.
+02000535_BF__MAIN__13	invented	NotUse	AddBalloonTalk	Keep your eyes open.
+02000535_BF__MAIN__14	invented	NotUse	AddBalloonTalk	Shift change is soon.
+02000535_BF__MAIN__15	invented	NotUse	AddBalloonTalk	Stop talking and stay at your post.
+02000535_BF__MAIN__16	invented	NotUse	AddBalloonTalk	The meeting is running long today.
+02000535_BF__MAIN__17	invented	NotUse	AddBalloonTalk	The boss must be in a foul mood.
+02000535_BF__MAIN__18	invented	NotUse	AddBalloonTalk	Better not get in the executives' way.
+02000535_BF__MAIN__19	invented	NotUse	AddBalloonTalk	You said it. Back to your post.
+02000535_BF__MAIN__20	invented	NotUse	AddBalloonTalk	The tea for the meeting room is ready.
+02000535_BF__MAIN__21	invented	NotUse	AddBalloonTalk	Hurry, or Lady Haren will be cross.
+02000535_BF__MAIN__22	invented	NotUse	AddBalloonTalk	There! An intruder!
+02000535_BF__MAIN__23	invented	NotUse	AddBalloonTalk	Surround them!
+02000535_BF__MAIN__24	invented	player	AddBalloonTalk	Those must be the executives. Let me listen in.
+02000535_BF__MAIN__25	invented	NotUse	AddBalloonTalk	The operation is on schedule.
+02000535_BF__MAIN__26	invented	NotUse	AddBalloonTalk	Then nothing can stop us now.
+02000535_BF__MAIN__27	invented	systemMSG	SetEventUI	You've heard enough. Find the way forward before you're spotted.
+02000535_BF__MAIN__28	invented	player	AddBalloonTalk	I need to get out of here before they notice me.
+02000535_BF__MAIN__29	invented	Bridd Min	SideNpcTalk	Can you hear me? I've opened the passage to the terrace.
+02000535_BF__MAIN__30	invented	Bridd Min	SideNpcTalk	Go now. I can't keep it open for long.
+02000535_BF__MAIN__31	invented	NotUse	AddBalloonTalk	They're on the terrace!
+02000535_BF__MAIN__32	invented	NotUse	AddBalloonTalk	Cut them off!
+02000535_BF__MAIN__33	invented	Armand	SideNpcTalk	We've got your back. Keep going!
+02000535_BF__MAIN__34	invented	Kyle	SideNpcTalk	Leave these guys to us. Find the way in!
+02000535_BF__MAIN__35	invented	NotUse	AddBalloonTalk	Don't let them reach the safe!
+51000006_DG__51000006_MAIN__0	translated	systemMSG	SetCinematicUI	Hi! I'm the free-spirited Black Bean! Playing is the best!\nPlay with me from now on!
+51000006_DG__51000006_MAIN__1	translated	systemMSG	SetCinematicUI	If you choose a different direction than me, you win;\nif you choose the same direction, you lose!
+51000006_DG__51000006_MAIN__2	translated	systemMSG	SetCinematicUI	If you lose five times, it's game over!\nThe longer you go, the higher you score!
+51000006_DG__51000006_MAIN__3	translated	systemMSG	SetCinematicUI	If you rank high enough, you'll get a gift! Pretty good deal, huh?\nThen let's begin~ Boing-boing!
+51000006_DG__51000006_MAIN__4	translated	NotUse	AddBalloonTalk	I won't lose to you!
+51000006_DG__51000006_MAIN__5	translated	Black Bean	AddBalloonTalk	Round and round~!
+51000006_DG__51000006_MAIN__6	translated	Black Bean	AddBalloonTalk	Did I just lose?!
+51000006_DG__51000006_MAIN__7	translated	player	AddBalloonTalk	I won!
+51000006_DG__51000006_MAIN__8	translated	Black Bean	AddBalloonTalk	Ne-ne ne-ne ne~ You lost~ Pbbblt!
+51000006_DG__51000006_MAIN__9	translated	player	AddBalloonTalk	Ugh! Damn it!
+52010012_QD__MAIN__0	invented	NotUse	SetDialogue	You won't catch me that easily!
+52010029_QD__MAIN__48	invented	Rutatimo Karr	AddCinematicTalk	...
+52010032_QD__MAIN__0	invented	Namid	AddCinematicTalk	Thank you. With this, I can begin the treatment.
+52010032_QD__MAIN__1	invented	Namid	AddCinematicTalk	Please stand back while I tend to the war chief.
+52010032_QD__MAIN__2	invented	Namid	AddCinematicTalk	War chief, please... come back to us.
+52010032_QD__MAIN__3	invented	Wolf Heart	AddCinematicTalk	Ugh...

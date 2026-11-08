@@ -1,8 +1,8 @@
 # Release 1.2.2: furniture, pets and mounts, the New tab, the players' reports
 
 Planned 2026-10-23 and 24 from the players' session reports and notes of those days, with content batch 3, the boss
-phases that wait for a battle end and the bugs set aside for 1.2.2; approved by the maintainer on 2026-10-24. Not
-published yet (section "Published").
+phases that wait for a battle end and the bugs set aside for 1.2.2; approved by the maintainer on 2026-10-24.
+Published 2026-10-29 without the maintainer's play check (sections "Play check" and "Published").
 
 ## Candidate
 - First candidate 2026-10-29: 733 server, 149 launcher and 103 Linux tests pass, with the data tests on the shipped
@@ -232,4 +232,12 @@ On the candidate, in Offline Adapted Mode with the content pack on unless a step
     Leave a map for 10 minutes and come back: it loads. If the Kritias epic can be set up, Reactor Site's cutscene
     after The Daring Rescue ends.
 
-## Published
+## Published (2026-10-29)
+
+Release `v1.2.2` on `e999b46b` (Maple2 `27d2c313`, Agarcium `c796c33e`), marked Latest: `MapleStory2-Offline-Setup.exe`
+(1,167,110,924 bytes, sha256 `565d5deb2bdbc1a6267dfc1292a566a995950bf7c5e34dfaff32fe79f4cfd8a1`),
+`MapleStory2-Offline-Update-1.2.2.zip` (623,183,336 bytes; needs 1.2.1), `release.json` and `release.json.sig`: the same
+four names as v1.2.1. Before upload: the full test suites, the core-loop run, the privacy scans of the two new source
+snapshots and of the Setup, the update zip and release.json, sizes, hashes, both signatures and a dry run of the
+pre-push hook. After upload: GitHub's sha256 digests equal the local files, and the `releases/latest/download` links
+serve them. Not done: the maintainer's play check (players test this release) and a live update of a 1.2.1 install.

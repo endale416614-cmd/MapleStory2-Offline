@@ -27,10 +27,20 @@ internal static class ContentPackFlow {
             }
             List<ContentPack.ArchiveState> states = pack.State(clientRoot).ToList();
             if (states.Any(s => s.Status == ContentPack.Status.Foreign)) {
-                // A client the pack does not fit (Steam update, other build) plays Global and is never written.
+                // A client the pack does not fit (Steam update, other build) plays Global. The archives that still carry the
+                // pack go back to Global first, so the client matches the server data (BT-03); the Foreign one is not written.
                 if (unifiedContent || states.Any(s => s.Status == ContentPack.Status.Applied)) {
                     string reasons = string.Join("; ", states.Where(s => s.Status == ContentPack.Status.Foreign).Select(s => s.Reason));
                     warning = $"The unified content does not fit this game client ({reasons}). The game starts without it; verify the game files in Steam to use it again.";
+                }
+                if (states.Any(s => s.Status is ContentPack.Status.Applied or ContentPack.Status.EarlierPack)) {
+                    try {
+                        if (!ContentPack.Restore(clientRoot, packDir)) {
+                            elevated(clientRoot, packDir, "--restore-content-pack");
+                        }
+                    } catch (InvalidOperationException) {
+                        // Restore names the Foreign archive it left, as the warning does.
+                    }
                 }
                 return Lock(globalDataDir, null, warning);
             }

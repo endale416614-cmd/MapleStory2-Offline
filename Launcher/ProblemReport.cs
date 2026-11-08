@@ -83,6 +83,13 @@ internal static class ProblemReport {
         return string.Join('\n', kept);
     }
 
+    /// <summary>
+    /// Whether a session's report is offered: any launcher problem; under SendReports=always also a session whose game ran
+    /// and whose server logs hold an error the upload keeps. An error only the client wrote leaves nothing to read (BT-165).
+    /// </summary>
+    public static bool OffersReport(bool hasProblems, string sendReports, bool gameRan, IEnumerable<string> logErrors) =>
+        hasProblems || (sendReports == "always" && gameRan && logErrors.Any(error => DropClientText(error).Length > 0));
+
     /// <summary>Removes the user profile folder, the Windows user name and PC name, and machine ids.</summary>
     public static string Redact(string text) {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -116,7 +123,7 @@ internal static class ProblemReport {
         string? unreadable = null;
         try {
             names.AddRange(Directory.GetDirectories(saveData).Select(Path.GetFileName).OfType<string>()
-                .Where(folder => !folder.Equals("backups", StringComparison.OrdinalIgnoreCase)));
+                .Where(folder => !Settings.IsReservedFolder(folder)));
             foreach (string save in Directory.GetFiles(saveData, "game-server.db", SearchOption.AllDirectories)) {
                 if (!ReadNames(save, names)) {
                     unreadable ??= save;
@@ -252,6 +259,38 @@ internal static class ProblemReport {
             }
         }
         return count;
+    }
+
+    /// <summary>The report's line of the last character's started epic quests, by id and name: where a stuck story stands. Never throws: a report must not break the end of a session.</summary>
+    public static string StartedEpicQuests(string saveFile, string dataFile) {
+        try {
+            var started = new List<long>();
+            using (var save = new SqliteConnection($"Data Source={saveFile};Mode=ReadOnly;Pooling=False")) {
+                save.Open();
+                using SqliteCommand command = save.CreateCommand();
+                command.CommandText = "SELECT Id FROM quest WHERE State = 1 AND OwnerId = (SELECT Id FROM \"character\" ORDER BY LastModified DESC LIMIT 1) ORDER BY Id";
+                using SqliteDataReader reader = command.ExecuteReader();
+                while (reader.Read()) {
+                    started.Add(reader.GetInt64(0));
+                }
+            }
+
+            var quests = new List<string>();
+            if (started.Count > 0) {
+                using var data = new SqliteConnection($"Data Source={dataFile};Mode=ReadOnly;Pooling=False");
+                data.Open();
+                using SqliteCommand command = data.CreateCommand();
+                command.CommandText = $"SELECT Id, Name FROM quest WHERE Id IN ({string.Join(",", started)}) AND COALESCE(json_extract(Basic, '$.Type'), 0) = 0 ORDER BY Id";
+                using SqliteDataReader reader = command.ExecuteReader();
+                while (reader.Read()) {
+                    quests.Add($"{reader.GetInt64(0)} {reader.GetValue(1)}");
+                }
+            }
+
+            return "Started epic quests: " + (quests.Count > 0 ? string.Join("; ", quests) : "none");
+        } catch (Exception ex) {
+            return $"Started epic quests: (could not read them: {ex.Message})";
+        }
     }
 
     private static bool ReadNames(string save, List<string> names) {

@@ -25,6 +25,8 @@
         <Compile Include="..\Launcher\SaveBackup.cs" Link="Linked\SaveBackup.cs" />
         <Compile Include="..\Launcher\EventLog.cs" Link="Linked\EventLog.cs" />
         <Compile Include="..\Launcher\PortGuard.cs" Link="Linked\PortGuard.cs" />
+        <Compile Include="..\Launcher\ServerHost.cs" Link="Linked\ServerHost.cs" />
+        <Compile Include="..\Launcher\ClientPatch.cs" Link="Linked\ClientPatch.cs" />
     </ItemGroup>
 
     <ItemGroup>

@@ -71,7 +71,8 @@ internal sealed class UpdateInstaller {
         return found.OrderBy(entry => ParseVersion(entry.Item2.Version));
     }
 
-    /// <summary>Installs every applicable pending update in version order. Throws with a player-readable message.</summary>
+    /// <summary>Installs every applicable pending update in version order; older or already installed ones are moved aside
+    /// to updates\skipped. Throws with a player-readable message.</summary>
     public List<Result> InstallPending(Action<string>? status = null) {
         var results = new List<Result>();
         CleanUpOldLauncher();
@@ -83,10 +84,11 @@ internal sealed class UpdateInstaller {
                 continue;
             }
             if (target < current) {
+                // An older update left behind is not the player's problem, and stopping here would also keep a newer one
+                // after it from installing (report d6a032e8).
                 Archive(zip, "skipped");
-                EventLog.Write("update", $"refused downgrade {Path.GetFileName(zip)} ({manifest.Version} < {settings.Version})");
-                throw new InvalidOperationException(
-                    $"\"{Path.GetFileName(zip)}\" is version {manifest.Version}, older than the installed version {settings.Version}. It was not installed.");
+                EventLog.Write("update", $"skipped {Path.GetFileName(zip)}: version {manifest.Version} is older than the installed {settings.Version}");
+                continue;
             }
             if (current < ParseVersion(manifest.MinVersion)) {
                 EventLog.Write("update", $"refused {Path.GetFileName(zip)}: needs {manifest.MinVersion}, installed {settings.Version}");
@@ -396,8 +398,9 @@ internal sealed class UpdateInstaller {
             string target = Path.Combine(settings.UpdateDir, folder);
             Directory.CreateDirectory(target);
             File.Move(zip, Path.Combine(target, Path.GetFileName(zip)), true);
-        } catch (Exception) {
+        } catch (Exception ex) {
             // leave it; it is skipped next time because its version is no longer newer
+            EventLog.Write("update", $"could not move {Path.GetFileName(zip)} to updates\\{folder}: {ex.Message}");
         }
     }
 

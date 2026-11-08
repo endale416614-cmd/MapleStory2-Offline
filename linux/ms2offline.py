@@ -62,6 +62,7 @@ except ImportError:
     fcntl = None
 
 TITLE = "MapleStory 2 (Offline)"
+LAUNCHER_VERSION = "1.2.3"  # newer_copy compares it; package_release.py refuses a package of any other version
 APP_NAME = "MapleStory 2 Offline"
 REPOSITORY = "endale416614-cmd/MapleStory2-Offline"
 STEAM_APP_ID = "560380"
@@ -75,6 +76,15 @@ LOGIN_PORT, WEB_PORT, WORLD_GRPC_PORT = 20001, 4000, 21001
 SETUP_MAGIC = b"MS2OFFLINE-PAYLOAD-1"
 # Windows-only parts of the release package, never installed here.
 PACKAGE_SKIP = ("MapleStory 2 Offline.exe", "dotnet/", "README.txt")
+# In the program folder from the first change to the program's files to the last (Releases.install_package).
+UPDATE_MARKER = "update-unfinished"
+# What the web server of 1.2.2 and older uploaded into the program folder. A full install keeps it: the new web server's first start copies it into the save.
+OLD_WEB_DATA = ("Maple2.Server.Web", "Data")
+# Sub-folders of a save that are no profile: its backups and its uploaded files.
+RESERVED_SAVE_FOLDERS = ("backups", "ugc")
+# The words of UpdateInstaller.RecoverInterrupted on Windows, which undoes the update; here it is finished (a test keeps the words equal).
+UPDATE_UNFINISHED = ("The update was interrupted last time and has not finished, so the game cannot start; your save was not changed. "
+                     "Install the update again: ms2offline install")
 # Public half of the update signing key: a copy of UpdateKey.PublicKey in Launcher/UpdateKey.cs (a test keeps them equal).
 UPDATE_PUBLIC_KEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOopEbtU/63TMJp0lW7rXWGqAAnKhACiFtjV+oK+BEfgl1Icrha2qGhd5vJvlE0VlmybN3p8Rfo+wnzcOyI0eSg=="
 RELEASE_HEADER = b"MS2OFFLINE-RELEASE-1\n"
@@ -93,6 +103,8 @@ WHAT_IS_SENT = (
     "of your session)\n"
     "• When you played: the launcher's steps with their times\n"
     "• Your MapleStory 2 Offline and Proton versions, and your program, prefix and game folders\n"
+    "• What your PC is: the Linux version, whether it is a Steam Deck, the session type, the screen size, the memory, the graphics card, the umu version, and the names (never the values) of the proxy and server environment variables that are set\n"
+    "• Your last character's level, class, map and started epic quests (not its name)\n"
     "• A random install number, so reports from the same PC can be grouped\n\n"
     "Never sent:\n"
     "• Your user name and computer name\n"
@@ -225,7 +237,7 @@ def profile_error(name):
         return "Use letters, digits, spaces, - or _ (up to 32 characters)."
     if any(not (c.isalnum() or c in " -_") for c in name):
         return "Use letters, digits, spaces, - or _ (up to 32 characters)."
-    if name.lower() == "backups":
+    if name.lower() in RESERVED_SAVE_FOLDERS:
         return "That name is reserved."
     return None
 
@@ -258,6 +270,7 @@ class Settings:
         self.party_dungeons = self._flag("PartyDungeons", None)
         self.fair_fight = self._flag("FairFight", None)
         self.black_market = self._flag("BlackMarket", None)
+        self.character_slots = self._flag("CharacterSlots", None)
         self.class_drops_only = self._flag("ClassDropsOnly", None)
         self.pet_taming = self._flag("PetTaming", None)
         self.dungeon_epic_gear = self._flag("DungeonEpicGear", None)
@@ -449,19 +462,34 @@ class UI:
         """Whether ask() reaches the player (a dialog tool on the desktop, or a terminal) instead of returning its default."""
         return self.tty or self.gui and bool(shutil.which("kdialog") or shutil.which("zenity"))
 
-    def ask(self, text, default=False):
-        """Yes/No. A dialog when there is a desktop, the terminal otherwise, the default when neither can ask. The dialog's
-        default button follows `default` (kdialog --yesno defaults to Yes, --warningyesno to No; zenity --default-cancel)."""
+    def answer(self, text, default=False):
+        """The player's Yes or No, or None when nobody could give one. A dialog when there is a desktop, the terminal otherwise.
+        The dialog's default button follows `default` (kdialog --yesno defaults to Yes, --warningyesno to No; zenity
+        --default-cancel). A tool answers with exit code 0 or 1: any other code, or a tool that cannot start, is no answer."""
+        dialogs = []
         if self.gui and shutil.which("kdialog"):
-            return subprocess.run(["kdialog", "--title", TITLE, "--yesno" if default else "--warningyesno", text],
-                                  check=False).returncode == 0
+            dialogs.append(["kdialog", "--title", TITLE, "--yesno" if default else "--warningyesno", text])
         if self.gui and shutil.which("zenity"):
-            return subprocess.run(["zenity", "--question", "--title", TITLE, "--no-wrap", "--no-markup", "--text", text]
-                                  + ([] if default else ["--default-cancel"]), check=False).returncode == 0
+            dialogs.append(["zenity", "--question", "--title", TITLE, "--no-wrap", "--no-markup", "--text", text]
+                           + ([] if default else ["--default-cancel"]))
+        # TODO: BT-191, a tool on a display it cannot open may exit 1 (zenity, not run here), the same code as No; and a dialog nobody can see waits forever.
+        for dialog in dialogs:
+            try:
+                code = subprocess.run(dialog, check=False).returncode
+            except OSError:
+                continue
+            if code in (0, 1):
+                return code == 0
         if self.tty:
             answer = input(f"{text} [{'Y/n' if default else 'y/N'}] ").strip().lower()
             return default if answer == "" else answer.startswith("y")
-        return default
+        return None
+
+    def ask(self, text, default=False):
+        """answer() for a question that must come back Yes or No: its default when no tool and no terminal can ask. A tool that
+        failed stays a No, so a default of Yes (the report notice) is never taken from a player who saw nothing."""
+        answer = self.answer(text, default)
+        return (default and not self.can_ask()) if answer is None else answer
 
 
 class EventLog:
@@ -572,8 +600,31 @@ class Client:
                    sha256(os.path.join(client_dir, dll)) == sha256(os.path.join(patch_dir, dll)) for dll in (PATCH_DLL, PROXY_DLL))
 
     @staticmethod
+    def missing_original(client_dir, patch_dir):
+        """BT-216, as ClientPatch.MissingOriginal on Windows: what to put back when the game's own NxCharacter64.dll is gone (the
+        patch's NxCharacter64.dll with no NxCharacter64.dll.bak beside it, or no NxCharacter64.dll at all), else None. The patch's
+        file loads the game's own from the .bak, so the game would close right after its window opens. Only a game folder
+        counts, and it is only read: nothing may be changed in that state."""
+        proxy, patched = os.path.join(client_dir, PROXY_DLL), os.path.join(patch_dir, PROXY_DLL)
+        if not os.path.isfile(os.path.join(client_dir, GAME_EXE)) or os.path.exists(proxy + ".bak"):
+            return None
+        if os.path.exists(proxy) and not (os.path.exists(patched) and sha256(proxy) == sha256(patched)):
+            with open(proxy, "rb") as f:
+                if b"NxCharacter64.dll.bak" not in f.read():  # any build of the patch's file names it; the game's own does not
+                    return None
+        return (f"The game's own NxCharacter64.dll is missing from the game folder:\n{client_dir}\n\n"
+                "The offline patch needs it, so the game would close right after its window opens. This usually happens when the "
+                "patch files are copied into the game folder by hand: the patch's NxCharacter64.dll then takes the place of the game's own.\n\n"
+                "Put the game's NxCharacter64.dll back: in Steam, right-click MapleStory 2, then Properties, Installed Files, Verify "
+                "integrity of game files. For a game you downloaded, copy NxCharacter64.dll from the download into the game's x64 "
+                "folder. Then start the launcher again: it installs the patch itself. Never copy the patch files by hand. If it "
+                "still fails, post the report on Discord.")
+
+    @staticmethod
     def proxy_state(client_dir, patch_dir):
         proxy = os.path.join(client_dir, PROXY_DLL)
+        if Client.missing_original(client_dir, patch_dir):  # BT-216: the game's own file is gone
+            return ("patched" if os.path.exists(proxy) else "missing") + ", without the game's own NxCharacter64.dll.bak; see TROUBLESHOOTING.txt [T9]"
         if not os.path.exists(proxy):
             return "missing"
         digest = sha256(proxy)
@@ -823,15 +874,12 @@ class ContentPack:
 
     @classmethod
     def restore(cls, client_root, pack_dir):
-        """Restores the client to the original state. Returns False when access is denied."""
+        """Restores the client to the original state, archive by archive: a Foreign archive (a Steam update, another build)
+        is left as it is and the others are still restored, then RuntimeError names it. Returns False when access is
+        denied."""
         try:
             pack = cls.load(pack_dir)
             states = pack.state(client_root)
-
-            # Check if any archive is Foreign
-            foreign = [state for state in states if state.status == cls.Status.Foreign]
-            if foreign:
-                raise RuntimeError(f"The content pack cannot be removed: {'; '.join(state.reason for state in foreign)}. Nothing was changed. Verify the game files in Steam and try again.")
 
             journal = cls.Journal(version=pack.version, state="restoring", utc=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
 
@@ -867,6 +915,11 @@ class ContentPack:
 
                 journal.state = "done"
                 cls._write_journal(pack_dir, journal)
+                # Steam's verify puts a Foreign archive back; the pack is out of all the others now.
+                foreign = [state for state in states if state.status == cls.Status.Foreign]
+                if foreign:
+                    raise RuntimeError(f"The content pack was removed from every archive except: {'; '.join(state.reason for state in foreign)}. "
+                                       "Verify the game files in Steam.")
                 return True
             except OSError as ex:
                 # Not writable: access denied, or a read-only mount (EROFS, e.g. an NTFS library after Fast Startup).
@@ -874,6 +927,45 @@ class ContentPack:
                     return False
                 raise
         except Exception:
+            raise
+
+    @classmethod
+    def repair(cls, client_root, pack_dir):
+        """Verify game files: puts the Global archive back wherever the pack does not fit (Foreign) but the archive still
+        starts with the Global bytes and a Global header is at hand; the file is cut to the Global size and the header put
+        back. Returns the reasons of the Foreign archives it left (Steam's verify can repair them), or None when the game
+        folder is not writable."""
+        pack = cls.load(pack_dir)
+        left = []
+        journal = cls.Journal(version=pack.version, state="repairing", utc=datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+        try:
+            for state in pack.state(client_root):
+                if state.status != cls.Status.Foreign:
+                    continue
+                archive = state.archive
+                target = os.path.join(client_root, archive.path)
+                header = os.path.join(client_root, archive.m2h_path)
+                orig = os.path.join(client_root, archive.orig_m2h_path)
+                global_header = os.path.exists(header) and cls._hash(header) == archive.orig_m2h_sha256
+                backup = os.path.exists(orig) and cls._hash(orig) == archive.orig_m2h_sha256
+                if not os.path.exists(target) or os.path.getsize(target) < archive.global_size \
+                        or cls._hash(target, 0, archive.global_size) != archive.global_sha256 or not (global_header or backup):
+                    left.append(state.reason)
+                    continue
+                if not global_header:
+                    cls._step(pack_dir, journal, archive.path, "m2h")
+                    cls._copy_over(orig, header)
+                cls._step(pack_dir, journal, archive.path, "truncate")
+                cls._truncate(target, archive.global_size)
+                if os.path.exists(orig):
+                    os.remove(orig)
+            journal.state = "done"
+            cls._write_journal(pack_dir, journal)
+            return left
+        except OSError as ex:
+            # Not writable: access denied, or a read-only mount (EROFS, e.g. an NTFS library after Fast Startup).
+            if isinstance(ex, PermissionError) or ex.errno == errno.EROFS:
+                return None
             raise
 
     @classmethod
@@ -1149,11 +1241,17 @@ def prepare_content(unified, client_root, pack_dir, global_data_dir):
             return _lock(global_data_dir, None, warning)
         states = pack.state(client_root)
         if any(s.status == ContentPack.Status.Foreign for s in states):
-            # A client the pack does not fit (Steam update, other build) plays Global and is never written.
+            # A client the pack does not fit (Steam update, other build) plays Global. The archives that still carry the
+            # pack go back to Global first, so the client matches the server data (BT-03); the Foreign one is not written.
             if unified or any(s.status == ContentPack.Status.Applied for s in states):
                 reasons = "; ".join(s.reason for s in states if s.status == ContentPack.Status.Foreign)
                 warning = (f"The unified content does not fit this game client ({reasons}). The game starts without it; "
                            "verify the game files in Steam to use it again.")
+            if any(s.status in (ContentPack.Status.Applied, ContentPack.Status.EarlierPack) for s in states):
+                try:
+                    ContentPack.restore(client_root, pack_dir)  # False, a game folder it cannot write: the warning still applies
+                except RuntimeError:
+                    pass  # restore names the Foreign archive it left, as the warning does
             return _lock(global_data_dir, None, warning)
         changed = False
         if unified and not all(_fully_applied(client_root, s) for s in states):
@@ -1185,6 +1283,75 @@ def prepare_content(unified, client_root, pack_dir, global_data_dir):
     except OSError as ex:
         return (global_data_dir, None, warning,
                 f"The unified content could not be prepared: {ex}. Close Steam and any virus scan of the game folder, then press Play again.")
+
+
+def verify_files(launcher):
+    """ms2offline verify: the game files (_verify_game_files), then the program's own files against files.json."""
+    code = _verify_game_files(launcher)
+    changed = program_files_changed(launcher.home)
+    if not changed:
+        return code
+    launcher.ui.info("These program files are missing or changed:\n" + "\n".join(changed[:20])
+                     + (f"\n... {len(changed) - 20} more" if len(changed) > 20 else "")
+                     + "\n\nInstall the program again to repair it: ms2offline install. It keeps your saves and settings.")
+    return 1
+
+
+def program_files_changed(home):
+    """The program's own files that are missing or changed against files.json, in the lines of the Windows diagnostics'
+    install check. Files the launcher or an update rewrites are skipped. Empty without a files.json (a developer copy)."""
+    try:
+        with open(os.path.join(home, "files.json"), encoding="utf-8") as f:
+            expected = json.load(f)
+    except (OSError, ValueError):
+        return []
+    changed = []
+    for rel, digest in sorted(expected.items()):
+        if not Releases.keep(rel) or rel in ("VERSION", "defaults.ini", "client-mods/offline-dungeons/mod.json", "client-mods/offline-pets/mod.json") \
+                or rel.startswith("client-mods/offline-testkit/"):
+            continue
+        path = os.path.join(home, *rel.split("/"))
+        if not os.path.isfile(path):
+            changed.append("MISSING   " + rel)
+        elif sha256(path) != digest.lower():
+            changed.append("MODIFIED  " + rel)
+    return changed
+
+
+def _verify_game_files(launcher):
+    """ms2offline verify (Windows: Start menu "Verify Game Files"): the content pack's archives against pack.json. After one
+    Yes it repairs the ones that still hold the Global game (ContentPack.repair); Steam's verify opens only on the player's
+    Yes for the rest. The next Play applies the unified content again."""
+    s, ui = launcher.settings, launcher.ui
+    if Client.running_pids():
+        raise RuntimeError("MapleStory 2 is running. Close it first.")
+    launcher.take_lock()
+    client_dir = Client.find(s)
+    if not client_dir:
+        raise RuntimeError("MapleStory 2 was not found. Set its folder with: ms2offline client --dir FOLDER")
+    if not os.path.exists(os.path.join(s.content_pack_dir, ContentPack.FILE_NAME)):
+        ui.info("This installation has no content pack, so the launcher has no game files to check. Steam can verify them.")
+        return 0
+    client_root = os.path.normpath(os.path.join(client_dir, ".."))
+    recovered = ContentPack.recover_interrupted(client_root, s.content_pack_dir)
+    foreign = [state.reason for state in ContentPack.load(s.content_pack_dir).state(client_root) if state.status == ContentPack.Status.Foreign]
+    if not foreign:
+        ui.info((recovered + "\n\n" if recovered else "") + "The game files fit the content pack. Nothing needs a repair.")
+        return 0
+    listing = "\n".join("- " + reason for reason in foreign)
+    if not ui.ask(f"These game files do not fit the content pack:\n{listing}\n\nRepair them? Only files that still hold the Global "
+                  "game are changed; Steam's verify can repair the rest."):
+        return 1
+    left = ContentPack.repair(client_root, s.content_pack_dir)
+    if left is None:
+        raise RuntimeError("The game folder is not writable, so nothing was repaired. Make it writable and run ms2offline verify again.")
+    if not left:
+        ui.info("Repaired. Press Play: the launcher applies the unified content again.")
+        return 0
+    listing = "\n".join("- " + reason for reason in left)
+    if ui.ask(f"These game files need Steam's verify:\n{listing}\n\nOpen Steam to verify the game files now?"):
+        subprocess.Popen(["xdg-open", f"steam://validate/{STEAM_APP_ID}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 1
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1354,7 +1521,8 @@ class ServerHost:
         env["DOTNET_NOLOGO"] = "1"
         for variable in ("BIND_IP", "LOGIN_IP", "GAME_IP", "GRPC_GAME_IP", "GRPC_WORLD_IP", "GRPC_LOGIN_IP", "WEB_IP"):
             env[variable] = "127.0.0.1"
-        for variable in ("ASPNETCORE_URLS", "DOTNET_URLS", "ASPNETCORE_HTTP_PORTS", "ASPNETCORE_HTTPS_PORTS"):
+        # .NET's HTTP/2 switch, set to false, would break every call between the servers: the World, Login and Game servers listen HTTP/2 only (BT-215).
+        for variable in ("ASPNETCORE_URLS", "DOTNET_URLS", "ASPNETCORE_HTTP_PORTS", "ASPNETCORE_HTTPS_PORTS", "DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT"):
             env.pop(variable, None)
         env["OFFLINE_MODE"] = "true"
         env["DB_PROVIDER"] = "sqlite"
@@ -1374,6 +1542,7 @@ class ServerHost:
             "OFFLINE_PARTY_DUNGEONS": s.party_dungeons,
             "OFFLINE_FAIR_FIGHT": s.fair_fight,
             "OFFLINE_MARKET": s.black_market,
+            "OFFLINE_CHARACTER_SLOTS": s.character_slots,
         }
         for key, value in flags.items():
             if value is None:
@@ -1505,6 +1674,21 @@ class SessionReport:
     def has_problems(self):
         return bool(self.problems)
 
+    def log_errors(self):
+        """The server-log errors of this session that the upload holds, one line each: raw_text keeps each server's last 30
+        flagged lines. An unreadable log has none: a report must never break the end of a session."""
+        for name in SERVERS:
+            try:
+                with open(os.path.join(self.settings.log_dir, f"{name.lower()}.log"), encoding="utf-8", errors="replace") as f:
+                    flagged = [line.rstrip("\r\n") for line in f if re.search(r"\[(WRN|ERR|FTL)\]", line)]
+            except OSError:
+                continue
+            yield from (line for line in flagged[-30:] if re.search(r"\[(ERR|FTL)\]", line))
+
+    def offered(self, send_reports):
+        """Whether this session's report is offered (ProblemReport.offers_report)."""
+        return ProblemReport.offers_report(self.has_problems, send_reports, self.exit_code is not None, self.log_errors())
+
     def write(self):
         s = self.settings
         os.makedirs(s.report_dir, exist_ok=True)
@@ -1521,13 +1705,100 @@ class SessionReport:
                 pass
         return path
 
+    @staticmethod
+    def system_line(runner, root=os.sep, environ=os.environ):
+        """What this PC is, as a bug may show only on one kind. No user or host name: DISPLAY can hold a host, so only
+        which display is set; a runner path can hold the home folder, so umu by its version."""
+        def read(*path):
+            try:
+                with open(os.path.join(root, *path), encoding="utf-8", errors="replace") as f:
+                    return f.read()
+            except OSError:
+                return ""
+
+        release = re.search(r'^PRETTY_NAME="?([^"\n]*)', read("etc", "os-release"), re.M)
+        ram = re.search(r"^MemTotal:\s*(\d+) kB", read("proc", "meminfo"), re.M)
+        board = read("sys", "devices", "virtual", "dmi", "id", "board_name").strip()
+        gpus, screens = [], []
+        try:
+            cards = sorted(os.listdir(os.path.join(root, "sys", "class", "drm")))
+        except OSError:
+            cards = []
+        for card in cards:
+            if re.fullmatch(r"card\d+", card):
+                fields = dict(re.findall(r"^(DRIVER|PCI_ID)=(.*)$", read("sys", "class", "drm", card, "device", "uevent"), re.M))
+                gpus.append(f"{fields.get('DRIVER', 'unknown')} {fields.get('PCI_ID', 'unknown')}")
+            elif read("sys", "class", "drm", card, "status").strip() == "connected":
+                screens += read("sys", "class", "drm", card, "modes").split()[:1]
+        try:
+            umu = " ".join(subprocess.run([runner, "--version"], capture_output=True, text=True, errors="replace", timeout=5, check=False).stdout.split())[:60] or "no version"
+        except (OSError, subprocess.TimeoutExpired):
+            umu = "not found"
+        displays = [name for name, key in (("x11", "DISPLAY"), ("wayland", "WAYLAND_DISPLAY")) if environ.get(key)]
+        return " | ".join([
+            "System: " + (release.group(1) if release else "unknown"),
+            "Steam Deck " + ("yes" if environ.get("SteamDeck") == "1" or board in ("Jupiter", "Galileo") else "no"),
+            f"session {environ.get('XDG_SESSION_TYPE', 'unknown')} {environ.get('XDG_CURRENT_DESKTOP', 'unknown')}",
+            "display " + (" ".join(displays) or "none"),
+            "screen " + (" ".join(screens) or "unknown"),
+            f"RAM {round(int(ram.group(1)) / 1048576)} GB" if ram else "RAM unknown",
+            "GPU " + (", ".join(gpus) or "unknown"),
+            "umu " + umu])
+
+    # The proxy variables (.NET on Linux takes its proxy only from them), the overrides Target.cs reads and .NET's HTTP/2 switch (BT-215).
+    NETWORK_VARIABLES = ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY", "all_proxy", "ALL_PROXY", "no_proxy", "NO_PROXY",
+                         "GRPC_WORLD_PORT", "GRPC_LOGIN_PORT", "LOGIN_PORT", "GAME_PORT", "GRPC_CHANNEL_PORT", "WEB_PORT", "INSTANCED_CONTENT",
+                         "DOTNET_RUNNING_IN_CONTAINER", "DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT")
+
+    @staticmethod
+    def network_line(environ=os.environ):
+        """ServerHost.NetworkLine without its proxy check, which here would copy .NET's proxy rules: the names of the
+        variables set, never a value (a proxy value can hold a password)."""
+        return "Network: variables set: " + (", ".join(name for name in SessionReport.NETWORK_VARIABLES if environ.get(name)) or "none")
+
+    JOBS = {10: "Beginner", 100: "Knight", 101: "Knight", 200: "Berserker", 201: "Berserker", 300: "Wizard", 301: "Wizard", 400: "Priest", 401: "Priest",
+            500: "Archer", 501: "Archer", 600: "Heavy Gunner", 601: "Heavy Gunner", 700: "Thief", 701: "Thief", 800: "Assassin", 801: "Assassin",
+            900: "Runeblade", 901: "Runeblade", 1000: "Striker", 1001: "Striker", 1100: "Soul Binder", 1101: "Soul Binder", 999: "Game Master"}
+
+    def character_lines(self):
+        """The last character's level, class and map, and its started epic quests by id and name: where a stuck story stands.
+        As SessionReport.DescribeCharacter and ProblemReport.StartedEpicQuests on Windows. A report must never break the end of a session."""
+        s = self.settings
+        try:
+            save = sqlite3.connect(f"file:{s.save_file}?mode=ro", uri=True)
+            try:
+                row = save.execute('SELECT Id, Level, Job, MapId, LastModified FROM "character" ORDER BY LastModified DESC LIMIT 1').fetchone()
+                if row is None:
+                    return ["No character yet."]
+                started = [r[0] for r in save.execute("SELECT Id FROM quest WHERE State = 1 AND OwnerId = ? ORDER BY Id", (row[0],))]
+            finally:
+                save.close()
+        except sqlite3.Error as ex:
+            return [f"(could not read the save file: {ex})"]
+        lines = [f"Last played: Lv {row[1]} {self.JOBS.get(row[2], f'job {row[2]}')}, map {row[3]}, saved {row[4]}"]
+        pack = os.path.join(s.content_pack_dir, "GameData", "maple-data.db")
+        try:
+            quests = []
+            if started:
+                data = sqlite3.connect(f"file:{pack if os.path.exists(pack) else os.path.join(s.game_data_dir, 'maple-data.db')}?mode=ro", uri=True)
+                try:
+                    marks = ",".join("?" * len(started))
+                    quests = [f"{r[0]} {r[1]}" for r in data.execute(f"SELECT Id, Name FROM quest WHERE Id IN ({marks}) AND COALESCE(json_extract(Basic, '$.Type'), 0) = 0 ORDER BY Id", started)]
+                finally:
+                    data.close()
+            lines.append("Started epic quests: " + ("; ".join(quests) or "none"))
+        except sqlite3.Error as ex:
+            lines.append(f"Started epic quests: (could not read them: {ex})")
+        return lines
+
     def raw_text(self):
         """The report before its redaction: only for ProblemReport.for_upload (which drops the game client's text while
         its markers are intact, then redacts) and for write(). Never written or shown as it is."""
         s = self.settings
         lines = [f"{TITLE} - play session report (Linux)", "=" * 50, "",
-                 f"Version: {s.version}", f"Session: {EventLog.session_id}", f"Proton: {self.proton}", f"Prefix: {s.prefix}",
+                 f"Version: {s.version}", self.system_line(s.runner), self.network_line(), f"Session: {EventLog.session_id}", f"Proton: {self.proton}", f"Prefix: {s.prefix}",
                  f"Program folder: {s.home}", f"Game folder: {s.client_dir}", f"Game exit code: {self.exit_code}", "",
+                 "Character", "---------"] + self.character_lines() + ["",
                  "Steps", "-----"] + [f"{t}  {text}" for t, text in self.steps] + ["", "Problems", "--------"]
         lines += [f"{t}  {text}" for t, text in self.problems] or ["None."]
         for name in SERVERS:
@@ -1600,6 +1871,12 @@ class ProblemReport:
         return "\n".join(kept)
 
     @staticmethod
+    def offers_report(has_problems, send_reports, game_ran, log_errors):
+        """Whether a session's report is offered: any launcher problem; under SendReports=always also a session whose game ran
+        and whose server logs hold an error the upload keeps. An error only the client wrote leaves nothing to read (BT-165)."""
+        return has_problems or (send_reports == "always" and game_ran and any(ProblemReport.drop_client_text(error) for error in log_errors))
+
+    @staticmethod
     def identity():
         """The user name and the computer name, also without its domain (alice-laptop.lan and alice-laptop)."""
         names = []
@@ -1643,7 +1920,7 @@ class ProblemReport:
         if not os.path.isdir(save_data):
             return names, None
         try:
-            names += [d for d in os.listdir(save_data) if os.path.isdir(os.path.join(save_data, d)) and d.lower() != "backups"]
+            names += [d for d in os.listdir(save_data) if os.path.isdir(os.path.join(save_data, d)) and d.lower() not in RESERVED_SAVE_FOLDERS]
         except OSError:
             return names, save_data
         unreadable = None
@@ -1885,7 +2162,7 @@ class Releases:
             raise ValueError(f"{name} does not match the signed release list (release.json). It was deleted and nothing was installed.")
 
     @staticmethod
-    def download(url, target, ui, label):
+    def download(url, target, ui, label, log=None):
         os.makedirs(os.path.dirname(target), exist_ok=True)
         part = target + ".part"
         request = urllib.request.Request(url, headers={"User-Agent": "MapleStory2-Offline-Linux/1.0"})
@@ -1901,6 +2178,8 @@ class Releases:
                 percent = done * 100 // total if total else -1
                 if percent != last and percent % 5 == 0:
                     ui.status(f"Downloading {label}... {percent}% ({done >> 20} MB)")
+                    if log:  # a Steam shortcut has no terminal: this is the one place its progress can be read
+                        log.write("update", f"downloading {label}: {percent}% ({done >> 20} MB)")
                     last = percent
         os.replace(part, target)
         return target
@@ -1934,11 +2213,39 @@ class Releases:
             return False
         return True
 
+    @staticmethod
+    def unfinished_update(home):
+        """What a program update that began and did not finish was installing ("update <version>" or "full"), else None.
+        The program folder may then be half old, half new: there is no journal here, unlike UpdateInstaller on Windows."""
+        try:
+            with open(os.path.join(home, UPDATE_MARKER), encoding="utf-8", errors="replace") as f:
+                return f.read().strip()
+        except OSError:
+            return None
+
+    @classmethod
+    def remove_all_but(cls, folder, kept):
+        """Removes what a folder holds, except one sub-folder (its names from the top down) and the folders that lead to it."""
+        for name in os.listdir(folder) if os.path.isdir(folder) else ():
+            path = os.path.join(folder, name)
+            if name == kept[0]:
+                if len(kept) > 1:
+                    cls.remove_all_but(path, kept[1:])
+            elif os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass  # As rmtree's ignore_errors: a file left over does no harm, and a stop here would leave the marker and block Play.
+
     @classmethod
     def install_package(cls, package, home, ui, full):
         """Extracts a package into the program folder. A full package is extracted and checked in updates/staging-<version>
         first (every file must be listed in files.json and match), then replaces the release folders; an update
-        package only adds its files and deletes the ones update.json lists."""
+        package only adds its files and deletes the ones update.json lists. The marker (unfinished_update) stands from the
+        first change to the program's files to the last, and an update package finishes only its own interrupted run."""
+        marker = os.path.join(home, UPDATE_MARKER)
         names = [n for n in package.namelist() if cls.keep(n)]
         expected = {}
         try:
@@ -1964,6 +2271,12 @@ class Releases:
                 update = json.loads(package.read("update.json"))
             except KeyError:
                 update = {}
+            began = f"update {update.get('version', '')}"
+            if cls.unfinished_update(home) not in (None, began):
+                raise ValueError("The last update was interrupted, and this update package cannot finish it. "
+                                 "Use the Setup file: ms2offline install --from MapleStory2-Offline-Setup.exe")
+            with open(marker, "w", encoding="utf-8") as f:
+                f.write(began)
             for rel in update.get("delete", []):
                 path = os.path.join(home, rel)
                 if os.path.isfile(path):
@@ -1986,7 +2299,10 @@ class Releases:
             if count % 200 == 0:
                 ui.status(f"Installing... {count}/{len(names)} files")
         if full:
-            for folder in ("Maple2", "GameData", "client-patch", "client-mods", "LICENSES"):
+            with open(marker, "w", encoding="utf-8") as f:
+                f.write("full")
+            cls.remove_all_but(os.path.join(home, "Maple2"), OLD_WEB_DATA)
+            for folder in ("GameData", "client-patch", "client-mods", "LICENSES"):
                 shutil.rmtree(os.path.join(home, folder), ignore_errors=True)
             for entry in os.listdir(root):
                 source, target = os.path.join(root, entry), os.path.join(home, entry)
@@ -1995,6 +2311,7 @@ class Releases:
                 else:
                     os.replace(source, target)
             shutil.rmtree(root, ignore_errors=True)
+        os.remove(marker)
         return count
 
     @staticmethod
@@ -2073,8 +2390,14 @@ class Launcher:
             if s.auto_update != "off":
                 self.offer_online_update()
                 self.settings = s = Settings(self.home)  # the update may have changed VERSION and defaults
+            if Releases.unfinished_update(self.home) is not None:  # here, not above: the update just offered can finish it, or stop halfway
+                raise RuntimeError(UPDATE_UNFINISHED)
             if not servers_only and not self.locate_client():
                 return
+            # BT-216: the patch's NxCharacter64.dll without the game's own. Stop before the servers, and change nothing in the game folder.
+            missing = None if servers_only else Client.missing_original(s.client_dir, s.patch_dir)
+            if missing:
+                raise RuntimeError(missing)
             self.claim_ports()
 
             ui.status("Backing up your save...")
@@ -2194,6 +2517,8 @@ class Launcher:
             ui.error("Something went wrong during this session." + hint)
             self.offer_report(report.raw_text())
         else:
+            if report and report_path and report.offered(s.send_reports):
+                self.offer_report(report.raw_text())
             ui.status("Done.")
         return 0
 
@@ -2260,28 +2585,42 @@ class Launcher:
             self.log.write("report", f"problem report not queued: {ex}")
 
     def offer_online_update(self):
-        s, ui, log = self.settings, self.ui, self.log
+        s, ui, log, report = self.settings, self.ui, self.log, self.report
         ui.status("Checking for updates...")
         try:
             latest = Releases.latest()
         except Exception as ex:  # noqa: BLE001
             log.write("update", "online check skipped: " + str(ex))
+            if report:
+                report.step("Update check skipped: " + str(ex))
             return
-        if Releases.parse_version(latest["version"]) <= Releases.parse_version(s.version):
+        # An unfinished update is never current: its own package can finish it.
+        if Releases.unfinished_update(self.home) is None and Releases.parse_version(latest["version"]) <= Releases.parse_version(s.version):
             return
         log.write("update", f"version {latest['version']} available online")
         if s.auto_update == "ask":
             text = (f"Version {latest['version']} is available (you have {s.version}).\n\n" +
                     (latest["notes"] + "\n\n" if latest["notes"] else "") +
                     "Update now? (Your save is backed up first.)\n\nTo update by hand instead, set AutoUpdate=off in launcher.ini.")
-            if not ui.ask(text):
+            answer = ui.answer(wrap_text(text)) if isinstance(ui, UI) else ui.ask(text)  # the window always asks
+            if answer is False:
                 log.write("update", f"{latest['version']} postponed by the player")
                 return
+            if answer is None:
+                log.write("update", f"{latest['version']}: nobody can answer the question, so it installs")
+                if report:
+                    report.step(f"Update to version {latest['version']}: nobody can answer the question, so it installs")
         try:
+            ui.notify(f"Updating to version {latest['version']}. The game starts when it is done.")
             self.install_release(latest)
+            if report:
+                report.step(f"Updated to version {latest['version']}")
         except Exception as ex:  # noqa: BLE001
             log.write("update", f"update to {latest['version']} failed: {ex}")
-            ui.error(f"The update could not be installed ({ex}). You can keep playing; it is tried again next time.")
+            if report:
+                report.problem(f"The update to version {latest['version']} failed: {ex}")
+            ui.error(f"The update could not be installed ({ex})." +
+                     (" You can keep playing; it is tried again next time." if Releases.unfinished_update(self.home) is None else ""))
 
     def locate_client(self):
         s, ui = self.settings, self.ui
@@ -2499,9 +2838,10 @@ class Launcher:
                 raise RuntimeError("The signed file list (release.json) belongs to another version. Nothing was installed.")
 
             installed = Releases.parse_version(s.version)
-            use_update = latest["update_url"] and s.version != "dev"
+            # An interrupted run is finished by its own update package, else only a full package puts every file back.
+            use_update = latest["update_url"] and s.version != "dev" and Releases.unfinished_update(self.home) in (None, f"update {latest['version']}")
             if use_update:
-                package_path = Releases.download(latest["update_url"], os.path.join(s.update_dir, latest["update_name"]), ui, f"update {latest['version']}")
+                package_path = Releases.download(latest["update_url"], os.path.join(s.update_dir, latest["update_name"]), ui, f"update {latest['version']}", log)
                 Releases.check_listed(package_path, listed)
                 with zipfile.ZipFile(package_path) as z:
                     try:
@@ -2513,12 +2853,13 @@ class Launcher:
             if not use_update:
                 if not latest["setup_url"]:
                     raise RuntimeError("The release has no Setup file to install from.")
-                package_path = Releases.download(latest["setup_url"], os.path.join(s.update_dir, f"MapleStory2-Offline-Setup-{latest['version']}.exe"), ui, f"release {latest['version']}")
+                package_path = Releases.download(latest["setup_url"], os.path.join(s.update_dir, f"MapleStory2-Offline-Setup-{latest['version']}.exe"), ui, f"release {latest['version']}", log)
                 Releases.check_listed(package_path, listed)
                 full = True
 
         self.backup_save()
         ui.status(f"Installing from {os.path.basename(package_path)}...")
+        log.write("install", f"installing from {os.path.basename(package_path)}")
         with Releases.open_package(package_path) as package:
             count = Releases.install_package(package, self.home, ui, full)
         Releases.install_dotnet(self.home, ui)
@@ -2619,6 +2960,22 @@ def report_problem(launcher, note=None):
     return 0
 
 
+def newer_copy(home, script):
+    """The program folder's copy of a launcher script when an update brought a newer launcher than this one, else None: this
+    one may run from a git clone or an older package that no update replaces (BT-171). A clone as new or newer keeps running.
+    Never from a half-installed update: Play says what to do then."""
+    folder = os.path.join(home, "linux")
+    try:
+        with open(os.path.join(folder, "ms2offline.py"), encoding="utf-8", errors="replace") as f:
+            found = re.search(r'^LAUNCHER_VERSION = "([^"]+)"', f.read(), re.M)
+    except OSError:
+        return None
+    path = os.path.join(folder, script)
+    if found is None or Releases.unfinished_update(home) is not None or not os.path.isfile(path):
+        return None
+    return path if Releases.parse_version(found.group(1)) > Releases.parse_version(LAUNCHER_VERSION) else None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="ms2offline", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--home", default=os.environ.get("MS2OFFLINE_HOME") or os.path.expanduser("~/Games/MapleStory2-Offline"),
@@ -2642,10 +2999,15 @@ def main(argv=None):
     diag.add_argument("--include-save", action="store_true")
     diag.add_argument("--to", help="folder for the zip (default: Desktop)")
     sub.add_parser("unpatch", help="restore the game's own NxCharacter64.dll")
+    sub.add_parser("verify", help="check the game files the content pack needs, repair them, or open Steam's verify")
     args = parser.parse_args(argv)
     command = args.command or "play"
 
-    launcher = Launcher(os.path.abspath(os.path.expanduser(args.home)))
+    home = os.path.abspath(os.path.expanduser(args.home))
+    newer = newer_copy(home, "ms2offline.py")
+    if newer:
+        os.execv(sys.executable, [sys.executable, newer] + (sys.argv[1:] if argv is None else list(argv)))
+    launcher = Launcher(home)
     s, ui = launcher.settings, launcher.ui
     try:
         if command == "play":
@@ -2672,7 +3034,7 @@ def main(argv=None):
         if command == "update":
             launcher.take_lock()
             latest = Releases.latest()
-            if Releases.parse_version(latest["version"]) <= Releases.parse_version(s.version):
+            if Releases.unfinished_update(launcher.home) is None and Releases.parse_version(latest["version"]) <= Releases.parse_version(s.version):
                 ui.status(f"Version {s.version} is current.")
                 return 0
             ui.status(f"Version {latest['version']} is available (you have {s.version}).")
@@ -2716,6 +3078,8 @@ def main(argv=None):
             path = launcher.diagnostics(args.include_save, args.to)
             ui.info(f"Saved:\n{path}\n\nAttach this file to your bug report.")
             return 0
+        if command == "verify":
+            return verify_files(launcher)
         if command == "unpatch":
             if Client.running_pids():
                 raise RuntimeError("MapleStory 2 is running. Close it first.")

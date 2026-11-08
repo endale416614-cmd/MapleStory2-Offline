@@ -50,6 +50,8 @@ OPEN_GACHA_BOX, OPEN_ITEM_BOX, OPEN_ITEM_BOX_WITH_KEY, SELECT_ITEM_BOX = 36, 38,
 BOX_FUNCTIONS = {36, 38, 39, 40, 41, 52}  # gacha, item boxes (plain, Lulu, Lulu simple, with key) and select boxes
 # Kirin and Sun Wukong (Combat Pet) boxes drop only from KR/CN rows; the pet items are sold instead
 PET_ITEMS = {20301385: 62000011, 20301386: 62000013}
+# Items nothing on the server can use (BT-122): the Guild/Party Summon Scroll boxes, the Instant Gathering Voucher box, a capsule giving only it
+NO_SERVER_FEATURE = {20393045, 20393048, 20393049, 22004504}
 FURNITURE_PRICE = 30  # Meret furniture without a price in the data gets the most common furniture price
 FEATURED_MAX = NEW_TAB_MAX = 90  # Featured (10) and New (11): the client pages them itself, 5 pages of 18 tiles (BT-123)
 NEW_LIST = os.path.join(ROOT, "tools", "data", "meret-new.tsv")
@@ -57,6 +59,7 @@ PRIZE_LIST = os.path.join(ROOT, "tools", "data", "meret-capsule-prizes.tsv")
 CAPSULE_PRICE = 380  # what every gacha capsule of the catalog costs
 EQUIPMENT, AIR_MOUNT, GROUND_MOUNT = 1, 5, 9
 EMOTE = (2, 14)  # Property Type and SubType (ModelExtensions.IsEmote)
+MARTIAL_SHOUT = 90200002  # every client's emote list has it: a file without it is not the emote strings
 PREMIUM_SECTION = "100000"
 # Top-level order of section 100000: (tab id, name string id, symbol)
 LAYOUT = [
@@ -131,6 +134,15 @@ def no_assistant(item, spawns, npcs):
     return item["category"] == "Maid" and spawns.get(str(item["cube"])) not in npcs
 
 
+def emote_skills(root, name):
+    """The skills the client's Emotes window lists, from its string/en/kordynamicaction.xml (root). Refuses a file without
+    Martial Shout, which would take every emote out of the market."""
+    emotes = {int(key.get("skillID")) for key in root.iter("key")}
+    if MARTIAL_SHOUT not in emotes:
+        raise SystemExit(f"{name} lists no skill {MARTIAL_SHOUT} (Martial Shout): not the client's emote strings. Nothing was written.")
+    return emotes
+
+
 def unlisted_emote(item, emotes):
     """An emote whose skill the client's Emotes window does not list (emotes: the skills it lists): learned, it shows no tile (BT-124)."""
     return (item["type"], item["subtype"]) == EMOTE and item["skill"] not in emotes
@@ -167,6 +179,8 @@ def load_new(path):
 
 def unusable(item_id, item, drops, rides, glides, emotes):
     """Why the server cannot use the item with this data (A6 leaves out what the server cannot create), or None."""
+    if item_id in NO_SERVER_FEATURE:
+        return "no server feature"
     if not 0 <= item["type"] <= 22 or item["type"] == 8:
         return "no inventory tab"  # ModelExtensions.HasTab
     if item["type"] == GROUND_MOUNT and item["ride"] not in rides:
@@ -299,6 +313,8 @@ def selftest():
     assert new_ids(catalog, rows) == [10, 12, 1]
     assert unusable(16, it("Ride", type_=9, ride=7), None, rides, glides, emotes) is None and unusable(18, items[18], None, rides, glides, emotes) is None
     assert unusable(20, it("Action", type_=8), None, rides, glides, emotes) == "no inventory tab"
+    # an item that does nothing offline is left out whatever its data (BT-122)
+    assert unusable(22004504, it("Package", type_=10), None, rides, glides, emotes) == "no server feature"
     try:
         add_new(catalog, items, [(14, None)], None, rides, glides, emotes)
         raise AssertionError("a category without entries must raise")
@@ -320,6 +336,14 @@ def selftest():
     items.update({26: it("Action", skill=9, subtype=14), 27: it("Action", skill=11, subtype=14), 28: it("Action", skill=11)})
     assert add_new(catalog, items, [(26, None), (27, None), (28, None)], drops, rides, glides, emotes) == (2, {"an emote the client does not list": 1})
     assert 26 in {entry["Id"] for entry in catalog["Entries"]} and unlisted_emote(items[27], emotes) and not unlisted_emote(items[28], emotes)
+    # an emote file without Martial Shout is refused (it would strip every emote); one with it gives its skills
+    try:
+        emote_skills(ET.fromstring('<ms2><key skillID="90200001" /></ms2>'), "x.xml")
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError("an emote file without Martial Shout must be refused")
+    assert emote_skills(ET.fromstring(f'<ms2><key skillID="{MARTIAL_SHOUT}" /></ms2>'), "x.xml") == {MARTIAL_SHOUT}
     try:
         new_ids({"Entries": [e(k, 40400) for k in range(NEW_TAB_MAX + 1)]}, [(k, None) for k in range(NEW_TAB_MAX + 1)])
     except AssertionError:
@@ -348,6 +372,10 @@ def selftest():
     result = organize_catalog(catalog, items, db, [(31, None)], [(32, None), (33, None)])
     assert result[7] == 1 and catalog_changed(result) and catalog["New"] == [31]
     assert not catalog_changed(organize_catalog(catalog, items, db, [(31, None)], [(32, None), (33, None)]))
+    # a run that changes only the New list (its entry is already sold) is a change too, so --check reports it
+    result = organize_catalog(catalog, items, db, [(30, None)], [(32, None), (33, None)])
+    assert result[4] == 0 and result[6] and catalog_changed(result) and catalog["New"] == [30]
+    assert catalog_changed(organize_catalog(catalog, items, db, [(31, None)], [(32, None), (33, None)])) and catalog["New"] == [31]
     # a maid stays when the data has the NPC her cube spawns, and leaves when it lacks it or her cube spawns none
     catalog["Entries"] += [e(35, FURNITURE), e(36, FURNITURE), e(37, FURNITURE)]
     items.update({35: dict(it("Maid"), cube=80000000), 36: dict(it("Maid"), cube=80000001), 37: dict(it("Maid"), cube=80000099)})
@@ -411,7 +439,7 @@ def main():
 
     db = sqlite3.connect(f"file:{args.db}?mode=ro", uri=True)
     items = load_items(db)
-    emotes = {int(key.get("skillID")) for key in ET.parse(args.emote_strings).getroot().iter("key")}
+    emotes = emote_skills(ET.parse(args.emote_strings).getroot(), args.emote_strings)
     with open(CATALOG, encoding="utf-8") as f:
         catalog = json.load(f)
     with open(CUBE_SPAWNS, encoding="utf-8") as f:

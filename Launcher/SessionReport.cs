@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
@@ -29,6 +28,7 @@ internal sealed class SessionReport {
     private readonly List<string> timeline = [];
     private readonly List<string> problems = [];
     private int? gameExitCode;
+    private bool gameRan;
     private string? crashEvent;
 
     public SessionReport(Settings settings) {
@@ -41,6 +41,16 @@ internal sealed class SessionReport {
     public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), FolderName);
 
     public bool HasProblems => problems.Count > 0;
+
+    /// <summary>Whether this session's report is offered (ProblemReport.OffersReport). Never throws: the end of a session must go on.</summary>
+    public bool Offered() {
+        try {
+            return ProblemReport.OffersReport(HasProblems, settings.SendReports, gameRan,
+                ServerNames.SelectMany(ScanServerLog).Where(problem => problem.Level is "ERR" or "FTL").Select(problem => problem.Sample));
+        } catch (Exception) {
+            return HasProblems;
+        }
+    }
 
     public void Step(string text) {
         lock (timeline) {
@@ -56,6 +66,7 @@ internal sealed class SessionReport {
     }
 
     public void GameExited(int? exitCode) {
+        gameRan = true;
         gameExitCode = exitCode;
         if (exitCode is null) {
             Step("Game closed");
@@ -141,6 +152,10 @@ internal sealed class SessionReport {
         }
         foreach (string problem in problems) {
             text.AppendLine("* " + problem);
+            // The launcher's own messages can be known problems too, such as [T9], its stop for a hand-copied patch (BT-216).
+            if (Triage.Classify(problem) is { } known) {
+                text.AppendLine($"      Known problem: {known.Category} (see TROUBLESHOOTING.txt {known.Section})");
+            }
         }
         foreach (LogProblem problem in logProblems.OrderBy(p => p.Level switch { "FTL" => 0, "ERR" => 1, _ => 2 }).ThenByDescending(p => p.Count)) {
             text.AppendLine($"* [{problem.Server} {problem.Level}] x{problem.Count}, first at {problem.FirstTime}: {problem.Sample}");
@@ -156,9 +171,17 @@ internal sealed class SessionReport {
             Section(text, "Game crash (Windows event log)");
             text.AppendLine(crashEvent);
         }
+        // BT-217: the game's crash reporter ends the process itself, so Windows seldom logs the crash; the client patch does.
+        string guardLog = Path.Combine(ClientLocator.Find(settings.ClientDir) ?? settings.ClientDir, "offline_guard.log");
+        if (gameExitCode is not (null or 0) && CrashEvent.FromGuardLog(ReadLines(guardLog), started) is { } crashLine) {
+            Section(text, "Game crash (offline_guard.log)");
+            text.AppendLine(crashLine);
+        }
 
         Section(text, "Character");
         text.AppendLine(DescribeCharacter());
+        string packData = Path.Combine(settings.ContentPackDir, "GameData", "maple-data.db");
+        text.AppendLine(ProblemReport.StartedEpicQuests(settings.SaveFile, File.Exists(packData) ? packData : Path.Combine(settings.GameDataDir, "maple-data.db")));
 
         Section(text, "Computer");
         AppendComputer(text);
@@ -179,8 +202,8 @@ internal sealed class SessionReport {
         string? clientLog = NewestFile(Path.Combine(Path.GetDirectoryName(clientRoot) ?? clientRoot, "ms2log"), "MS2Log*.txt");
         text.AppendLine(clientLog == null ? "(none)" : $"{Path.GetFileName(clientLog)}:\n{Tail(clientLog, 80)}");
 
-        // Every launch logs ~24 "hook ... INSTALLED" lines; only blocked connections and REFUSED hooks matter here.
-        Section(text, "Offline guard log (last 20 blocked or refused lines)");
+        // Every launch logs ~25 "hook ... INSTALLED" lines; only blocked connections, REFUSED hooks and crashes (BT-217) matter here.
+        Section(text, "Offline guard log (last 20 blocked, refused or crash lines)");
         text.AppendLine(Tail(Path.Combine(clientRoot, "offline_guard.log"), 20, line => !line.EndsWith(" INSTALLED")));
 
         text.AppendLine();
@@ -246,8 +269,9 @@ internal sealed class SessionReport {
     }
 
     private void AppendComputer(StringBuilder text) {
-        text.AppendLine($"Windows : {RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})");
+        text.AppendLine($"Windows : {RuntimeInformation.OSDescription}.{Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "UBR", "?")} ({RuntimeInformation.OSArchitecture})");
         text.AppendLine($".NET    : {RuntimeInformation.FrameworkDescription}");
+        text.AppendLine($"Network : {ServerHost.NetworkLine(Environment.GetEnvironmentVariable, HttpClient.DefaultProxy)}");
         text.AppendLine($"CPU     : {Registry.GetValue(@"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString", "?")?.ToString()?.Trim()} ({Environment.ProcessorCount} threads)");
         if (GetMemory() is { } memory) {
             text.AppendLine($"Memory  : {memory.Total / 1024.0 / 1024 / 1024:0.0} GB total, {memory.Free / 1024.0 / 1024 / 1024:0.0} GB free at the end");
@@ -280,14 +304,10 @@ internal sealed class SessionReport {
         string? detected = ClientLocator.Find(settings.ClientDir);
         text.AppendLine($"Game folder   : {(detected ?? "NOT FOUND")} ({(string.IsNullOrEmpty(settings.ClientDir) ? "found automatically" : "set in launcher.ini")})");
         string clientDir = detected ?? settings.ClientDir;
-        foreach (string dll in new[] { "NxCharacter64.dll", "AgarciumClient.dll" }) {
-            string installed = Path.Combine(clientDir, dll), shipped = Path.Combine(settings.PatchDir, dll);
-            string state = !File.Exists(installed) ? "MISSING"
-                : !File.Exists(shipped) ? "installed"
-                : Hash(installed) == Hash(shipped) ? "up to date" : "DIFFERENT from the shipped patch";
-            text.AppendLine($"Patch {dll,-20}: {state}");
+        // BT-216: before the first game start the patch reads as not installed yet, and the backup line names a hand-copied patch.
+        foreach (string line in ClientPatch.ReportLines(clientDir, settings.PatchDir)) {
+            text.AppendLine(line);
         }
-        text.AppendLine($"Original DLL backup : {(File.Exists(Path.Combine(clientDir, "NxCharacter64.dll.bak")) ? "present" : "not yet (made on first start)")}");
         text.AppendLine($"Save file           : {(File.Exists(settings.SaveFile) ? $"{new FileInfo(settings.SaveFile).Length / 1024} KB" : "MISSING")}");
         text.AppendLine($"Save profile        : {(settings.Profile.Length == 0 ? "main" : settings.Profile)}");
         text.AppendLine(ContentPack.Describe(detected == null ? settings.ClientDir : Path.GetFullPath(Path.Combine(detected, "..")), settings.ContentPackDir));
@@ -354,15 +374,6 @@ internal sealed class SessionReport {
     private static string Shorten(string text, int max) => text.Length <= max ? text : text[..max] + " ...";
 
     private static string FormatDuration(TimeSpan span) => span.TotalHours >= 1 ? $"{(int) span.TotalHours}h {span.Minutes}m" : $"{span.Minutes}m {span.Seconds}s";
-
-    private static string Hash(string path) {
-        try {
-            using FileStream stream = File.OpenRead(path);
-            return Convert.ToHexString(SHA256.HashData(stream));
-        } catch (Exception) {
-            return "";
-        }
-    }
 
     /// <summary>Removes the Windows user name, PC name and machine id (ProblemReport.Redact, shared with the uploads).</summary>
     public static string Redact(string text) => ProblemReport.Redact(text);

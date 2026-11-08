@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace MapleStory2Offline;
 
 /// <summary>
@@ -77,6 +79,8 @@ internal sealed class Settings {
     public bool? FairFight { get; private init; }
     /// <summary>Offline Black Market: listings by a synthetic seller from offline-market.json, a new pick at every Play (Adapted default).</summary>
     public bool? BlackMarket { get; private init; }
+    /// <summary>All 15 character slots open without 1-slot Character Cards (Adapted default).</summary>
+    public bool? CharacterSlots { get; private init; }
     /// <summary>
     /// Unified content (KMS/JMS records and art) applied to the client before Play; false keeps the pure Global game.
     /// </summary>
@@ -104,6 +108,31 @@ internal sealed class Settings {
     public string ClientRoot => Path.GetFullPath(Path.Combine(ClientDir, ".."));
     public string Username { get; private init; } = "offline";
     public string Password { get; private init; } = "offline";
+
+    /// <summary>The first World server file that files.json lists and this folder lacks, or null. An unpacked update zip holds only
+    /// the changed files but the full list (report b98bf5a7). Only the World folder: other listed files may rightly be absent, such as
+    /// a client mod's file the launcher turned off. A .pdb is not needed to run. A folder without a readable list is a developer copy.</summary>
+    public string? MissingServerFile() {
+        try {
+            var listed = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(Root, "files.json"))) ?? [];
+            return listed.Keys.FirstOrDefault(name => name.StartsWith("Maple2/Maple2.Server.World/", StringComparison.Ordinal)
+                && !name.EndsWith(".pdb", StringComparison.Ordinal)
+                && !File.Exists(Path.Combine(Root, name.Replace('/', Path.DirectorySeparatorChar))));
+        } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) {
+            return null;
+        }
+    }
+
+    /// <summary>A file of the game inside <paramref name="folder"/>, or null: MapleStory2.exe or Xml.m2d, which the program and its packs never hold.
+    /// Setup replaces or removes the whole program folder, and a game kept there would go with it. Nothing is skipped: a wrong refusal costs
+    /// the player a rename, a missed game costs the download.</summary>
+    public static string? GameInside(string folder) {
+        if (!Directory.Exists(folder)) {
+            return null;
+        }
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MaxRecursionDepth = 16 };
+        return new[] { "MapleStory2.exe", "Xml.m2d" }.SelectMany(name => Directory.EnumerateFiles(folder, name, options)).FirstOrDefault();
+    }
 
     public static Settings Load() => Load(Path.GetFullPath(AppContext.BaseDirectory));
 
@@ -144,6 +173,7 @@ internal sealed class Settings {
             PartyDungeons = Flag(values, "PartyDungeons"),
             FairFight = Flag(values, "FairFight"),
             BlackMarket = Flag(values, "BlackMarket"),
+            CharacterSlots = Flag(values, "CharacterSlots"),
             ClassDropsOnly = Flag(values, "ClassDropsOnly"),
             PetTaming = Flag(values, "PetTaming"),
             DungeonEpicGear = Flag(values, "DungeonEpicGear"),
@@ -214,6 +244,10 @@ internal sealed class Settings {
     private static bool? Flag(Dictionary<string, string> values, string key) =>
         bool.TryParse(values.GetValueOrDefault(key), out bool value) ? value : null;
 
+    /// <summary>A sub-folder of SaveData that is no save: the main save's backups and uploaded files (portraits, designs).</summary>
+    public static bool IsReservedFolder(string? name) =>
+        string.Equals(name, "backups", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "ugc", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>null when the name can be a profile folder, else the message for the player.</summary>
     public static string? ValidateProfile(string name) {
         string trimmed = name.Trim();
@@ -228,7 +262,7 @@ internal sealed class Settings {
                 return "Use letters, digits, spaces, - or _ (up to 32 characters).";
             }
         }
-        if (string.Equals(trimmed, "backups", StringComparison.OrdinalIgnoreCase)) {
+        if (IsReservedFolder(trimmed)) {
             return "That name is reserved.";
         }
         return null;

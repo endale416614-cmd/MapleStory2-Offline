@@ -84,7 +84,7 @@ internal static class Diagnostics {
     }
 
     /// <summary>Files of the release that are missing or modified (compared with files.json).</summary>
-    private static string InstallCheck(Settings settings) {
+    internal static string InstallCheck(Settings settings) {
         string manifest = Path.Combine(settings.Root, "files.json");
         if (!File.Exists(manifest)) {
             return "No files.json (developer or portable copy without a release manifest).";

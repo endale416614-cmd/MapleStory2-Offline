@@ -139,6 +139,45 @@ public class ContentPackTests {
         Assert.Throws<InvalidOperationException>(() => ContentPack.Restore(client, packDir));
     }
 
+    // Verify game files: a Foreign archive that still starts with the Global bytes, with a Global header at hand.
+    [Test]
+    public void Repair_PackHeaderOnTheGlobalArchive_PutsTheGlobalHeaderBack() {
+        File.WriteAllBytes(M2h, newM2h);
+        File.WriteAllBytes(OrigM2h, origM2h);
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.Foreign));
+
+        Assert.That(ContentPack.Repair(client, packDir), Is.Empty);
+
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(global));
+        Assert.That(File.ReadAllBytes(M2h), Is.EqualTo(origM2h));
+        Assert.That(File.Exists(OrigM2h), Is.False);
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.NotApplied));
+    }
+
+    [Test]
+    public void Repair_CutOffTailWithoutBackup_TruncatesToTheGlobalArchive() {
+        File.WriteAllBytes(Archive, global.Concat(tail.Take(700)).ToArray());
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.Foreign));
+
+        Assert.That(ContentPack.Repair(client, packDir), Is.Empty);
+
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(global));
+        Assert.That(State().Status, Is.EqualTo(ContentPack.Status.NotApplied));
+    }
+
+    [Test]
+    public void Repair_OtherClientBuild_LeftForSteam() {
+        byte[] other = (byte[])global.Clone();
+        other[10] ^= 0xFF;
+        File.WriteAllBytes(Archive, other);
+
+        List<string>? left = ContentPack.Repair(client, packDir);
+
+        Assert.That(left, Has.Count.EqualTo(1));
+        Assert.That(left![0], Does.Contain("unknown client build"));
+        Assert.That(File.ReadAllBytes(Archive), Is.EqualTo(other));
+    }
+
     // An earlier pack (1.2.0's on a 1.2.1 update): another tail and header on the Global archive, the Global header backed up.
     private void EarlierPack(byte[] prefix) {
         File.WriteAllBytes(Archive, prefix.Concat(Bytes(new Random(3), 900)).ToArray());

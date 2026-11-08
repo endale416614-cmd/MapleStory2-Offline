@@ -45,6 +45,21 @@ public class ReleaseManifestTests {
     }
 
     [Test]
+    public void BothSetupNames_AreAccepted() {
+        // What tools/package_release.py write_release signs since BT-170. Only the update zip is looked up.
+        byte[] json = Encoding.UTF8.GetBytes($$"""
+            {"version": "1.2.3", "files": [
+             {"name": "MapleStory2-Offline-Setup.exe", "size": 10, "sha256": "{{Sha}}"},
+             {"name": "MapleStory2-Offline-Update-1.2.3.zip", "size": 20, "sha256": "{{Sha}}"},
+             {"name": "MapleStory2-Offline-Setup-1.2.3.exe", "size": 10, "sha256": "{{Sha}}"}], "notes": ""}
+            """);
+        ReleaseManifest manifest = ReleaseManifest.Verify(json, Sign(ReleaseManifest.Message(json)), publicKey);
+
+        Assert.That(manifest.Files, Has.Count.EqualTo(3));
+        Assert.That(manifest.Find("MapleStory2-Offline-Update-1.2.3.zip")?.Size, Is.EqualTo(20));
+    }
+
+    [Test]
     public void ChangedByte_IsRefused() {
         byte[] json = Encoding.UTF8.GetBytes(Json);
         byte[] signature = Sign(ReleaseManifest.Message(json));

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Summon lists of NPCs (NB-09): aiInfo/@summonNpcIDs of every npc XML, for the server's summon-npcs.json (a summon node's npcId N is the Nth id, 1-based). Input: a folder of npc XMLs (M2dPack extract <Xml.m2d> npc/ <dir>).
-Also the function cubes' spawners and use buffs, which the ingest drops (HS-02, SV-01). Input: a folder of object XMLs (M2dPack extract <Xml.m2d> object/ <dir>)."""
+Also the function cubes' spawners and use buffs, which the ingest drops (HS-02, SV-01). Input: a folder of object XMLs (M2dPack extract <Xml.m2d> object/ <dir>).
+The Xml.m2d is the nightly's: the NA client's npc files hold no summon lists. --check writes nothing and exits 1 if --out would change, whatever its line ends."""
 
 import os
+import sys
 import xml.etree.ElementTree as ET
 import json
 import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # for msb: python -I does not add the script's folder
+from msb import write_or_check
 
 
 def collect(npc_dir):
@@ -289,19 +294,36 @@ def selftest():
             print(f"Cube self-test failed. Got {cube_spawns}, {cube_buffs}")
             return False
 
+        out = os.path.join(tmpdir, 'out.json')
+        args = ['--npc-dir', npc_dir, '--object-dir', object_dir, '--out', out]
+        # A missing file would change and a check writes nothing; a checkout's CRLF is no change; an edit is.
+        results = [main(args + ['--check']), os.path.exists(out), main(args), main(args + ['--check'])]
+        with open(out, encoding='utf-8') as f:
+            written = f.read()
+        with open(out, 'w', encoding='utf-8', newline='\r\n') as f:
+            f.write(written)
+        results.append(main(args + ['--check']))
+        with open(out, 'a', encoding='utf-8') as f:
+            f.write(' ')
+        results.append(main(args + ['--check']))
+        if results != [1, False, 0, 0, 0, 1]:
+            print(f"Check self-test failed. Got {results}")
+            return False
+
     print("selftest ok")
     return True
 
 
-def main():
+def main(argv=None):
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--npc-dir', required=True)
     parser.add_argument('--object-dir', required=True)
     parser.add_argument('--out', required=True)
+    parser.add_argument('--check', action='store_true', help='write nothing, exit 1 if --out would change')
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     result, bad = collect(args.npc_dir)
     string_ids = collect_string_ids(args.npc_dir)
@@ -320,17 +342,16 @@ def main():
             "CubeSpawns": {str(cube_id): cube_spawns[cube_id] for cube_id in sorted(cube_spawns)},
             "CubeBuffs": {str(cube_id): cube_buffs[cube_id] for cube_id in sorted(cube_buffs)}}
 
-    with open(args.out, 'w', encoding='utf-8', newline='\n') as f:
-        json.dump(data, f, indent=1, ensure_ascii=False, separators=(',', ': '))
-        f.write('\n')
-
     print(f"{len(result)} NPCs with a summon list, {len(string_ids)} with a stringID, {len(skill_probs)} with skill probabilities, {len(races)} with race strings, {len(interact_skills)} usable (interact skills), {bad} files not parsed; {len(cube_spawns)} function cubes spawn an NPC, {len(cube_buffs)} give a buff on use")
+    if not write_or_check(args.out, json.dumps(data, indent=1, ensure_ascii=False, separators=(',', ': ')) + '\n', args.check):
+        print(f"{args.out}: would change", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    import sys
     if len(sys.argv) > 1 and sys.argv[1] == '--selftest':
         if not selftest():
             sys.exit(1)
     else:
-        main()
+        sys.exit(main())

@@ -16,8 +16,12 @@ batch 3, so each needs a reviewed row (source copy).
 --apply writes the names into one string file (the rows whose file is its name): every key line of a listed id takes the
 name (copy_names.py's strict apply), and an id with no key line free of feature and locale gets one, so the client and
 the server show the name whatever their features.
+--follow gives the server the client's item names (NM-08, BT-10: the client's name wins): every key line of the server
+stage's itemname.xml for an id the client shows a name for (the pack's file with tools/data/shop-item-names.tsv, as the
+offline-shop mod ships it) takes that name where a line has another. A string key is no name, and no line is added.
 Usage: shown_names.py --build <pack build dir> --global <GMS scan> --taiwan <TMS scan> [--reviewed <tsv>] [--out <tsv>]
-       | --apply <tsv> <string file> --out <file> | --selftest"""
+       | --apply <tsv> <string file> --out <file> | --follow <client itemname.xml> <server itemname.xml> --out <file>
+       | --selftest"""
 import argparse
 import collections
 import os
@@ -149,6 +153,23 @@ def copy_homes(text):
     return {int(r[2]) for r in rows if r[1] == "copy"}
 
 
+def unnamed_copies(homes_text, new):
+    """The copy ids of a kms-homes.tsv text without a row in new (id: name): the pack ships each under its home id, so --apply
+    on itemname.xml writes nothing while one lacks a name (D-16 on every pack build)."""
+    return sorted(copy_homes(homes_text) - set(new))
+
+
+def follow(client_text, server_text, on, restored):
+    """(server text, ids renamed, key lines changed, listed ids it cannot rename): every key line of the server's file
+    for an id whose name the client shows (on: the features on; restored: shop-item-names.tsv's names, which the
+    offline-shop mod adds) takes that name where a line has another (NM-08, BT-10). No line is added."""
+    have = lines(server_text)
+    shown = shop.shown(shop.build(client_text, restored), on)
+    new = {i: n for i, n in shown.items() if named(n) and any(name != n for name, *_ in have.get(i, []))}
+    text, changed, missing, stuck = copy_names.apply(server_text, new)
+    return text, sorted(new), changed, sorted(set(missing) | set(stuck))
+
+
 def measure(build, glob, taiwan, reviewed, selection, copies, restored, features, kms_homes):
     """(rows, ids that need a reviewed row, stale reviewed ids) from a pack build no name table has touched (its pack
     DB, strings-119 and overlay-fixed string files), the GMS and TMS scans, and tools/data's tables as texts."""
@@ -274,6 +295,23 @@ def selftest():
     rows, need, stale = decide("item", homes | {20393045}, {}, {}, True, [], {}, {}, {20393049: copy},
                                dict.fromkeys(homes | {20393045}, "3"))
     assert homes == {20393049} and rows == [copy] and need == [20393045] and stale == [], "a copy needs a name (D-16)"
+    homes_text = "id\tverdict\thome\treason\r\n20303049\tcopy\t20393049\tKMS\r\n11320293\ttwin\t11300308\tre-issue\r\n"
+    assert unnamed_copies(homes_text, {20393049: "Instant Gathering Voucher (50)"}) == [] and unnamed_copies("", {}) == []
+    assert unnamed_copies(homes_text, {11300308: "x"}) == [20393049], "a copy without a name row stops --apply (D-16)"
+    client = ('<ms2>\r\n\t<key id="1" name="Cheerful" />\r\n\t<key id="2" name="Same" />\r\n'
+              '\t<key id="3" name="ITEMNAME_3_NAME" />\r\n\t<key id="4" name="Gated" feature="Off" />\r\n'
+              '\t<key id="5" name="Q &amp; A" />\r\n\t<key id="6" name="Client Only" />\r\n'
+              '\t<key id="7" name="ITEMNAME_7_NAME" />\r\n</ms2>\r\n')
+    server = ('<ms2>\r\n\t<key id="1" class="suit" name="Exciting" />\r\n\t<key id="1" name="Old" feature="Event" />\r\n'
+              '\t<key id="2" name="Older" feature="Event" />\r\n\t<key id="2" name="Same" />\r\n\t<key id="4" name="Kept" />\r\n'
+              '\t<key id="3" name="Server" />\r\n\t<key id="5" name="Q and A" />\r\n\t<key id="7" name="Seven" />\r\n</ms2>\r\n')
+    out, ids, changed, stuck = follow(client, server, set(), {7: ("", "Restored")})
+    assert (ids, changed, stuck) == ([1, 2, 5, 7], 5, []), (ids, changed, stuck)
+    assert '\t<key id="1" class="suit" name="Cheerful" />\r\n\t<key id="1" name="Cheerful" feature="Event" />\r\n' in out, \
+        "every key line of the id takes the name the client shows (NM-08)"
+    assert '\t<key id="5" name="Q &amp; A" />\r\n' in out and '\t<key id="7" name="Restored" />\r\n' in out, "the mod's name"
+    assert 'name="Server"' in out and 'name="Kept"' in out and 'id="6"' not in out, "a key or a gated line is no name"
+    assert follow(client, out, set(), {7: ("", "Restored")})[1:] == ([], 0, []), "a second run changes nothing"
     print("selftest ok")
 
 
@@ -287,6 +325,7 @@ def main():
     parser.add_argument("--global", dest="glob")
     parser.add_argument("--reviewed", default=TABLE)
     parser.add_argument("--apply", nargs=2, metavar=("TABLE", "STRING_FILE"))
+    parser.add_argument("--follow", nargs=2, metavar=("CLIENT_FILE", "SERVER_FILE"))
     args = parser.parse_args()
     read = lambda path: open(path, encoding="utf-8", newline="").read()
     if args.apply:
@@ -298,6 +337,12 @@ def main():
         if not new or not any(line.strip() == "<ms2>" for line in text.split("\n")):
             print(f"{args.apply[1]}: no <ms2> root line, or no row of the table names {target}")
             sys.exit(1)
+        homes_path = os.path.join(DATA, "kms-homes.tsv")
+        unnamed = unnamed_copies(read(homes_path), new) if target == FILES["item"] and os.path.exists(homes_path) else []
+        if unnamed:
+            print(f"{args.apply[1]}: kms-homes.tsv copies without a name row in the table: " + " ".join(map(str, unnamed)) +
+                  "; nothing written (D-16)")
+            sys.exit(1)
         text, changed, added, stuck = apply(text, new)
         if stuck:
             print(f"{args.apply[1]}: a key element it cannot rename for " + " ".join(map(str, stuck)) +
@@ -306,6 +351,20 @@ def main():
         with open(args.out, "w", encoding="utf-8", newline="") as f:
             f.write(text)
         print(f"{args.out}: {len(new)} ids, {changed} key lines changed, {added} lines added")
+        return
+    if args.follow:
+        if not args.out:
+            parser.error("--follow needs --out")
+        on = shop.features_on(read(os.path.join(DATA, "pack-overlay", "table", "feature.xml")))
+        restored = shop.restored(read(os.path.join(DATA, "shop-item-names.tsv")).replace("\r\n", "\n"))
+        text, ids, changed, stuck = follow(read(args.follow[0]), read(args.follow[1]), on, restored)
+        if stuck:
+            print(f"{args.follow[1]}: a key element it cannot rename for " + " ".join(map(str, stuck)) +
+                  "; nothing written")
+            sys.exit(1)
+        with open(args.out, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        print(f"{args.out}: {len(ids)} ids take the item name the client shows, {changed} key lines changed")
         return
     if not (args.build and args.glob and args.taiwan):
         parser.error("the table needs --build, --global and --taiwan")

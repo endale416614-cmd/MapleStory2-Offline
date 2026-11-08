@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace MapleStory2Offline;
 
-/// <summary>Known failure signatures of the server logs (R12-21): pattern, category, section of TROUBLESHOOTING.txt.</summary>
+/// <summary>Known failure signatures of the server logs and the launcher's messages (R12-21): pattern, category, section of TROUBLESHOOTING.txt.</summary>
 internal static class Triage {
     public sealed record Signature(Regex Pattern, string Category, string Section);
 
@@ -15,6 +15,8 @@ internal static class Triage {
         new(new Regex(@"database is locked|SQLite Error 5\b", RegexOptions.IgnoreCase), "Save file in use by another program", "[T5]"),
         new(new Regex(@"written by a newer version of the game", RegexOptions.IgnoreCase), "Save from a newer version", "[T6]"),
         new(new Regex(@"Only one usage of each socket address|address already in use", RegexOptions.IgnoreCase), "A server port is taken by another program", "[T7]"),
+        new(new Regex(@"Failed to add channel to World Server", RegexOptions.IgnoreCase), "The game server could not reach the world server", "[T8]"),
+        new(new Regex(@"The game's own NxCharacter64\.dll is missing", RegexOptions.IgnoreCase), "The game's own NxCharacter64.dll is missing", "[T9]"),
     ];
 
     /// <summary>The first known signature found in the text, or null.</summary>

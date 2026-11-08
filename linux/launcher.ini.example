@@ -19,6 +19,7 @@ GameMode=Adapted
 #PartyDungeons=true
 #FairFight=true
 #BlackMarket=true
+#CharacterSlots=true
 # Chat commands /godmode, /killall, /unstuck, /freebies, /give, /item, /find.
 #CheatCommands=true
 # Same in both modes (on unless set to false):

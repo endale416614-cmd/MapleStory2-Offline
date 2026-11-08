@@ -126,6 +126,12 @@ internal sealed class LauncherForm : Form {
                 MessageBox.Show(recovered, Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 Show();
             }
+            if (settings.MissingServerFile() is { } missing) {
+                throw new InvalidOperationException(
+                    $"This folder holds only part of the game ({missing} is missing), so it cannot start from here. An update zip is not unpacked.\n\n" +
+                    "To update: Start menu > MapleStory 2 Offline - Install Update, and pick the zip.\n" +
+                    "To install or repair: run MapleStory2-Offline-Setup.exe.");
+            }
             if (settings.AutoUpdate != "off" && File.Exists(Path.Combine(settings.Root, "files.json"))) {
                 await DownloadOnlineUpdateAsync(token);
             }
@@ -137,6 +143,11 @@ internal sealed class LauncherForm : Form {
                 finished = true;
                 Close();
                 return;
+            }
+
+            // BT-216: the patch's NxCharacter64.dll without the game's own. Stop before the servers, and change nothing in the game folder.
+            if (ClientPatch.MissingOriginal(settings.ClientDir, settings.PatchDir) is { } missingOriginal) {
+                throw new InvalidOperationException(missingOriginal);
             }
 
             if (!ChooseGameMode()) {
@@ -178,13 +189,21 @@ internal sealed class LauncherForm : Form {
             try {
                 SetStatus("Starting the world...");
                 host.Start("World");
-                await host.WaitAsync(() => ServerHost.IsListening(WORLD_GRPC_PORT), "the world server", TimeSpan.FromMinutes(2), token);
+                await host.WaitAsync(() => host.IsUp("World", WORLD_GRPC_PORT, "Now listening on:"), "the world server", TimeSpan.FromMinutes(2), token);
 
                 SetStatus("Starting the login server...");
                 host.Start("Login");
                 host.Start("Web");
-                await host.WaitAsync(() => ServerHost.IsListening(LOGIN_PORT) && ServerHost.IsListening(WEB_PORT),
+                await host.WaitAsync(() => host.IsUp("Login", LOGIN_PORT, "started on Port:") && host.IsUp("Web", WEB_PORT, "Now listening on:"),
                     "the login server", TimeSpan.FromMinutes(2), token);
+                // For the next report of this kind: a server that only its log showed.
+                foreach ((string name, int port) in new[] { ("World", WORLD_GRPC_PORT), ("Login", LOGIN_PORT), ("Web", WEB_PORT) }) {
+                    if (report != null && !ServerHost.IsListening(port)) {
+                        string connect = await ServerHost.CanConnectAsync(port) ? "ok" : "FAILED";
+                        string owner = PortGuard.Listeners().FirstOrDefault(listener => listener.Port == port)?.Name ?? "none";
+                        report.Step($"{name} server: port {port} not in the listener table; its log says it is listening; connect {connect}; owner table {owner}");
+                    }
+                }
 
                 SetStatus("Loading Maple World...");
                 host.Start("Game");
@@ -281,7 +300,7 @@ internal sealed class LauncherForm : Form {
         } else if (report is { HasProblems: true } && reportPath != null) {
             Community.ShowProblem("Something went wrong during this session." + ReportHint(reportPath), Title, MessageBoxIcon.Warning);
         }
-        if (report is { HasProblems: true }) {
+        if (report != null && await Task.Run(report.Offered)) {
             await OfferReportAsync(report);
         }
 
@@ -431,6 +450,11 @@ internal sealed class LauncherForm : Form {
             update = await UpdateChecker.CheckAsync(settings, token);
         } catch (Exception ex) when (!token.IsCancellationRequested) {
             EventLog.Write("update", "online check skipped: " + ex.Message);
+            if (ex is InvalidOperationException) { // what CheckAsync throws when it refuses a release; anything else is no answer from GitHub
+                report?.Problem("The update check refused the release: " + ex.Message);
+            } else {
+                report?.Step("Update check skipped: " + ex.Message);
+            }
             return;
         }
         if (update == null) {
@@ -468,6 +492,7 @@ internal sealed class LauncherForm : Form {
             EventLog.Write("update", $"downloaded {Path.GetFileName(file)}");
         } catch (Exception ex) when (!token.IsCancellationRequested) {
             EventLog.Write("update", $"download of {update.Version} failed: {ex.Message}");
+            report?.Problem($"The update to version {update.Version} could not be downloaded: {ex.Message}");
             Hide();
             MessageBox.Show($"The update could not be downloaded ({ex.Message}). You can keep playing; it is tried again next time.",
                 Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);

@@ -265,6 +265,51 @@ class TestContentPack(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             ms2offline.ContentPack.restore(self.client, self.pack_dir)
 
+    # Verify game files: a Foreign archive that still starts with the Global bytes, with a Global header at hand.
+    def test_repair_pack_header_on_the_global_archive_puts_the_global_header_back(self):
+        archive, m2h = os.path.join(self.client, "Data", "Xml.m2d"), os.path.join(self.client, "Data", "Xml.m2h")
+        orig = os.path.join(self.client, "Data", "Xml.orig.m2h")
+        with open(m2h, "wb") as f:
+            f.write(self.new_m2h)
+        with open(orig, "wb") as f:
+            f.write(self.orig_m2h)
+        self.assertEqual(self._state().status, ms2offline.ContentPack.Status.Foreign)
+
+        self.assertEqual(ms2offline.ContentPack.repair(self.client, self.pack_dir), [])
+
+        with open(archive, "rb") as f:
+            self.assertEqual(f.read(), self.global_data)
+        with open(m2h, "rb") as f:
+            self.assertEqual(f.read(), self.orig_m2h)
+        self.assertFalse(os.path.exists(orig))
+        self.assertEqual(self._state().status, ms2offline.ContentPack.Status.NotApplied)
+
+    def test_repair_cut_off_tail_without_backup_truncates_to_the_global_archive(self):
+        archive = os.path.join(self.client, "Data", "Xml.m2d")
+        with open(archive, "wb") as f:
+            f.write(self.global_data + self.tail[:700])
+        self.assertEqual(self._state().status, ms2offline.ContentPack.Status.Foreign)
+
+        self.assertEqual(ms2offline.ContentPack.repair(self.client, self.pack_dir), [])
+
+        with open(archive, "rb") as f:
+            self.assertEqual(f.read(), self.global_data)
+        self.assertEqual(self._state().status, ms2offline.ContentPack.Status.NotApplied)
+
+    def test_repair_other_client_build_is_left_for_steam(self):
+        archive = os.path.join(self.client, "Data", "Xml.m2d")
+        other = bytearray(self.global_data)
+        other[10] ^= 0xFF
+        with open(archive, "wb") as f:
+            f.write(bytes(other))
+
+        left = ms2offline.ContentPack.repair(self.client, self.pack_dir)
+
+        self.assertEqual(len(left), 1)
+        self.assertIn("unknown client build", left[0])
+        with open(archive, "rb") as f:
+            self.assertEqual(f.read(), bytes(other))
+
     def test_pack_json_is_strict(self):
         """Test that pack.json is strict."""
         # Test missing archives array
@@ -855,6 +900,31 @@ class TestPrepareContent(unittest.TestCase):
         self.assertEqual(self._read(self.m2h), self.orig_m2h)
         self.assertFalse(os.path.exists(self.orig_m2h_path))
 
+    def test_foreign_archive_next_to_applied_restores_the_other_and_starts_global(self):
+        # BT-03: a Steam update replaced Data/Xml.m2d while Data/Other.m2d still carried the pack.
+        import random
+        rng = random.Random(4)
+        other_global, other_tail, other_orig_m2h, other_new_m2h = rng.randbytes(2048), rng.randbytes(1000), rng.randbytes(200), rng.randbytes(300)
+        other_archive = os.path.join(self.client, "Data", "Other.m2d")
+        other_m2h = os.path.join(self.client, "Data", "Other.m2h")
+        other_orig = os.path.join(self.client, "Data", "Other.orig.m2h")
+        self._write(other_archive, other_global + other_tail)
+        self._write(other_m2h, other_new_m2h)
+        self._write(other_orig, other_orig_m2h)
+        self._write(os.path.join(self.pack_dir, "Other.tail"), other_tail)
+        self._write(os.path.join(self.pack_dir, "Other.m2h"), other_new_m2h)
+        self._write_pack_json([self._entry("Data/Xml.m2d", self.global_data, self.tail, self.new_m2h, self.orig_m2h),
+                               self._entry("Data/Other.m2d", other_global, other_tail, other_new_m2h, other_orig_m2h)])
+        updated = rng.randbytes(5000)  # Steam's new Xml.m2d
+        self._write(self.archive, updated)
+        data_dir, applied, warning, error = self._prepare(True)
+        self.assertEqual((data_dir, applied, error), (self.global_data_dir, None, None))
+        self.assertIn("does not fit", warning)
+        self.assertEqual(self._read(other_archive), other_global)
+        self.assertEqual(self._read(other_m2h), other_orig_m2h)
+        self.assertFalse(os.path.exists(other_orig))
+        self.assertEqual(self._read(self.archive), updated)
+
     def test_no_pack_folder_global_data_names_pack_lock_error(self):
         import shutil
         shutil.rmtree(self.pack_dir)
@@ -882,6 +952,20 @@ class TestPrepareContent(unittest.TestCase):
         self.assertIn("Xml.tail", warning)
         self.assertEqual(self._read(self.archive), self.global_data)
         self.assertEqual(self._read(self.m2h), self.orig_m2h)
+
+    def test_verify_repairs_after_one_yes(self):
+        # ms2offline verify: an archive cut off in the middle of the tail, with no journal, is repaired after one Yes.
+        from unittest import mock
+        self._write(self.archive, self.global_data + self.tail[:700])
+        launcher = mock.Mock(home=self.root)
+        launcher.settings.content_pack_dir = self.pack_dir
+        launcher.ui.ask.return_value = True
+        with mock.patch.object(ms2offline.Client, "find", return_value=os.path.join(self.client, "x64")), \
+                mock.patch.object(ms2offline.Client, "running_pids", return_value=[]):
+            self.assertEqual(ms2offline.verify_files(launcher), 0)
+        self.assertEqual(self._read(self.archive), self.global_data)
+        self.assertEqual(launcher.ui.ask.call_count, 1)
+        self.assertIn("Repaired", launcher.ui.info.call_args[0][0])
 
 
 class TestContentWiring(unittest.TestCase):

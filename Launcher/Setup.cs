@@ -106,6 +106,10 @@ internal static class Setup {
     /// <summary>Copies the program (replacing an older copy, keeping install id and player data) and registers it.</summary>
     public static void Install(string exe, (long Offset, long Length) payload, Options options) {
         string programDir = Path.GetFullPath(options.ProgramDir);
+        if ((Settings.GameInside(programDir) ?? Settings.GameInside(programDir.TrimEnd('\\') + ".new") ?? Settings.GameInside(programDir.TrimEnd('\\') + ".old")) is { } game) {
+            throw new InvalidOperationException(
+                $"The game is inside this folder ({game} is part of it), and installing here would delete it.\n\nRename this folder and run Setup again. The launcher then asks where the game is: choose the folder with MapleStory2.exe inside the renamed one.");
+        }
         if (Process.GetProcessesByName("MapleStory2").Length > 0) {
             throw new InvalidOperationException("Close MapleStory 2 first.");
         }
@@ -153,10 +157,14 @@ internal static class Setup {
         InstallInfo.Write(staging, installId, options.DataDir);
 
         string old = programDir.TrimEnd('\\') + ".old";
-        if (Directory.Exists(old)) {
+        // A swap cut off by a crash left the program in .old. A copy that fails stops here, with the old installation intact.
+        InstallInfo.CarryWebData(programDir, staging);
+        InstallInfo.CarryWebData(old, staging);
+        bool hadProgram = Directory.Exists(programDir);
+        // With no program folder, .old is the only copy until the swap; the delete after the swap removes it (UG-02).
+        if (hadProgram && Directory.Exists(old)) {
             Directory.Delete(old, true);
         }
-        bool hadProgram = Directory.Exists(programDir);
         if (hadProgram) {
             Directory.Move(programDir, old);
         }
@@ -235,14 +243,16 @@ internal static class Setup {
         if (deleteData && settings.Installed && Directory.Exists(settings.DataRoot)) {
             Directory.Delete(settings.DataRoot, true);
         }
-        if (settings.Installed) {
+        string? game = settings.Installed ? Settings.GameInside(settings.Root) : null;
+        if (settings.Installed && game == null) {
             // The running exe cannot delete its own folder: a detached cmd removes it after we exit.
             Process.Start(new ProcessStartInfo("cmd.exe", $"/c ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"{settings.Root}\"") {
                 CreateNoWindow = true, UseShellExecute = false,
             });
         }
         if (!quiet) {
-            MessageBox.Show($"{ProductName} was removed." + (deleteData ? "" : $"\n\nYour saves are kept in:\n{settings.DataRoot}"),
+            MessageBox.Show($"{ProductName} was removed." + (deleteData ? "" : $"\n\nYour saves are kept in:\n{settings.DataRoot}")
+                + (game == null ? "" : $"\n\nThe program folder was kept because the game is inside it ({game} is part of it):\n{settings.Root}\n\nDelete it yourself if you no longer want the game."),
                 ProductName, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
@@ -279,6 +289,8 @@ internal static class Setup {
         Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Report a Problem.lnk"), launcher, "--report-problem", workingDir,
             "Send the developer a problem report with your own words");
         Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Install Update.lnk"), launcher, "--install-update", workingDir, "Install a downloaded update zip");
+        Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Verify Game Files.lnk"), launcher, "--verify-files", workingDir,
+            "Check the game files the unified content needs and repair them");
         Shortcut(Path.Combine(StartMenuDir, $"Uninstall {ProductName}.lnk"), launcher, "--uninstall", workingDir, "Remove MapleStory 2 Offline");
         Shortcut(DesktopShortcut, launcher, "", workingDir, "Play MapleStory 2 offline");
     }

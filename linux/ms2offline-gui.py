@@ -317,13 +317,15 @@ class Window(QtWidgets.QMainWindow):
         def work():
             s = ms2offline.Settings(self.home)
             latest = ms2offline.Releases.latest()
-            if ms2offline.Releases.parse_version(latest["version"]) <= ms2offline.Releases.parse_version(s.version):
+            unfinished = ms2offline.Releases.unfinished_update(self.home) is not None
+            if not unfinished and ms2offline.Releases.parse_version(latest["version"]) <= ms2offline.Releases.parse_version(s.version):
                 self.launcher.ui.info(f"Version {s.version} is current.")
                 return
             if ms2offline.Ports.own_server_pids(s):
                 self.launcher.ui.error("The servers are running. Stop them first.")
                 return
-            if self.launcher.ui.ask(f"Version {latest['version']} is available (you have {s.version}).\n\n{latest['notes']}\n\nInstall it now?"):
+            if self.launcher.ui.ask(f"{ms2offline.UPDATE_UNFINISHED}\n\nInstall it now?" if unfinished else
+                                    f"Version {latest['version']} is available (you have {s.version}).\n\n{latest['notes']}\n\nInstall it now?"):
                 self.launcher.take_lock()
                 self.launcher.install_release(latest)
         self.run("update", work)
@@ -385,6 +387,9 @@ def main():
     home = os.environ.get("MS2OFFLINE_HOME") or os.path.expanduser("~/Games/MapleStory2-Offline")
     if len(sys.argv) > 2 and sys.argv[1] == "--home":
         home = os.path.abspath(os.path.expanduser(sys.argv[2]))
+    newer = ms2offline.newer_copy(home, "ms2offline-gui.py")
+    if newer:
+        os.execv(sys.executable, [sys.executable, newer] + sys.argv[1:])
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationName(ms2offline.APP_NAME)
     app.setDesktopFileName("ms2offline")   # own window class / app id (menu icon, and no window rules meant for other python apps)

@@ -30,3 +30,36 @@ recognises, for example "see TROUBLESHOOTING.txt [T3]". If your problem is not h
 [T7] A server port is taken by another program
   Another program, or a server left over from a crash, uses a port the servers need. Restart the PC (or close the
   other program) and start again.
+
+[T8] The game server could not reach the world server
+  The game server could not connect to the world server on this PC, so the game did not start. Usually a proxy, a VPN,
+  a game accelerator or traffic tool, or security software is handling the connections to this PC (127.0.0.1); the
+  report's Network line says "proxy for 127.0.0.1 YES" when it is a proxy. Close that program, or set it to leave
+  local addresses alone, and start again. In the Windows proxy settings (Settings, Network & internet, Proxy), if a
+  manual proxy is on, tick "Don't use the proxy server for local (intranet) addresses". If the Network line names
+  HTTP_PROXY or ALL_PROXY, add the environment variable NO_PROXY with the value 127.0.0.1,localhost (Start menu: "Edit
+  environment variables for your account"). Allow the Maple2.Server programs (in the Maple2 folder of the program
+  folder) in your antivirus or firewall. If it still fails, post the report on Discord with what you tried.
+
+[T9] The game's own NxCharacter64.dll is missing
+  The offline patch puts its own NxCharacter64.dll into the game's x64 folder and keeps the game's file beside it as
+  NxCharacter64.dll.bak, which the patch needs. Here the game's file is gone, so the launcher stops before the game
+  would close right after its window opens. This usually happens when the patch files (NxCharacter64.dll and
+  AgarciumClient.dll) are copied into the game folder by hand. Put the game's NxCharacter64.dll back: in Steam,
+  right-click MapleStory 2, then Properties, Installed Files, Verify integrity of game files. For a game you
+  downloaded, copy NxCharacter64.dll from the download into the game's x64 folder. Then start the launcher again: it
+  installs the patch itself. Never copy the patch files by hand. If it still fails, post the report on Discord.
+
+If the game does not work any more: what to try, in this order
+--------------------------------------------------------------
+Each step is explained in PLAYER_GUIDE.txt. None of them touches your save, unless the step says so.
+
+1. Run the Setup again ("Install" in the guide). It replaces the program files and keeps your saves and settings. This also
+   finishes an update that stopped halfway. On Linux: ms2offline install
+2. Verify the game files in Steam, then start again: the launcher installs the offline patch and the content pack again.
+   Use this when the game closes while it starts, or when the launcher says the unified content does not fit.
+3. Play without the content pack: put UnifiedContent=false in launcher.ini and start the game ("The content pack" in the
+   guide). Items from the pack stay in your save and show again when it is back on.
+4. Restore a save backup, only if the launcher says your save failed its integrity check or your progress is wrong ("Saves
+   and backups" in the guide). This replaces your save with an older one: keep the file you move away.
+5. Post the session report from Desktop\MapleStory 2 Offline Reports on our Discord, with what you tried.
