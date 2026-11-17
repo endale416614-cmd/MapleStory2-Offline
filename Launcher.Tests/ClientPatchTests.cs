@@ -18,6 +18,8 @@ public class ClientPatchTests {
         File.WriteAllText(Path.Combine(patch, "NxCharacter64.dll"), "the patch's proxy");
         File.WriteAllText(Path.Combine(patch, "AgarciumClient.dll"), "the patch");
         Put("MapleStory2.exe", "the game");
+        Directory.CreateDirectory(Path.Combine(root, "Data"));
+        File.WriteAllText(Path.Combine(root, "Data", "Xml.m2d"), "an archive");
     }
 
     [TearDown]
@@ -41,6 +43,21 @@ public class ClientPatchTests {
         Assert.That(ClientPatch.MissingOriginal(client, patch), Is.Not.Null, "an earlier build of the patch");
         File.Delete(Path.Combine(client, "NxCharacter64.dll"));
         Assert.That(ClientPatch.MissingOriginal(client, patch), Is.Not.Null, "no NxCharacter64.dll at all");
+    }
+
+    /// <summary>T9-01 (BT-216): a game folder that holds none of the game's files but MapleStory2.exe is no client, and is not [T9].</summary>
+    [Test]
+    public void MissingOriginal_NoGameFilesAtAll_IsNotAClientAndNotT9() {
+        File.Delete(Path.Combine(root, "Data", "Xml.m2d"));
+        string? message = ClientPatch.MissingOriginal(client, patch);
+        Assert.That(message, Does.StartWith("The game folder is not a complete MapleStory 2 client:\n" + client + "\n\n"));
+        Assert.That(message, Does.Contain("Choose the folder that holds the whole game"));
+        Assert.That(Triage.Classify(message!), Is.Null, "not reported as [T9]");
+        string last = ClientPatch.ReportLines(client, patch).Last();
+        Assert.That(last, Does.StartWith("Original DLL backup : MISSING: the folder is not a complete MapleStory 2 client"));
+        Assert.That(last, Does.Not.Contain("[T9]"));
+        Put("NxCharacter64.dll.bak", "the game's own");
+        Assert.That(ClientPatch.MissingOriginal(client, patch), Is.Null, "the game's own file is there");
     }
 
     [Test]

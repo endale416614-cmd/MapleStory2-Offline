@@ -62,7 +62,7 @@ except ImportError:
     fcntl = None
 
 TITLE = "MapleStory 2 (Offline)"
-LAUNCHER_VERSION = "1.2.3"  # newer_copy compares it; package_release.py refuses a package of any other version
+LAUNCHER_VERSION = "1.2.4"  # newer_copy compares it; package_release.py refuses a package of any other version
 APP_NAME = "MapleStory 2 Offline"
 REPOSITORY = "endale416614-cmd/MapleStory2-Offline"
 STEAM_APP_ID = "560380"
@@ -1662,6 +1662,7 @@ class SessionReport:
         self.steps = []
         self.problems = []
         self.exit_code = None
+        self.started = now()
 
     def step(self, text):
         self.steps.append((stamp(), text))
@@ -1684,6 +1685,28 @@ class SessionReport:
             except OSError:
                 continue
             yield from (line for line in flagged[-30:] if re.search(r"\[(ERR|FTL)\]", line))
+
+    @staticmethod
+    def crash_from_guard_log(lines, since):
+        """CP-03a (BT-235): the newest line the client patch wrote for a crash ("yyyy-MM-dd HH:mm:ss crash: ...") at or after
+        `since`, or None; CrashEvent.FromGuardLog on Windows. The lines start with the local time, so they compare as text."""
+        start = since.strftime("%Y-%m-%d %H:%M:%S")
+        found = [line for line in lines if len(line) > 27 and line[19:27] == " crash: " and line[:19] >= start]
+        return found[-1] if found else None
+
+    def guard_crash_line(self):
+        """The crash line of offline_guard.log (in the game's x64 folder) for a session whose game exited with a non-zero code.
+        A report must never break the end of a session."""
+        if self.exit_code in (None, 0):
+            return None
+        try:
+            client = Client.find(self.settings) or self.settings.client_dir
+            if not client:
+                return None
+            with open(os.path.join(client, "offline_guard.log"), encoding="utf-8", errors="replace") as f:
+                return self.crash_from_guard_log([line.rstrip("\r\n") for line in f], self.started)
+        except OSError:
+            return None
 
     def offered(self, send_reports):
         """Whether this session's report is offered (ProblemReport.offers_report)."""
@@ -1801,6 +1824,8 @@ class SessionReport:
                  "Character", "---------"] + self.character_lines() + ["",
                  "Steps", "-----"] + [f"{t}  {text}" for t, text in self.steps] + ["", "Problems", "--------"]
         lines += [f"{t}  {text}" for t, text in self.problems] or ["None."]
+        if (crash := self.guard_crash_line()) is not None:
+            lines += ["", "Game crash (offline_guard.log)", "-" * 30, crash]
         for name in SERVERS:
             log = os.path.join(s.log_dir, f"{name.lower()}.log")
             if os.path.exists(log):

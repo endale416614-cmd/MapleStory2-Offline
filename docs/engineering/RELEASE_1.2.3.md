@@ -111,3 +111,13 @@ player's notes and every fix planned for 1.2.3. Published 2026-11-08 without pla
 ## Play check
 Not run for 1.2.3 (the maintainer's decision, 2026-11-07): no game run, no core-loop run and no fair-fight run; players
 test the release, and their problem reports arrive automatically.
+
+## Published (2026-11-08)
+
+Release `v1.2.3` on `5110dc94` (Maple2 `7ad5403a`, Agarcium `a9453e34`), marked Latest: `MapleStory2-Offline-Setup.exe`
+(1,169,670,761 bytes, sha256 `274542adf433f2479c0cd1e8066b2876b295d82ef4da3f564a569dd1b4b54aa2`),
+`MapleStory2-Offline-Update-1.2.3.zip` (584,509,733 bytes; needs 1.2.2), `release.json` and `release.json.sig`: the same
+four names as v1.2.2. Before upload: the full test suites, the privacy scans of the three source snapshots and of the
+Setup, the update zip and release.json, sizes, hashes, both signatures and dry runs of the pre-push hook. After upload:
+GitHub's sha256 digests equal the local files, and the `releases/latest/download` links serve them (release.json and
+its signature byte for byte). Not done: the play checks (players test this release).

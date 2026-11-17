@@ -238,17 +238,40 @@ internal sealed class ServerHost : IDisposable {
 
     public void StopAll() {
         // Game first so it stops writing, World last since the others report to it.
-        foreach ((string _, Process process) in Enumerable.Reverse(servers)) {
+        foreach ((string name, Process process) in Enumerable.Reverse(servers)) {
+            string? left = null;
             try {
                 if (!process.HasExited) {
-                    process.Kill(entireProcessTree: true);
+                    left = EndTree(() => process.Kill(entireProcessTree: true), () => process.Kill());
                     process.WaitForExit(5000);
                 }
             } catch (InvalidOperationException) {
                 // already gone
             }
+            if (left != null) {
+                EventLog.Write("servers", $"{name}: a process of its tree could not be ended ({left})");
+            }
         }
         servers.Clear();
+    }
+
+    /// <summary>LC-02 (BT-249): ends a server's process tree. A process of the tree that cannot be ended (access denied) is no
+    /// problem of the session: the server is then ended alone, and the kill-on-close job takes the rest when the launcher exits.
+    /// Returns why the tree could not be ended, or null when it was (or was already gone).</summary>
+    internal static string? EndTree(Action killTree, Action killAlone) {
+        try {
+            killTree();
+            return null;
+        } catch (InvalidOperationException) {
+            return null; // already gone
+        } catch (Exception ex) when (ex is AggregateException or System.ComponentModel.Win32Exception) {
+            try {
+                killAlone();
+            } catch (Exception) {
+                // gone by now, or not ours to end
+            }
+            return ex.InnerException?.Message ?? ex.Message;
+        }
     }
 
     public void Dispose() {

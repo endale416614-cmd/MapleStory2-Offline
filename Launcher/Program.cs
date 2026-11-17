@@ -128,9 +128,13 @@ internal static class Program {
             if (Has(args, "--check-ports")) {
                 // Test/support aid: who holds the ports the servers need.
                 List<PortGuard.Listener> listeners = PortGuard.Listeners();
+                string serverDir = PortGuard.FinalPath(settings.ServerDir);
+                PortGuard.Owner[] owners = listeners.Select(l => PortGuard.Classify(l.ExePath, serverDir)).ToArray();
+                // PG-01 (BT-291): OTHERCOPY = a Maple2.Server.* exe of another copy of the game (the launcher window asks; this check only reports).
+                string[] words = owners.Select(owner => owner.ToString().ToUpperInvariant()).ToArray();
                 WriteResult(settings.DataRoot, listeners.Count == 0 ? "ports free" : string.Join(Environment.NewLine,
-                    listeners.Select(l => $"port {l.Port}: {l.Name} pid {l.ProcessId} {(PortGuard.IsOwnServer(l, settings) ? "OWN" : "FOREIGN")}")));
-                return listeners.Any(l => !PortGuard.IsOwnServer(l, settings)) ? 1 : 0;
+                    listeners.Select((l, i) => $"port {l.Port}: {l.Name} pid {l.ProcessId} {words[i]}")));
+                return owners.Any(owner => owner != PortGuard.Owner.Own) ? 1 : 0;
             }
             if (Has(args, "--prepare-content")) {
                 // Test/support aid: the content step of Play (apply or remove the unified content, data lock) without the game.
@@ -153,6 +157,11 @@ internal static class Program {
         } catch (Exception ex) {
             ReportCrash(settings, ex);
             return 1;
+        }
+
+        // PA-05 (BT-234): an install updated by a zip gets the Start menu shortcuts newer versions added.
+        if (settings.Installed) {
+            Setup.AddMissingShortcuts(exe);
         }
 
         using var mutex = new Mutex(true, "MapleStory2Offline.Launcher", out bool first);

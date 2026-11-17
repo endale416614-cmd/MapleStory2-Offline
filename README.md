@@ -8,7 +8,7 @@ report to the developer after a session with a problem, unless you chose otherwi
 
 ## Download
 
-### [⬇ Download MapleStory 2 Offline 1.2.3 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
+### [⬇ Download MapleStory 2 Offline 1.2.4 (Setup, about 1.1 GB)](https://github.com/endale416614-cmd/MapleStory2-Offline/releases/latest/download/MapleStory2-Offline-Setup.exe)
 
 1. Run the downloaded file and click **Install**. No administrator rights are needed.
 2. Start the game from the **MapleStory 2 Offline** icon on your desktop.
@@ -22,8 +22,8 @@ Updates install themselves: when you press Play and a newer version exists, the 
 is backed up first). Prefer to update by hand? Put `AutoUpdate=off` in `launcher.ini`, download the update file and use
 Start menu → **MapleStory 2 Offline - Install Update**. All versions: [Releases](https://github.com/endale416614-cmd/MapleStory2-Offline/releases).
 
-**Still on 1.2.1 or older?** Install 1.2.3 once with the Setup above; it keeps your save. The automatic update to 1.2.3
-needs 1.2.2, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
+**Still on 1.2.2 or older?** Install 1.2.4 once with the Setup above; it keeps your save. The automatic update to 1.2.4
+needs 1.2.3, and launchers before 1.1.9 cannot take an automatic update at all (the update signing key was replaced).
 
 **New here?** The [player guide](docs/PLAYER_GUIDE.md) walks you through install, first start, modes, updates and saves.
 

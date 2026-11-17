@@ -69,6 +69,22 @@ public class ServerHostTests {
             "the Windows system proxy");
     }
 
+    // LC-02 (BT-249, report 1497cc8a): a process below a server that cannot be ended ("Not all processes in process tree could be
+    // terminated. (Access is denied.)") is no problem of the session: the server is ended alone and the reason is returned for the log.
+    [Test]
+    public void EndTree_AProcessThatCannotBeEndedIsNoProblem() {
+        int alone = 0;
+        Assert.That(ServerHost.EndTree(() => { }, () => alone++), Is.Null, "the tree ended");
+        Assert.That(ServerHost.EndTree(() => throw new InvalidOperationException(), () => alone++), Is.Null, "already gone");
+        Assert.That(alone, Is.EqualTo(0));
+
+        var denied = new AggregateException("Not all processes in process tree could be terminated.", new System.ComponentModel.Win32Exception(5));
+        Assert.That(ServerHost.EndTree(() => throw denied, () => alone++), Is.EqualTo(denied.InnerException!.Message), "a descendant refused");
+        Assert.That(alone, Is.EqualTo(1), "the server is ended alone");
+        Assert.That(ServerHost.EndTree(() => throw new System.ComponentModel.Win32Exception(5), () => throw new InvalidOperationException()), Is.Not.Null,
+            "the server itself refused, and ending it alone found it gone");
+    }
+
     /// <summary>As .NET's Windows system proxy for an address it sends direct: never bypassed, and no proxy.</summary>
     private sealed class SystemProxyWithoutAProxy : IWebProxy {
         public ICredentials? Credentials { get; set; }

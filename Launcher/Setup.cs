@@ -283,16 +283,22 @@ internal static class Setup {
 
     private static void CreateShortcuts(string launcher, string workingDir) {
         Directory.CreateDirectory(StartMenuDir);
-        Shortcut(Path.Combine(StartMenuDir, $"{ProductName}.lnk"), launcher, "", workingDir, "Play MapleStory 2 offline");
-        Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Export Diagnostics.lnk"), launcher, "--export-diagnostics", workingDir,
-            "Save a diagnostics file on the desktop to send with a bug report");
-        Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Report a Problem.lnk"), launcher, "--report-problem", workingDir,
-            "Send the developer a problem report with your own words");
-        Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Install Update.lnk"), launcher, "--install-update", workingDir, "Install a downloaded update zip");
-        Shortcut(Path.Combine(StartMenuDir, $"{ProductName} - Verify Game Files.lnk"), launcher, "--verify-files", workingDir,
-            "Check the game files the unified content needs and repair them");
-        Shortcut(Path.Combine(StartMenuDir, $"Uninstall {ProductName}.lnk"), launcher, "--uninstall", workingDir, "Remove MapleStory 2 Offline");
+        foreach ((string name, string arguments, string description) in Shortcuts.StartMenu(ProductName)) {
+            Shortcut(Path.Combine(StartMenuDir, name), launcher, arguments, workingDir, description);
+        }
         Shortcut(DesktopShortcut, launcher, "", workingDir, "Play MapleStory 2 offline");
+    }
+
+    /// <summary>PA-05 (BT-234): adds the Start menu shortcuts this installed copy lacks. Never throws: a shortcut is a convenience
+    /// and must not stop the launcher.</summary>
+    public static void AddMissingShortcuts(string launcher) {
+        try {
+            foreach ((string name, string arguments, string description) in Shortcuts.Missing(StartMenuDir, ProductName)) {
+                Shortcut(Path.Combine(StartMenuDir, name), launcher, arguments, Path.GetDirectoryName(launcher)!, description);
+            }
+        } catch (Exception) {
+            // tried again on the next start
+        }
     }
 
     private static void RemoveShortcuts() {

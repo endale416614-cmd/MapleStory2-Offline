@@ -116,8 +116,18 @@ internal sealed class LauncherForm : Form {
                 Show();
             }
             _ = ReportDialogs.SendQueuedAsync(settings); // reports the player agreed to earlier, in the background
-            if (Process.GetProcessesByName(GAME_EXE).Length > 0) {
-                throw new InvalidOperationException("MapleStory 2 is already running. Close it first.");
+            if (Process.GetProcessesByName(GAME_EXE) is { Length: > 0 } leftover) {
+                // LC-01 (BT-233): a game left over from an earlier launcher is offered to be closed, not only refused.
+                Hide();
+                DialogResult close = MessageBox.Show(
+                    "MapleStory 2 is already running, perhaps left over from an earlier start of this launcher.\n\nClose it? (Anything in it that is not saved is lost.)",
+                    Title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                Show();
+                EventLog.Write("startup", $"game already running ({leftover.Length} process(es)); close it: {close}");
+                if (close != DialogResult.Yes || !GameExit.Close(leftover)) {
+                    throw new InvalidOperationException("MapleStory 2 is already running. Close it first.");
+                }
+                report?.Step("Closed a MapleStory 2 left over from an earlier start");
             }
 
             if (updates.RecoverInterrupted() is { } recovered) {
@@ -229,7 +239,12 @@ internal sealed class LauncherForm : Form {
             using Process game = LaunchGame();
             report?.Step("Game started");
             EventLog.Write("game", "started");
-            await WaitForWindowAsync(game, token);
+            try {
+                await WaitForWindowAsync(game, token);
+            } catch (OperationCanceledException) {
+                GameExit.Close([game]); // LC-01 (BT-233): a cancelled start closes the game it started
+                throw;
+            }
             Hide();
 
             // The game may hand off to helper processes, so wait for every MapleStory2.exe to close.
@@ -242,8 +257,9 @@ internal sealed class LauncherForm : Form {
                 await Task.Delay(1000);
             }
             int? exitCode = game.HasExited ? game.ExitCode : null;
-            report?.GameExited(exitCode);
-            EventLog.Write("game", $"closed exit={exitCode?.ToString() ?? "?"}");
+            TimeSpan? sinceQuit = exitCode is null or 0 ? null : GameExit.QuitAge(host.LogPath("Game"), DateTime.Now);
+            report?.GameExited(exitCode, sinceQuit);
+            EventLog.Write("game", $"closed exit={exitCode?.ToString() ?? "?"}{(sinceQuit is { } age ? $" {age.TotalSeconds:F0}s after quit" : "")}");
 
             Show();
             SetStatus("Saving your progress...");
@@ -356,20 +372,52 @@ internal sealed class LauncherForm : Form {
     /// </summary>
     private void ClaimPorts() {
         List<PortGuard.Listener> listeners = PortGuard.Listeners();
-        List<PortGuard.Listener> foreign = listeners.Where(listener => !PortGuard.IsOwnServer(listener, settings)).ToList();
-        if (foreign.Count > 0) {
-            string list = string.Join("\n", foreign.Select(listener => $"  port {listener.Port}: {listener.Name} (process {listener.ProcessId})"));
+        string serverDir = PortGuard.FinalPath(settings.ServerDir);
+        PortGuard.Owner OwnerOf(PortGuard.Listener listener) => PortGuard.Classify(listener.ExePath, serverDir);
+        void Refuse(IEnumerable<PortGuard.Listener> held, string advice = "Close that program (or another copy of MapleStory 2 Offline) and start again.") {
+            string list = string.Join("\n", held.Select(listener => "  " + PortGuard.Describe(listener)));
             EventLog.Write("error", "ports in use: " + list.Replace("\n", ";"));
             throw new InvalidOperationException(
-                $"Another program is using a network port MapleStory 2 Offline needs:\n{list}\n\n" +
-                "Close that program (or another copy of MapleStory 2 Offline) and start again.");
+                $"Another program is using a network port MapleStory 2 Offline needs:\n{list}\n\n" + advice);
         }
-        List<PortGuard.Listener> leftovers = listeners.Where(listener => PortGuard.IsOwnServer(listener, settings)).ToList();
+
+        List<PortGuard.Listener> otherCopy = listeners.Where(listener => OwnerOf(listener) == PortGuard.Owner.OtherCopy).ToList();
+        PortGuard.Claim claim = PortGuard.Before(listeners.Select(listener => (listener, OwnerOf(listener))).ToList());
+        if (claim.Step == PortGuard.Step.Ask) {
+            // PG-01 (BT-291): only servers of another copy of the game hold the ports: end them if the player says so.
+            string folders = string.Join("\n", otherCopy.Select(PortGuard.Folder).Distinct().Select(folder => "  " + folder));
+            Hide();
+            DialogResult end = MessageBox.Show(
+                $"These servers of another copy of MapleStory 2 Offline are still running:\n{folders}\n\nEnd them and start?",
+                Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            Show();
+            EventLog.Write("startup", $"servers of another copy running ({folders.Replace("\n", ";")}); end them: {end}");
+            claim = PortGuard.Answer(otherCopy, end == DialogResult.Yes);
+            if (claim.Step == PortGuard.Step.Go) {
+                report?.Step("Ended servers of another copy of the game: " + string.Join("; ", otherCopy.Select(PortGuard.Describe)));
+                PortGuard.StopOwnServers(otherCopy);
+            }
+        }
+        if (claim.Step == PortGuard.Step.Refuse) {
+            Refuse(claim.Held);
+        }
+        List<PortGuard.Listener> leftovers = listeners.Where(listener => OwnerOf(listener) == PortGuard.Owner.Own).ToList();
         if (leftovers.Count > 0) {
             SetStatus("Closing servers left over from last time...");
             EventLog.Write("startup", "stopping leftover servers of this installation: " + string.Join(", ", leftovers.Select(l => l.Name).Distinct()));
             report?.Step("Stopped servers left over from a previous run");
             PortGuard.StopOwnServers(leftovers);
+        }
+        if (otherCopy.Count + leftovers.Count > 0) {
+            // PG-01 (BT-291): a server that could not be ended (elevated, another user's) still holds its port: starting would play on it.
+            List<PortGuard.Listener> still = PortGuard.Listeners();
+            for (int i = 0; i < 6 && still.Count > 0; i++) {
+                Thread.Sleep(500);
+                still = PortGuard.Listeners();
+            }
+            if (PortGuard.Afterwards(still) is { Step: PortGuard.Step.Refuse } refused) {
+                Refuse(refused.Held, "It could not be ended. End it in Task Manager (its process number is in the line above) or restart the PC, then start again.");
+            }
         }
     }
 

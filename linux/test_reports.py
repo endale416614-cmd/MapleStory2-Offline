@@ -647,6 +647,47 @@ class SystemLineTest(unittest.TestCase):
         self.assertIn("\nSystem: Some Linux\nNetwork: variables set: ", PR.for_upload(raw, []))
 
 
+class GuardCrashLineTest(unittest.TestCase):
+    """CP-03a (BT-235): the Linux report shows the crash line of offline_guard.log as the Windows report does (CrashEventTests.cs)."""
+    STARTED = datetime.datetime(2026, 11, 16, 10, 0, 0)
+    OLD = "2026-11-16 09:59:59 crash: MapleStory2.exe+0x1 exception C0000005 at 0x10"
+    CRASH = "2026-11-16 10:30:12 crash: MapleStory2.exe+0x2 exception C0000005 at 0x20"
+    LATER = "2026-11-16 10:30:13 crash: MapleStory2.exe+0x3 exception C0000005 at 0x30"
+    BLOCKED = "2026-11-16 10:30:14 blocked connect cr-us.nexon.co.kr"
+
+    def test_the_newest_crash_line_from_this_session(self):
+        find = ms2offline.SessionReport.crash_from_guard_log
+        self.assertEqual(find([self.OLD, "2026-11-16 10:00:00 hook x INSTALLED", self.CRASH, self.LATER, self.BLOCKED], self.STARTED), self.LATER)
+        self.assertEqual(find([self.OLD, self.BLOCKED], self.STARTED), None, "a crash of an earlier session, and a line that is no crash")
+        self.assertEqual(find([], self.STARTED), None)
+
+    def report(self, folder, exit_code, guard):
+        client = os.path.join(folder, "x64")
+        os.makedirs(client)
+        if guard is not None:
+            with open(os.path.join(client, "offline_guard.log"), "w", encoding="utf-8") as f:
+                f.write("\n".join(guard) + "\n")
+        settings = types.SimpleNamespace(version="1.2.4", prefix="/p", home=folder, client_dir=client, log_dir=folder, runner="umu-run",
+                                         save_file=os.path.join(folder, "none.db"), content_pack_dir=folder, game_data_dir=folder)
+        report = ms2offline.SessionReport(settings)
+        report.started = self.STARTED
+        report.exit_code = exit_code
+        with mock.patch.object(ms2offline.Client, "normalize", side_effect=lambda path: path if path == client else None):
+            with mock.patch.object(ms2offline.SessionReport, "system_line", return_value="System: Some Linux"):
+                return report.raw_text()
+
+    def test_the_report_of_a_crashed_session_shows_the_line(self):
+        with tempfile.TemporaryDirectory() as folder:
+            raw = self.report(folder, -1073741819, [self.OLD, self.CRASH, self.BLOCKED])
+        self.assertIn("\nGame crash (offline_guard.log)\n" + "-" * 30 + "\n" + self.CRASH + "\n", raw)
+        self.assertNotIn(self.OLD, raw)
+
+    def test_no_line_for_a_clean_exit_a_session_without_exit_or_no_log(self):
+        for exit_code, guard in ((0, [self.CRASH]), (None, [self.CRASH]), (1, None), (1, [self.OLD, self.BLOCKED])):
+            with tempfile.TemporaryDirectory() as folder:
+                self.assertNotIn("Game crash (offline_guard.log)", self.report(folder, exit_code, guard), (exit_code, guard))
+
+
 class NetworkTest(unittest.TestCase):
     """BT-215: the report names the proxy and server variables set, never a value, and the servers do not inherit .NET's HTTP/2 switch."""
 

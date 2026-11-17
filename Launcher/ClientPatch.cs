@@ -24,6 +24,13 @@ internal static class ClientPatch {
             || (File.Exists(proxy) && Hash(proxy) != Hash(Path.Combine(patchDir, Proxy)) && !LoadsBackup(proxy))) {
             return null;
         }
+        if (HoldsNoGameFiles(clientDir)) {
+            return $"The game folder is not a complete MapleStory 2 client:\n{clientDir}\n\n" +
+                   "It holds MapleStory2.exe but none of the game's other files (no game archives in the Data folder, no NxCharacter64.dll). " +
+                   "This happens when the game was moved or only partly copied. Choose the folder that holds the whole game, with MapleStory2.exe " +
+                   "in its x64 folder, in the launcher's settings (ClientDir in launcher.ini), or install the game again with Steam. " +
+                   "Then start the launcher again.";
+        }
         return $"The game's own NxCharacter64.dll is missing from the game folder:\n{clientDir}\n\n" +
                "The offline patch needs it, so the game would close right after its window opens. This usually happens when the " +
                "patch files are copied into the game folder by hand: the patch's NxCharacter64.dll then takes the place of the game's own.\n\n" +
@@ -31,6 +38,20 @@ internal static class ClientPatch {
                "integrity of game files. For a game you downloaded, copy NxCharacter64.dll from the download into the game's x64 " +
                "folder. Then start the launcher again: it installs the patch itself. Never copy the patch files by hand. If it " +
                "still fails, post the report on Discord.";
+    }
+
+    /// <summary>
+    /// T9-01 (BT-216): a folder with MapleStory2.exe that has no NxCharacter64.dll (nor its backup) and no game archive in the
+    /// Data folder beside x64 is not a client at all, so [T9] (the patch's hand copy) does not describe it.
+    /// </summary>
+    private static bool HoldsNoGameFiles(string clientDir) {
+        string data = Path.Combine(clientDir, "..", "Data");
+        try {
+            return !File.Exists(Path.Combine(clientDir, Proxy)) && !File.Exists(Path.Combine(clientDir, Backup))
+                   && !(Directory.Exists(data) && Directory.EnumerateFiles(data, "*.m2d").Any());
+        } catch (Exception) {
+            return false;
+        }
     }
 
     /// <summary>
@@ -51,6 +72,7 @@ internal static class ClientPatch {
         }
         yield return "Original DLL backup : " + (backup ? "present"
             : MissingOriginal(clientDir, patchDir) == null ? "not yet (made on first start)"
+            : HoldsNoGameFiles(clientDir) ? "MISSING: the folder is not a complete MapleStory 2 client (no game archives, no NxCharacter64.dll); choose the folder that holds MapleStory2.exe"
             : File.Exists(Path.Combine(clientDir, Proxy)) ? "MISSING: the patch's NxCharacter64.dll took the place of the game's own (see TROUBLESHOOTING.txt [T9])"
             : "MISSING, and NxCharacter64.dll too (see TROUBLESHOOTING.txt [T9])");
     }

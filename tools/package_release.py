@@ -294,7 +294,7 @@ def assemble(stage, version):
     # build PC's own game (character portraits) and must never ship.
     copy_tree(os.path.join(maple, "Maple2.Server.Web", "Data", "system"), put("Maple2/Maple2.Server.Web/Data/system"))
     for name in ("offline-economy.json", "offline-meret-catalog.json", "offline-grind.json", "offline-market.json", "offline-spawns.json",
-                 "offline-testkit.json", "offline-triggers.json", "summon-npcs.json", "defensive-effects.json"):
+                 "offline-testkit.json", "offline-triggers.json", "summon-npcs.json", "defensive-effects.json", "final-status-effects.json", "damage-factors.json"):
         copy(os.path.join(maple, name), put(f"Maple2/{name}"))
 
     # Portable .env: no machine paths (the launcher passes the folders), no MySQL credentials.

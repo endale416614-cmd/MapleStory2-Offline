@@ -65,7 +65,8 @@ internal sealed class SessionReport {
         }
     }
 
-    public void GameExited(int? exitCode) {
+    /// <param name="sinceQuit">Time since the player's last Quit packet, when the game server logged one (LC-01).</param>
+    public void GameExited(int? exitCode, TimeSpan? sinceQuit = null) {
         gameRan = true;
         gameExitCode = exitCode;
         if (exitCode is null) {
@@ -73,7 +74,7 @@ internal sealed class SessionReport {
         } else if (exitCode == 0) {
             Step("Game closed normally");
         } else {
-            Problem($"The game closed unexpectedly (exit code {exitCode} = 0x{exitCode:X8}{DescribeExitCode(exitCode.Value)})");
+            Problem(GameExit.Describe(exitCode.Value, sinceQuit));
             // An NTSTATUS error code is a crash, which Windows logs as Application Error 1000.
             if (unchecked((uint) exitCode.Value) >= 0xC0000000) {
                 crashEvent = CrashEvent.Read(DateTime.Now);
@@ -383,16 +384,6 @@ internal sealed class SessionReport {
         500 or 501 => "Archer", 600 or 601 => "Heavy Gunner", 700 or 701 => "Thief", 800 or 801 => "Assassin",
         900 or 901 => "Runeblade", 1000 or 1001 => "Striker", 1100 or 1101 => "Soul Binder", 999 => "Game Master",
         _ => $"job {job}",
-    };
-
-    private static string DescribeExitCode(int code) => unchecked((uint) code) switch {
-        0xC0000005 => ", access violation (crash)",
-        0xC0000409 => ", stack buffer overrun (crash)",
-        0xC00000FD => ", stack overflow (crash)",
-        0xC0000374 => ", heap corruption (crash)",
-        0xC0000017 or 0xE06D7363 => ", out of memory or unhandled exception (crash)",
-        0x40010004 => ", closed by Windows / Task Manager",
-        _ => "",
     };
 
     private static IEnumerable<string> GraphicsCards() {

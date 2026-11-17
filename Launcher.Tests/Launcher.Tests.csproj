@@ -27,6 +27,8 @@
         <Compile Include="..\Launcher\PortGuard.cs" Link="Linked\PortGuard.cs" />
         <Compile Include="..\Launcher\ServerHost.cs" Link="Linked\ServerHost.cs" />
         <Compile Include="..\Launcher\ClientPatch.cs" Link="Linked\ClientPatch.cs" />
+        <Compile Include="..\Launcher\Shortcuts.cs" Link="Linked\Shortcuts.cs" />
+        <Compile Include="..\Launcher\GameExit.cs" Link="Linked\GameExit.cs" />
     </ItemGroup>
 
     <ItemGroup>

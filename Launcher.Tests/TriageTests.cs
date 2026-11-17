@@ -38,13 +38,17 @@ public class TriageTests {
     /// <summary>BT-216: the launcher's stop when the game's own NxCharacter64.dll is gone is known problem [T9], in its own words.</summary>
     [Test]
     public void Classify_TheMissingOriginalStop_IsT9() {
-        string client = Path.Combine(Path.GetTempPath(), "TriageTests_" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(Path.GetTempPath(), "TriageTests_" + Guid.NewGuid().ToString("N")), client = Path.Combine(root, "x64");
         Directory.CreateDirectory(client);
+        Directory.CreateDirectory(Path.Combine(root, "Data"));
         try {
             File.WriteAllText(Path.Combine(client, "MapleStory2.exe"), "the game");
+            // T9-01 (BT-216): with no game archive either, the folder is no client and the stop is not [T9].
+            Assert.That(Triage.Classify(ClientPatch.MissingOriginal(client, client)!), Is.Null);
+            File.WriteAllText(Path.Combine(root, "Data", "Xml.m2d"), "an archive");
             Assert.That(Triage.Classify(ClientPatch.MissingOriginal(client, client)!)?.Section, Is.EqualTo("[T9]"));
         } finally {
-            Directory.Delete(client, true);
+            Directory.Delete(root, true);
         }
     }
 
